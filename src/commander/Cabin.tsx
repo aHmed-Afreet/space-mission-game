@@ -259,7 +259,8 @@ export default function Cabin(props: Props) {
         pos,
         current.current.telemetry,
         current.current.world?.target,
-        current.current.world?.session.landed,
+        current.current.world?.session.landed ||
+          current.current.world?.session.flight.status === "pad",
       );
       if (current.current.world) field?.update(current.current.world.session);
       const wp = current.current.world?.waypoint;

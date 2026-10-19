@@ -1,3 +1,4 @@
+import LaunchView from "./LaunchView";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cabin from "../Cabin";
 import Icon from "../Icons";
@@ -45,7 +46,15 @@ export default function Flight({
   onDismissTutorial,
   onResetTutorials,
   saveError,
+  onOptional,
+  onRate,
+  onControls,
+  onAbort,
 }: {
+  onOptional: (id: string) => void;
+  onRate: (rate: number) => void;
+  onControls: (throttle: number, pitch: number) => void;
+  onAbort: () => void;
   session: Session;
   progress: Progress;
   onMove: (p: Position) => void;
@@ -57,6 +66,7 @@ export default function Flight({
   onResetTutorials: () => void;
   saveError: string;
 }) {
+  const [trackedOptional, setTrackedOptional] = useState<string | null>(null);
   const [tablet, setTablet] = useState(false),
     [tab, setTab] = useState<CampaignTab>("MISSION"),
     [actions, setActions] = useState(false),
@@ -129,7 +139,18 @@ export default function Flight({
         onNext={s.report.success ? onNext : undefined}
       />
     );
-  const target = o?.site ? sitePosition(o.site, m.destination) : undefined;
+  const detour = m.optional?.find(
+    (c) => c.id === trackedOptional && !s.optionalDone.includes(c.id),
+  );
+  const waypointSite = detour?.site || o?.site;
+  const target = waypointSite
+    ? {
+        ...sitePosition(waypointSite, m.destination),
+        ...(detour ? { name: "OPTIONAL / " + detour.title } : {}),
+      }
+    : undefined;
+  const launching =
+    currentPhase(s) === "LAUNCH" || s.flight.status === "ascent";
   const actionable = !!o?.action && (!o.site || atSite(s, o.site));
   const inventoryTask = o?.action === "eat" || o?.action === "drink";
   const extras = area
@@ -144,33 +165,41 @@ export default function Flight({
         ] as { action: CampaignAction; label: string }[])
       : [];
   return (
-    <div className="cmd-session campaign-flight">
-      <Cabin
-        key={s.id}
-        onArea={() => {}}
-        onPosition={move}
-        onInteract={() => {
-          if (inventoryTask) {
-            setTab("INVENTORY");
-            setTablet(true);
-          } else setActions((v) => !v);
-        }}
-        onGraphicsError={() => onTickPause(true)}
-        locked={s.state.paused || s.state.sleeping || tablet || !!tutorial}
-        alarm={alerts(s.state).length > 0 || s.camp.broken}
-        effect={effect}
-        telemetry={{
-          ...s.state,
-          oxygenCapacity: s.life.oxygen,
-          batteryCapacity: s.life.batteries,
-        }}
-        world={{
-          session: s,
-          waypoint: target ? { ...target, name: target.name } : undefined,
-          target:
-            o?.site && o.site in deck ? (o.site as keyof typeof deck) : null,
-        }}
-      />
+    <div
+      className={`cmd-session campaign-flight ${launching ? "launch-active" : ""}`}
+    >
+      {launching ? (
+        <LaunchView s={s} onCommand={run} onControls={onControls} />
+      ) : (
+        <Cabin
+          key={s.id}
+          onArea={() => {}}
+          onPosition={move}
+          onInteract={() => {
+            if (inventoryTask) {
+              setTab("INVENTORY");
+              setTablet(true);
+            } else setActions((v) => !v);
+          }}
+          onGraphicsError={() => onTickPause(true)}
+          locked={s.state.paused || s.state.sleeping || tablet || !!tutorial}
+          alarm={alerts(s.state).length > 0 || s.camp.broken}
+          effect={effect}
+          telemetry={{
+            ...s.state,
+            oxygenCapacity: s.life.oxygen,
+            batteryCapacity: s.life.batteries,
+          }}
+          world={{
+            session: s,
+            waypoint: target ? { ...target, name: target.name } : undefined,
+            target:
+              waypointSite && waypointSite in deck
+                ? (waypointSite as keyof typeof deck)
+                : null,
+          }}
+        />
+      )}
       <div className="cmd-cinema-shade" aria-hidden="true" />
       <div className="cmd-hud-header">
         <div className="cmd-flight-identity">
@@ -215,10 +244,38 @@ export default function Flight({
           </button>
         </div>
       </div>
+      <div className="campaign-sim-rate">
+        <label>
+          SIM RATE{" "}
+          <select
+            aria-label="Simulation rate"
+            value={s.simRate}
+            onChange={(e) => onRate(Number(e.target.value))}
+          >
+            {[1, 5, 20, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}×
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="campaign-guidance">
+        {detour && (
+          <button
+            className="optional-detour"
+            onClick={() => setTrackedOptional(null)}
+          >
+            OPTIONAL: {detour.title} · cancel guidance ×
+          </button>
+        )}
         <small>
-          {m.title.toUpperCase()} / LEVEL {m.level}
+          {m.title.toUpperCase()} / MISSION {m.level}
         </small>
+        <p className="campaign-phase">
+          PHASE {m.phases.indexOf(currentPhase(s)) + 1} / {m.phases.length} ·{" "}
+          {currentPhase(s)}
+        </p>
         <span>
           CURRENT TASK{" "}
           <b>
@@ -227,6 +284,7 @@ export default function Flight({
           </b>
         </span>
         <h2>{o?.title}</h2>
+        {o?.instruction !== o?.title && <p>{o?.instruction}</p>}
         <div className="cmd-objective-progress">
           <span
             style={{ width: `${(s.objective / m.objectives.length) * 100}%` }}
@@ -264,60 +322,82 @@ export default function Flight({
           Save warning — open tablet
         </button>
       )}
-      <div className="campaign-interaction">
-        {actions && (
-          <div className="cmd-action-menu">
-            {actionable && o?.action && !inventoryTask && (
-              <button disabled={s.state.paused} onClick={() => run(o.action!)}>
-                {o.title}
-                <Icon name="chevron" size={14} />
-              </button>
-            )}
-            <button onClick={() => setShowOther((v) => !v)}>
-              {showOther ? "Hide" : "Other"} operations
-            </button>
-            {showOther &&
-              extras.map((a) => (
+      {!launching && (
+        <div className="campaign-interaction">
+          {actions && (
+            <div className="cmd-action-menu">
+              {actionable &&
+                o?.choices &&
+                o.choices.map((c) => (
+                  <button
+                    key={c.action}
+                    disabled={s.state.paused}
+                    onClick={() => run(c.action)}
+                  >
+                    <span>
+                      {c.title}
+                      <small>{c.detail}</small>
+                    </span>
+                    <Icon name="chevron" size={13} />
+                  </button>
+                ))}
+              {actionable && o?.action && !o.choices && !inventoryTask && (
                 <button
                   disabled={s.state.paused}
-                  key={a.action}
-                  onClick={() => run(a.action)}
+                  onClick={() => run(o.action!)}
                 >
-                  {a.label}
-                  <Icon name="chevron" size={13} />
+                  {o.title}
+                  <Icon name="chevron" size={14} />
                 </button>
-              ))}
-          </div>
-        )}
-        {(actionable || area || outside(s)) && !tablet && !s.state.sleeping && (
-          <button
-            className="cmd-interaction-prompt"
-            disabled={s.state.paused}
-            aria-expanded={actions}
-            onClick={() => {
-              if (inventoryTask) {
-                setTab("INVENTORY");
-                setTablet(true);
-              } else setActions((v) => !v);
-            }}
-          >
-            <kbd>E</kbd>
-            <span>
-              {inventoryTask ? "INVENTORY" : "INTERACT"}
-              <strong>
-                {inventoryTask
-                  ? "Use your carried supplies"
-                  : actionable && target
-                    ? target.name
-                    : area
-                      ? deck[area].name
-                      : "Field equipment"}
-              </strong>
-            </span>
-            <Icon name="chevron" size={15} />
-          </button>
-        )}
-      </div>
+              )}
+              <button onClick={() => setShowOther((v) => !v)}>
+                {showOther ? "Hide" : "Other"} operations
+              </button>
+              {showOther &&
+                extras.map((a) => (
+                  <button
+                    disabled={s.state.paused}
+                    key={a.action}
+                    onClick={() => run(a.action)}
+                  >
+                    {a.label}
+                    <Icon name="chevron" size={13} />
+                  </button>
+                ))}
+            </div>
+          )}
+          {(actionable || area || outside(s)) &&
+            !tablet &&
+            !s.state.sleeping && (
+              <button
+                className="cmd-interaction-prompt"
+                disabled={s.state.paused}
+                aria-expanded={actions}
+                onClick={() => {
+                  if (inventoryTask) {
+                    setTab("INVENTORY");
+                    setTablet(true);
+                  } else setActions((v) => !v);
+                }}
+              >
+                <kbd>E</kbd>
+                <span>
+                  {inventoryTask ? "INVENTORY" : "INTERACT"}
+                  <strong>
+                    {inventoryTask
+                      ? "Use your carried supplies"
+                      : actionable && target
+                        ? target.name
+                        : area
+                          ? deck[area].name
+                          : "Field equipment"}
+                  </strong>
+                </span>
+                <Icon name="chevron" size={15} />
+              </button>
+            )}
+        </div>
+      )}
       {s.state.sleeping && (
         <div className="cmd-rest-card">
           <Icon name="sleep" size={30} />
@@ -360,6 +440,9 @@ export default function Flight({
         <CampaignTablet
           s={s}
           progress={progress}
+          onOptional={onOptional}
+          onGuideOptional={setTrackedOptional}
+          onAbort={onAbort}
           tab={tab}
           onTab={setTab}
           onClose={closeTablet}

@@ -1,3 +1,4 @@
+import { missions as oldMissions } from "./legacyDefinitions";
 import type { Destination } from "./environments";
 import type { EquipmentId } from "./equipment";
 import type { Area, Action } from "../simulation";
@@ -29,6 +30,29 @@ export type ObjectiveType =
   | "RETURN";
 export type CampaignAction =
   | Action
+  | "verifyPower"
+  | "verifyLife"
+  | "verifyRadio"
+  | "verifyFuel"
+  | "sealHatch"
+  | "armLaunch"
+  | "ignite"
+  | "separate"
+  | "insertOrbit"
+  | "returnBurn"
+  | "recoverVehicle"
+  | "powerSafe"
+  | "powerScience"
+  | "diagnoseSatellite"
+  | "repairSatellite"
+  | "testSatellite"
+  | "repairSecondary"
+  | "recoverPackage"
+  | "selectCamp"
+  | "alignSolar"
+  | "alignRelay"
+  | "eventReset"
+  | "eventReroute"
   | "equipSuit"
   | "checkOxygen"
   | "checkPower"
@@ -66,9 +90,19 @@ export type Objective = {
   site?: Site;
   action?: CampaignAction;
   count?: number;
-  condition?: "vacuum" | "pressurized" | "minutes" | "science";
+  condition?:
+    | "vacuum"
+    | "pressurized"
+    | "minutes"
+    | "science"
+    | "countdown"
+    | "staging"
+    | "orbitHeight";
   value?: number;
   tutorial?: string;
+  phase?: string;
+  choices?: { action: CampaignAction; title: string; detail: string }[];
+  event?: "power" | "comms" | "campPower";
 };
 export type MissionDefinition = {
   id: string;
@@ -96,11 +130,27 @@ export type MissionDefinition = {
   scoring: { science: number; resources: number; crew: number };
   configuration: { antenna: boolean; spectrometer: boolean };
   completion: "all-objectives";
+  funding?: number;
+  reward?: number;
+  unlocks?: string[];
+  optional?: OptionalChallenge[];
+  expectedMinutes?: string;
+};
+export type OptionalChallenge = {
+  id: string;
+  title: string;
+  description: string;
+  reward: number;
+  action?: CampaignAction;
+  site?: Site;
+  condition?: "battery" | "fuel" | "samples" | "suit";
+  value?: number;
+  gear?: EquipmentId;
 };
 export const chapters = [
   {
     id: "training",
-    title: "Command Training",
+    title: "Earth Orbit",
     subtitle: "Learn to operate your explorer.",
   },
   {
@@ -253,289 +303,448 @@ function def(
     ...extra,
   };
 }
+const phase = (name: string, tasks: Objective[]) =>
+  tasks.map((t) => ({ ...t, phase: name }));
+const wait = (title: string, minutes: number, site?: Site) =>
+  task("WAIT", title, site, undefined, {
+    condition: "minutes",
+    value: minutes,
+  });
+const decision = (
+  title: string,
+  site: Site,
+  event: Objective["event"],
+  choices: NonNullable<Objective["choices"]>,
+) =>
+  task("INTERACT", title, site, choices[0].action, {
+    event,
+    choices,
+    instruction:
+      "Choose a response. Each option changes your mission resources.",
+  });
+const launch = () => [
+  ...phase("PRE-LAUNCH", [
+    use("power", "Verify electrical power.", "verifyPower"),
+    use("galley", "Confirm life support and stored supplies.", "verifyLife"),
+    use("communications", "Run the launch radio check.", "verifyRadio"),
+    use("cockpit", "Verify the departure trajectory.", "course"),
+    use("cockpit", "Confirm propellant reserve.", "verifyFuel"),
+    use("cockpit", "Seal the vehicle and arm the countdown.", "sealHatch"),
+  ]),
+  ...phase("LAUNCH", [
+    use("cockpit", "Start the launch countdown.", "armLaunch"),
+    task("WAIT", "Monitor the six-second countdown.", "cockpit", undefined, {
+      condition: "countdown",
+    }),
+    use("cockpit", "Ignite the launch vehicle.", "ignite"),
+    task(
+      "WAIT",
+      "Fly the ascent to the staging window.",
+      undefined,
+      undefined,
+      {
+        condition: "staging",
+        instruction:
+          "Set thrust above 65%. Keep pitch near the blue guidance target. Separate when altitude reaches 12 km.",
+      },
+    ),
+    task("INTERACT", "Separate the booster stage.", undefined, "separate"),
+    task(
+      "WAIT",
+      "Guide the upper stage to orbital altitude.",
+      undefined,
+      undefined,
+      {
+        condition: "orbitHeight",
+        instruction:
+          "Keep thrust and pitch on guidance. Reach 180 km and 7.8 km/s, then confirm orbital insertion.",
+      },
+    ),
+    task("INTERACT", "Complete orbital insertion.", undefined, "insertOrbit"),
+  ]),
+];
+const meals = () => [
+  use(
+    "galley",
+    "Collect a meal and prepare for the duty shift.",
+    "takeMeal",
+    "COLLECT",
+  ),
+  use("galley", "Fill the water bottle.", "fill", "COLLECT"),
+  task("EAT", "Eat your carried meal.", undefined, "eat", {
+    tutorial: "supplies",
+  }),
+  task("DRINK", "Drink from the water bottle.", undefined, "drink"),
+];
+const travel = () =>
+  phase("TRANSFER OPERATIONS", [
+    use("science", "Record a navigation-star observation.", "science"),
+    use("cockpit", "Apply the transfer-course correction.", "course"),
+    ...meals(),
+    use("sleep", "Rest before the next operational shift.", "sleep", "REST", {
+      tutorial: "rest",
+    }),
+    wait("Complete the rest interval.", 12, "sleep"),
+    task("REST", "Wake and begin the next shift.", undefined, "wake"),
+  ]);
+const powerDecision = () =>
+  decision("Resolve the power-bus warning.", "power", "power", [
+    {
+      action: "eventReset",
+      title: "Isolate and repair the bus",
+      detail: "Use 1 spare part. Recover full power and preserve science.",
+    },
+    {
+      action: "eventReroute",
+      title: "Bypass the failed branch",
+      detail: "Keep the spare part; lose 0.12 kWh and 8 science points.",
+    },
+  ]);
+const returnHome = () =>
+  phase("RETURN & RECOVERY", [
+    use(
+      "communications",
+      "Transmit the mission science and recovery plan.",
+      "comms",
+      "TRANSMIT",
+    ),
+    use("cockpit", "Start the controlled return burn.", "returnBurn"),
+    wait("Monitor the return corridor.", 12, "cockpit"),
+    use(
+      "cockpit",
+      "Confirm vehicle recovery and close the mission.",
+      "recoverVehicle",
+    ),
+  ]);
+function full(
+  level: number,
+  chapter: string,
+  title: string,
+  destination: Destination,
+  tasks: Objective[],
+  extra: Partial<MissionDefinition>,
+): MissionDefinition {
+  return {
+    ...def(level, chapter, title, destination, tasks, extra),
+    id: `mission-${level}`,
+    revision: 3,
+    startsLanded: false,
+    implemented: level <= 4,
+    phases: [...new Set(tasks.map((t) => t.phase || "OPERATIONS"))],
+    prerequisites: level === 1 ? [] : [`mission-${level - 1}`],
+    duration: 180,
+    expectedMinutes: "15–30 min · first flight target",
+    funding: 100,
+    reward: 110,
+    optional: [],
+    unlocks: [],
+    ...extra,
+  };
+}
 export const missions: MissionDefinition[] = [
-  def(
+  full(
     1,
     "training",
-    "Flight Check",
+    "Orbital Qualification",
     "earth",
     [
-      go("cockpit", "Go to the navigation console."),
-      use("cockpit", "Check the flight trajectory.", "course", "INTERACT", {
-        tutorial: "navigation",
-      }),
+      ...launch(),
+      ...phase("ORBITAL QUALIFICATION", [
+        use("science", "Map the ocean calibration target.", "science"),
+        decision("Choose the orbital power plan.", "power", undefined, [
+          {
+            action: "powerSafe",
+            title: "Conserve power",
+            detail: "Save 0.10 kWh; take a lower-yield observation.",
+          },
+          {
+            action: "powerScience",
+            title: "Run the high-resolution observation",
+            detail: "Spend 0.16 kWh for 20 extra science.",
+          },
+        ]),
+        ...meals(),
+        use("sleep", "Begin a short recovery break.", "sleep", "REST"),
+        wait("Finish the recovery break.", 10, "sleep"),
+        task("REST", "Wake for the final systems check.", undefined, "wake"),
+        powerDecision(),
+        use("science", "Validate the recovered science channel.", "science"),
+      ]),
+      ...returnHome(),
     ],
     {
-      description: "Learn where to go and how to use a console.",
-      majorObjective: "Verify the flight trajectory.",
+      description:
+        "Qualify the explorer for independent operations. Fly an ascent, operate the cabin, resolve a power warning and bring the vehicle home.",
+      majorObjective: "Launch, qualify the spacecraft and recover safely.",
+      funding: 80,
+      reward: 110,
+      experiments: ["Orbital calibration"],
+      unlocks: ["highGain"],
+      optional: [
+        {
+          id: "reserve",
+          title: "Power discipline",
+          description: "Recover with at least 70% battery reserve.",
+          condition: "battery",
+          value: 0.7,
+          reward: 2,
+        },
+        {
+          id: "package",
+          title: "Extra calibration package",
+          description:
+            "At the science console, spend 0.10 kWh and crew energy on a second spectral calibration before returning.",
+          action: "recoverPackage",
+          site: "science",
+          reward: 3,
+        },
+      ],
     },
   ),
-  def(
+  full(
     2,
     "training",
-    "Crew Survival",
+    "Satellite Repair",
     "earth",
     [
-      go("galley", "Go to food and water storage."),
-      use("galley", "Take one meal pack.", "takeMeal", "COLLECT", {
-        tutorial: "food",
-      }),
-      use("galley", "Fill your water bottle.", "fill", "COLLECT", {
-        tutorial: "water",
-      }),
-      task("EAT", "Eat your carried meal.", undefined, "eat", {
-        tutorial: "inventory",
-      }),
-      task("DRINK", "Drink from your water bottle.", undefined, "drink"),
+      ...launch(),
+      ...phase("RENDEZVOUS", [
+        use("communications", "Locate the disabled relay satellite.", "comms"),
+        use("cockpit", "Match the satellite approach corridor.", "approach"),
+        wait("Coast to the tethered work platform.", 18, "cockpit"),
+        use(
+          "power",
+          "Read the satellite fault telemetry.",
+          "diagnoseSatellite",
+        ),
+      ]),
+      ...phase("EVA PREPARATION", evaOut()),
+      ...phase("SATELLITE SERVICE", [
+        use(
+          "survey",
+          "Inspect the relay power connector.",
+          "diagnoseSatellite",
+        ),
+        use(
+          "survey",
+          "Replace the damaged satellite connector.",
+          "repairSatellite",
+          "REPAIR",
+        ),
+        use("survey", "Align and test the satellite radio.", "testSatellite"),
+      ]),
+      ...phase("EVA RETURN", evaReturn()),
+      ...phase("CABIN RECOVERY", [powerDecision(), ...meals()]),
+      ...returnHome(),
     ],
     {
-      description: "Collect real supplies and use them from your inventory.",
-      majorObjective: "Eat a meal and drink water.",
-    },
-  ),
-  def(
-    3,
-    "training",
-    "Science Operations",
-    "earth",
-    [
-      go("science", "Go to the science station."),
-      use(
-        "science",
-        "Collect three sets of observations.",
-        "science",
-        "INTERACT",
-        { count: 3, tutorial: "science" },
-      ),
-      go("sleep", "Go to the sleeping berth."),
-      use("sleep", "Start a short rest.", "sleep", "REST", {
-        tutorial: "rest",
-      }),
-      task("WAIT", "Rest for five mission minutes.", "sleep", undefined, {
-        condition: "minutes",
-        value: 5,
-      }),
-      task("REST", "Wake up and return to duty.", undefined, "wake"),
-    ],
-    {
-      majorObjective: "Collect science data and practise resting.",
-      experiments: ["Cabin water-search observations"],
-    },
-  ),
-  def(
-    4,
-    "training",
-    "Communications",
-    "earth",
-    [
-      go("science", "Go to the science station."),
-      use(
-        "science",
-        "Collect three sets of observations.",
-        "science",
-        "INTERACT",
-        { count: 3 },
-      ),
-      go("communications", "Go to communications."),
-      use(
-        "communications",
-        "Restore the radio link and send the data.",
-        "comms",
-        "TRANSMIT",
-        { tutorial: "comms" },
-      ),
-    ],
-    {
-      hazards: [{ type: "comms", at: 0 }],
-      majorObjective: "Transmit observations to Earth.",
-    },
-  ),
-  def(
-    5,
-    "training",
-    "Emergency Repair",
-    "earth",
-    [
-      go("power", "Go to the power station."),
-      use("power", "Read the power fault.", "diagnose", "INTERACT", {
-        tutorial: "power",
-      }),
-      go("equipment", "Go to the equipment locker."),
-      use("equipment", "Collect your repair toolkit.", "tools", "COLLECT"),
-      go("power", "Return to the power station."),
-      use(
-        "power",
-        "Repair the faulty unit. One spare part is used.",
-        "repair",
-        "REPAIR",
-        { tutorial: "repair" },
-      ),
-    ],
-    {
-      hazards: [{ type: "power", at: 0 }],
-      majorObjective: "Repair a spacecraft power failure.",
-    },
-  ),
-  def(
-    6,
-    "training",
-    "EVA Training",
-    "earth",
-    [
-      ...evaOut(),
-      use(
-        "survey",
-        "Photograph the external training target.",
-        "photo",
-        "USE_ITEM",
-      ),
-      ...evaReturn(),
-    ],
-    {
+      description:
+        "A relay satellite has lost power and its downlink. Match its orbit and service it from a tethered EVA platform before returning to Earth.",
+      majorObjective:
+        "Restore an independent satellite and recover the service crew.",
       eva: true,
-      surface: true,
-      requiredEquipment: ["suit", "camera"],
-      phases: [
-        "EVA PREPARATION",
-        "EVA",
-        "RETURN TO SPACECRAFT",
-        "MISSION REPORT",
+      requiredEquipment: ["suit", "repair"],
+      funding: 100,
+      reward: 125,
+      experiments: ["Relay diagnostics"],
+      unlocks: ["reserveBattery", "improvedSuit"],
+      optional: [
+        {
+          id: "secondary",
+          title: "Repair the backup antenna",
+          description:
+            "Outside at the satellite: spend a second spare part and 0.06 suit power to restore redundancy.",
+          action: "repairSecondary",
+          site: "survey",
+          gear: "repair",
+          reward: 4,
+        },
+        {
+          id: "cleanEva",
+          title: "EVA reserve",
+          description:
+            "Recover with at least 75% suit oxygen and battery remaining.",
+          condition: "suit",
+          value: 0.75,
+          reward: 3,
+        },
       ],
-      majorObjective: "Complete an outside training walk and return safely.",
-      experiments: ["Training target photograph"],
     },
   ),
-  def(
-    7,
+  full(
+    3,
     "lunar",
-    "Lunar Approach",
+    "Lunar Science Landing",
     "moon",
     [
-      go("power", "Go to the power station."),
-      use(
-        "power",
-        "Check power and life support.",
-        "checkSystems",
-        "INTERACT",
-        { tutorial: "environment" },
-      ),
-      go("cockpit", "Go to the navigation console."),
-      use("cockpit", "Prepare the lunar approach.", "approach"),
-      task("WAIT", "Follow the approach countdown.", "cockpit", undefined, {
-        condition: "minutes",
-        value: 5,
-      }),
+      ...launch(),
+      ...travel(),
+      ...phase("LUNAR APPROACH", [
+        use("communications", "Receive the lunar landing clearance.", "comms"),
+        use("cockpit", "Brake into the lunar approach corridor.", "approach"),
+        wait("Track the descent corridor.", 16, "cockpit"),
+        use(
+          "cockpit",
+          "Commit the fuel reserve to a controlled lunar landing.",
+          "land",
+        ),
+      ]),
+      ...phase("EVA PREPARATION", evaOut()),
+      ...phase("GEOLOGICAL EXPEDITION", [
+        use("survey", "Scan the landing-site geology.", "scan", "SCAN"),
+        use("survey", "Measure the surface temperature.", "measureTemperature"),
+        use("crater", "Collect a crater-rim rock sample.", "sample", "SAMPLE"),
+        use(
+          "crater",
+          "Drill a labelled shallow subsurface sample.",
+          "drill",
+          "SAMPLE",
+        ),
+        use("survey", "Photograph the sample context.", "photo"),
+      ]),
+      ...phase("EVA RETURN", evaReturn()),
+      ...phase("ASCENT PREPARATION", [powerDecision()]),
+      ...returnHome(),
     ],
     {
-      majorObjective: "Prepare the spacecraft for lunar operations.",
-      phases: ["APPROACH", "MISSION REPORT"],
-    },
-  ),
-  def(
-    8,
-    "lunar",
-    "Lunar Landing",
-    "moon",
-    [
-      go("cockpit", "Go to the flight deck."),
-      use("cockpit", "Check the landing systems.", "checkSystems"),
-      use("cockpit", "Begin the guided lunar landing.", "land"),
-      task(
-        "WAIT",
-        "Wait for the landing sequence to finish.",
-        "cockpit",
-        undefined,
-        { condition: "minutes", value: 6 },
-      ),
-      go("communications", "Go to the radio console."),
-      use(
-        "communications",
-        "Confirm touchdown with Earth.",
-        "comms",
-        "TRANSMIT",
-      ),
-    ],
-    {
-      majorObjective: "Land safely and confirm touchdown.",
-      phases: ["LANDING", "MISSION REPORT"],
-    },
-  ),
-  def(
-    9,
-    "lunar",
-    "First Lunar EVA",
-    "moon",
-    [
-      ...evaOut(),
-      use(
-        "survey",
-        "Measure the lunar environment.",
-        "measureTemperature",
-        "USE_ITEM",
-        { tutorial: "field" },
-      ),
-      ...evaReturn(),
-    ],
-    {
+      description:
+        "Investigate a crater rim with independent surface measurements. Plan your reserves, land, sample two layers and return the samples for analysis.",
+      majorObjective:
+        "Return lunar rock and subsurface samples with contextual measurements.",
       eva: true,
       surface: true,
-      requiredEquipment: ["suit", "sensor"],
-      majorObjective: "Walk on the Moon and return through the airlock.",
-      experiments: ["Lunar surface temperature"],
+      requiredEquipment: [
+        "suit",
+        "scanner",
+        "containers",
+        "drill",
+        "sensor",
+        "camera",
+      ],
+      funding: 130,
+      reward: 145,
+      experiments: ["Geology", "Temperature", "Sample context"],
+      unlocks: ["advancedSolar"],
+      optional: [
+        {
+          id: "rare",
+          title: "Distant survey sample",
+          description:
+            "Travel to the relay survey marker and recover a rare sample using containers. Costs suit power and reserve time.",
+          action: "recoverPackage",
+          site: "relay",
+          gear: "containers",
+          reward: 5,
+        },
+        {
+          id: "fuel",
+          title: "Propellant discipline",
+          description: "Recover with more than 20 fuel units.",
+          condition: "fuel",
+          value: 20,
+          reward: 2,
+        },
+      ],
     },
   ),
-  def(
-    10,
+  full(
+    4,
     "lunar",
-    "Geological Survey",
+    "Lunar Research Camp",
     "moon",
     [
-      ...evaOut(),
-      use("survey", "Scan the marked rock.", "scan", "SCAN"),
-      use("survey", "Collect a labelled rock sample.", "sample", "SAMPLE"),
-      go("crater", "Walk to the shallow crater."),
-      use("crater", "Drill a shallow sample.", "drill", "SAMPLE"),
-      use("crater", "Photograph the survey site.", "photo", "USE_ITEM"),
-      ...evaReturn(),
+      ...launch(),
+      ...travel(),
+      ...phase("LUNAR LANDING", [
+        use("cockpit", "Brake into the camp delivery corridor.", "approach"),
+        use("cockpit", "Land the research-camp cargo.", "land"),
+      ]),
+      ...phase("EVA PREPARATION", evaOut()),
+      ...phase("CAMP ESTABLISHMENT", [
+        decision(
+          "Select the camp site after a local survey.",
+          "camp",
+          undefined,
+          [
+            {
+              action: "selectCamp",
+              title: "Sheltered instrument site",
+              detail:
+                "Lower environmental wear; camp solar operates at 80% output.",
+            },
+            {
+              action: "alignSolar",
+              title: "Exposed sunlit site",
+              detail:
+                "Full solar output; suit condition loses 4 points during setup.",
+            },
+          ],
+        ),
+        use(
+          "camp",
+          "Deploy the instrument shelter and work table.",
+          "deployShelter",
+          "DEPLOY",
+        ),
+        use("camp", "Deploy the camp solar array.", "deploySolar", "DEPLOY"),
+        use("camp", "Connect the camp battery.", "deployBattery", "DEPLOY"),
+        use(
+          "camp",
+          "Raise the communications antenna.",
+          "deployAntenna",
+          "DEPLOY",
+        ),
+        use(
+          "camp",
+          "Install the environmental sensor.",
+          "deploySensor",
+          "DEPLOY",
+        ),
+        use(
+          "camp",
+          "Deploy the sample-storage case.",
+          "deployStorage",
+          "DEPLOY",
+        ),
+        use("camp", "Run the first powered field experiment.", "experiment"),
+        decision(
+          "Restore the camp after a connector trip.",
+          "camp",
+          "campPower",
+          [
+            {
+              action: "eventReset",
+              title: "Repair the camp connector",
+              detail: "Use 1 spare part to restore the solar/battery bus.",
+            },
+            {
+              action: "eventReroute",
+              title: "Use the emergency battery bypass",
+              detail:
+                "Lose 0.16 kWh of camp energy and restore service without a spare.",
+            },
+          ],
+        ),
+        use(
+          "camp",
+          "Confirm the recovered environmental experiment.",
+          "experiment",
+        ),
+        use(
+          "camp",
+          "Transmit the camp commissioning results.",
+          "campTransmit",
+          "TRANSMIT",
+        ),
+      ]),
+      ...phase("EVA RETURN", evaReturn()),
+      ...returnHome(),
     ],
     {
-      eva: true,
-      surface: true,
-      requiredEquipment: ["suit", "scanner", "containers", "drill", "camera"],
-      majorObjective: "Collect two different lunar samples.",
-      experiments: ["Rock survey", "Shallow sample"],
-    },
-  ),
-  def(
-    11,
-    "lunar",
-    "Deploy Research Station",
-    "moon",
-    [
-      ...evaOut(),
-      go("camp", "Go to the research camp marker."),
-      use(
-        "camp",
-        "Deploy the research shelter and work table.",
-        "deployShelter",
-        "DEPLOY",
-        { tutorial: "camp" },
-      ),
-      use("camp", "Deploy the solar array.", "deploySolar", "DEPLOY"),
-      use("camp", "Connect the camp battery.", "deployBattery", "DEPLOY"),
-      use("camp", "Set up the camp antenna.", "deployAntenna", "DEPLOY"),
-      use("camp", "Place the environmental sensor.", "deploySensor", "DEPLOY"),
-      use("camp", "Deploy sample storage.", "deployStorage", "DEPLOY"),
-      use("camp", "Run a powered field experiment.", "experiment", "USE_ITEM"),
-      use(
-        "camp",
-        "Send the experiment result to the spacecraft.",
-        "campTransmit",
-        "TRANSMIT",
-      ),
-      ...evaReturn(),
-    ],
-    {
+      description:
+        "Deliver and commission a temporary lunar field base. Choose a site, deploy real equipment, solve a power interruption and return after the station reports its first results.",
+      majorObjective:
+        "Establish and certify a powered, communicating lunar research camp.",
       eva: true,
       surface: true,
       requiredEquipment: [
@@ -547,208 +756,70 @@ export const missions: MissionDefinition[] = [
         "sensor",
         "storage",
         "experiment",
+        "repair",
       ],
-      majorObjective: "Build and operate a working field research camp.",
-      phases: [
-        "EVA PREPARATION",
-        "FIELD EXPEDITION",
-        "RESEARCH CAMP",
-        "RETURN TO SPACECRAFT",
-        "MISSION REPORT",
+      funding: 150,
+      reward: 155,
+      experiments: ["Camp environment", "Power recovery"],
+      optional: [
+        {
+          id: "recover",
+          title: "Recover an abandoned instrument",
+          description:
+            "At the crater rim, use the toolkit to recover a damaged science package. Uses suit power and one spare.",
+          action: "recoverPackage",
+          site: "crater",
+          gear: "repair",
+          reward: 5,
+        },
+        {
+          id: "reserve",
+          title: "Leave a resilient power system",
+          description: "Finish with at least 60% spacecraft battery.",
+          condition: "battery",
+          value: 0.6,
+          reward: 2,
+        },
       ],
-      experiments: ["Camp environment test"],
-    },
-  ),
-  def(
-    12,
-    "lunar",
-    "Lunar Emergency",
-    "moon",
-    [
-      ...evaOut(),
-      go("camp", "Go to the deployed research camp."),
-      use(
-        "camp",
-        "Repair the failed field power connector.",
-        "repairCamp",
-        "REPAIR",
-      ),
-      use(
-        "camp",
-        "Measure radiation at the camp.",
-        "measureRadiation",
-        "USE_ITEM",
-      ),
-      use(
-        "camp",
-        "Confirm that field communications work.",
-        "campTransmit",
-        "TRANSMIT",
-      ),
-      ...evaReturn(),
-    ],
-    {
-      eva: true,
-      surface: true,
-      requiredEquipment: ["suit", "repair", "radiation"],
-      outpost: "existing",
-      majorObjective: "Repair the field base and return safely.",
-      hazards: [{ type: "campPower", at: 0 }],
-      experiments: ["Field radiation survey"],
-    },
-  ),
-  def(
-    13,
-    "mars",
-    "Mars Transfer",
-    "mars",
-    [
-      use("cockpit", "Plan the Mars transfer.", "course"),
-      task("EAT", "Eat a meal.", undefined, "eat"),
-      task("DRINK", "Drink water.", undefined, "drink"),
-    ],
-    {
-      majorObjective: "Manage supplies and navigation on the journey.",
-      duration: 240,
-    },
-  ),
-  def(14, "mars", "Mars Arrival", "mars", [
-    use("power", "Check arrival systems.", "checkSystems"),
-    use("cockpit", "Prepare Mars approach.", "approach"),
-  ]),
-  def(15, "mars", "Mars Landing", "mars", [
-    use("cockpit", "Begin Mars descent.", "land"),
-    task("WAIT", "Complete descent.", "cockpit", undefined, {
-      condition: "minutes",
-      value: 10,
-    }),
-  ]),
-  def(
-    16,
-    "mars",
-    "Search for Water",
-    "mars",
-    [
-      ...evaOut(),
-      use("survey", "Scan for ice signatures.", "scan", "SCAN"),
-      use("crater", "Drill a soil sample.", "drill", "SAMPLE"),
-      ...evaReturn(),
-    ],
-    { eva: true, surface: true, requiredEquipment: scienceGear },
-  ),
-  def(
-    17,
-    "mars",
-    "Establish Research Camp",
-    "mars",
-    [
-      ...evaOut(),
-      use("camp", "Deploy a Mars field base.", "deployShelter", "DEPLOY"),
-      ...evaReturn(),
-    ],
-    {
-      eva: true,
-      surface: true,
-      requiredEquipment: ["suit", "shelter", "solar", "battery", "antenna"],
-    },
-  ),
-  def(
-    18,
-    "mars",
-    "Mars Science Expedition",
-    "mars",
-    [
-      ...evaOut(),
-      use(
-        "survey",
-        "Measure the local environment.",
-        "measureTemperature",
-        "USE_ITEM",
-      ),
-      use("camp", "Run the field experiment.", "experiment", "USE_ITEM"),
-      ...evaReturn(),
-    ],
-    {
-      eva: true,
-      surface: true,
-      requiredEquipment: ["suit", "sensor", "experiment"],
-    },
-  ),
-  def(
-    19,
-    "mars",
-    "Equipment Failure",
-    "mars",
-    [
-      ...evaOut(),
-      use("camp", "Repair field equipment.", "repairCamp", "REPAIR"),
-      ...evaReturn(),
-    ],
-    { eva: true, surface: true, requiredEquipment: ["suit", "repair"] },
-  ),
-  def(
-    20,
-    "mars",
-    "Long-Range Exploration",
-    "mars",
-    [
-      ...evaOut(),
-      go("relay", "Reach the distant survey point."),
-      use("relay", "Scan the distant outcrop.", "scan", "SCAN"),
-      ...evaReturn(),
-    ],
-    {
-      eva: true,
-      surface: true,
-      requiredEquipment: ["suit", "scanner", "antenna"],
-    },
-  ),
-  def(
-    21,
-    "mars",
-    "Return to Spacecraft",
-    "mars",
-    [task("RETURN", "Bring the expedition home.", "cockpit")],
-    { eva: true, surface: true, requiredEquipment: ["suit"] },
-  ),
-  def(
-    22,
-    "deep",
-    "Asteroid Rendezvous",
-    "asteroid",
-    [use("cockpit", "Match the asteroid approach.", "approach")],
-    { majorObjective: "Navigate to a small body." },
-  ),
-  def(
-    23,
-    "deep",
-    "Low-Gravity Sampling",
-    "asteroid",
-    [
-      ...evaOut(),
-      use("survey", "Collect a tethered sample.", "sample", "SAMPLE"),
-      ...evaReturn(),
-    ],
-    { eva: true, surface: true, requiredEquipment: ["suit", "containers"] },
-  ),
-  def(
-    24,
-    "deep",
-    "Deep-Space Systems Failure",
-    "deep-space",
-    [
-      use("power", "Diagnose the emergency.", "diagnose"),
-      use("power", "Restore essential power.", "repair", "REPAIR"),
-      use("communications", "Contact Earth.", "comms", "TRANSMIT"),
-    ],
-    {
-      majorObjective: "Handle a major emergency far from Earth.",
-      duration: 360,
     },
   ),
 ];
-export function missionById(id: string) {
-  const m = missions.find((m) => m.id === id);
-  if (!m) throw new Error("Unknown mission: " + id);
+const future: [string, string, Destination][] = [
+  ["Lunar Reconnaissance", "lunar", "moon"],
+  ["Lunar Emergency Rescue", "lunar", "moon"],
+  ["Mars Cargo Preparation", "mars", "mars"],
+  ["Mars Transfer Mission", "mars", "mars"],
+  ["Mars Surface Expedition", "mars", "mars"],
+  ["Search for Subsurface Water", "mars", "mars"],
+  ["Mars Research Camp", "mars", "mars"],
+  ["Mars Camp Emergency", "mars", "mars"],
+  ["Asteroid Rendezvous", "deep", "asteroid"],
+  ["Low-Gravity Sampling", "deep", "asteroid"],
+  ["Deep-Space Rescue", "deep", "deep-space"],
+  ["Outer-System Expedition", "deep", "europa"],
+];
+future.forEach(([title, chapter, destination], i) =>
+  missions.push(
+    full(
+      i + 5,
+      chapter,
+      title,
+      destination,
+      [task("INTERACT", "Mission operations under development.")],
+      {
+        implemented: false,
+        description:
+          "Planned mission — gameplay and destination assets are not implemented.",
+        majorObjective: title,
+        phases: ["PLANNED"],
+        expectedMinutes: "Not playable",
+      },
+    ),
+  ),
+);
+export const missionById = (id: string): MissionDefinition => {
+  const m =
+    missions.find((m) => m.id === id) || oldMissions.find((m) => m.id === id);
+  if (!m) throw Error("Unknown mission: " + id);
   return m;
-}
+};

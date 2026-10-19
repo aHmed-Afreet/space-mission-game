@@ -1,7 +1,14 @@
+import {
+  allocation,
+  launchFinance,
+  technologies,
+  money,
+  type Technology,
+} from "./economy";
 import type { Dispatch, SetStateAction } from "react";
 import { components, rockets, trajectories, type Design } from "../../game";
 import { lifeOptions, type LifeSupport } from "../simulation";
-import { engineeringCampaign } from "./engine";
+import { engineeringCampaign, preflight, type Progress } from "./engine";
 import {
   equipment,
   packMass,
@@ -19,7 +26,13 @@ export default function Preparation({
   onGear,
   mission,
   onLaunch,
+  progress,
+  upgrades,
+  onUpgrade,
 }: {
+  progress: Progress;
+  upgrades: Technology[];
+  onUpgrade: (id: Technology) => void;
   design: Design;
   setDesign: Dispatch<SetStateAction<Design>>;
   life: LifeSupport;
@@ -29,36 +42,128 @@ export default function Preparation({
   mission: MissionDefinition;
   onLaunch: () => void;
 }) {
-  const e = engineeringCampaign(design, life, gear, mission.eva);
-  const blockers = [
-    e.cost > 300 ? "Over the $300M mission budget." : "",
-    e.mass > rockets[design.rocket].payload
-      ? "Payload exceeds your rocket capacity."
+  const e = engineeringCampaign(design, life, gear, mission.eva, upgrades);
+  const blockers = preflight(mission, design, life, gear, progress, upgrades);
+  let finance;
+  try {
+    finance = launchFinance(mission, progress, e.cost);
+  } catch {
+    /* The preflight panel explains affordability. */
+  }
+  const warnings = [
+    e.foodDays * 1440 < mission.duration
+      ? "Food endurance is below the planned mission duration."
       : "",
-    e.power < 0 ? "Add solar panels or reduce electrical demand." : "",
-    e.fuel < 10 ? "Need at least 10 fuel reserve units." : "",
-    !design.counts.antenna ? "Install a communications antenna." : "",
-    !design.counts.spectrometer ? "Install a spectrometer for science." : "",
-    packMass(gear) > PACK_CAPACITY
-      ? "Your field pack is too heavy. Remove optional equipment."
+    e.waterDays * 1440 < mission.duration
+      ? "Water endurance is below the planned mission duration."
       : "",
-    ...mission.requiredEquipment
-      .filter((id) => !gear.includes(id))
-      .map((id) => "Pack the " + equipment[id].name.toLowerCase() + "."),
+    e.oxygenDays * 1440 < mission.duration
+      ? "Oxygen endurance is below the planned mission duration."
+      : "",
+    e.fuel < 25 ? "Fuel margin is small. Avoid unnecessary corrections." : "",
   ].filter(Boolean);
   return (
     <div className="cmd-builder">
       <div className="eyebrow">ORBITAL / COMMANDER MODE</div>
       <h1>{mission.title}</h1>
       <p>
-        LEVEL {mission.level} / {mission.description}
+        MISSION {mission.level} / {mission.description}
       </p>
       <p>
-        Choose supplies and hardware, then prepare the field equipment for this
-        mission. Strategy Mode is unchanged.
+        Read the flight brief, choose your equipment, then board for pre-launch
+        checks. Funding and flight spending are booked only when you commit the
+        mission.
       </p>
+      <div className="mission-brief-grid">
+        <section className="panel">
+          <small>FLIGHT BRIEF</small>
+          <h2>{mission.majorObjective}</h2>
+          <p>{mission.description}</p>
+          <p>
+            Destination: {mission.destination.toUpperCase()} ·{" "}
+            {mission.expectedMinutes}
+          </p>
+          <p>
+            Operational window: {mission.duration} simulated minutes. Mission
+            clocks are compressed for gameplay.
+          </p>
+          <p>
+            Known challenges:{" "}
+            {mission.eva
+              ? "Vacuum, suit reserves, hatch interlocks; "
+              : "Launch guidance, crew readiness; "}
+            {mission.surface
+              ? "lunar descent and surface power."
+              : "electrical faults and propellant margin."}
+          </p>
+          <p>
+            Recommended: required equipment below, 3 spare parts, at least 25
+            fuel reserve and 60% battery for recovery.
+          </p>
+        </section>
+        <section className="panel agency-finance">
+          <small>AGENCY BUDGET</small>
+          <h2>{money(progress.economy.balance)}</h2>
+          <p>
+            Mission allocation <b>+{money(allocation(mission, progress))}</b>
+          </p>
+          <p>
+            Available before purchases{" "}
+            <b>
+              {money(progress.economy.balance + allocation(mission, progress))}
+            </b>
+          </p>
+          <p>
+            Flight configuration <b>{money(e.cost)}</b>
+          </p>
+          <p>
+            Post-purchase balance{" "}
+            <b>
+              {finance
+                ? money(
+                    finance.before +
+                      finance.allocation +
+                      finance.assistance -
+                      finance.cost,
+                  )
+                : "Over budget"}
+            </b>
+          </p>
+          {finance?.assistance ? (
+            <p>
+              Recovery underwriting {money(finance.assistance)} · covers this
+              flight only; excluded from insurance.
+            </p>
+          ) : null}
+          {finance?.practice && (
+            <p>
+              TRAINING REPLAY · no spending, allocation or cash rewards. Scores
+              still count.
+            </p>
+          )}
+        </section>
+      </div>
+      <section className="panel">
+        <h2>Flight phases</h2>
+        <div className="campaign-level-chips">
+          {mission.phases.map((p, i) => (
+            <span key={p}>
+              {i + 1} · {p}
+            </span>
+          ))}
+        </div>
+        <h3>Optional challenges</h3>
+        {mission.optional?.map((o) => (
+          <p key={o.id}>
+            <b>
+              +{money(o.reward)} · {o.title}
+            </b>{" "}
+            — {o.description}
+          </p>
+        ))}
+      </section>
       <section className="cmd-design-summary" aria-live="polite">
-        <strong>${e.cost.toFixed(1)}M / $300M</strong>
+        <strong>${e.cost.toFixed(1)}M flight configuration</strong>
         <strong>
           {e.mass.toFixed(0)} / {rockets[design.rocket].payload} kg
         </strong>
@@ -107,6 +212,34 @@ export default function Preparation({
           </p>
         </section>
       )}
+      <section className="panel">
+        <h2>Technology access</h2>
+        <p>
+          Mission-fit upgrades are purchased for this flight. Research access
+          persists; basic controls are always included.
+        </p>
+        <div className="campaign-gear">
+          {(Object.keys(technologies) as Technology[]).map((id) => (
+            <button
+              key={id}
+              disabled={!progress.economy.unlocks.includes(id)}
+              aria-pressed={upgrades.includes(id)}
+              onClick={() => onUpgrade(id)}
+            >
+              <span>
+                {technologies[id].name}
+                <small>
+                  {progress.economy.unlocks.includes(id)
+                    ? `${money(technologies[id].cost)} · ${technologies[id].mass} kg`
+                    : "LOCKED · complete the preceding research mission"}{" "}
+                  · {technologies[id].description}
+                </small>
+              </span>
+              <b>{upgrades.includes(id) ? "✓" : "+"}</b>
+            </button>
+          ))}
+        </div>
+      </section>
       <details className="campaign-engineering">
         <summary>Spacecraft design & life support · optional details</summary>
         <h2>Spacecraft hardware</h2>
@@ -205,11 +338,19 @@ export default function Preparation({
           <p>
             Food: {e.foodDays.toFixed(1)} days · water: {e.waterDays.toFixed(1)}{" "}
             days · oxygen: {e.oxygenDays.toFixed(1)} days. These are stores for
-            the readiness sortie, not supplies for a full Mars transit. A future
+            this flight, not supplies for a full Mars transit. A future
             full-transit mission will require additional provisioning.
           </p>
         </div>
       </details>
+      {!!warnings.length && (
+        <div className="cmd-alert caution">
+          <strong>Risk advisory · launch is allowed</strong>
+          {warnings.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
+        </div>
+      )}
       {!!blockers.length && (
         <div className="alert">
           <ul>
@@ -226,7 +367,7 @@ export default function Preparation({
           onLaunch();
         }}
       >
-        Start mission →
+        Commit flight & board →
       </button>
     </div>
   );

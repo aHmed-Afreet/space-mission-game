@@ -1,3 +1,5 @@
+import { decodeStore as decodeLegacy } from "./legacySave";
+import { technologies } from "./economy";
 import {
   defaultDesign,
   defaultLife,
@@ -15,16 +17,16 @@ import {
   type Report,
 } from "./engine";
 import { spawn } from "../layout";
-export const SAVE_KEY = "orbital-campaign-v2";
+export const SAVE_KEY = "orbital-campaign-v3";
 export type Store = {
-  version: 2;
+  version: 3;
   design: Design;
   life: LifeSupport;
   progress: Progress;
   session: Session | null;
 };
 export const newStore = (): Store => ({
-  version: 2,
+  version: 3,
   design: structuredClone(defaultDesign),
   life: { ...defaultLife },
   progress: emptyProgress(),
@@ -42,14 +44,28 @@ function configuration(d: any, l: any) {
     )
       throw Error("Invalid hardware");
   for (const o of lifeOptions)
-    if (!finite(l[o.key]) || l[o.key] < o.min || l[o.key] > o.max)
+    if (
+      !finite(l[o.key]) ||
+      l[o.key] < o.min ||
+      l[o.key] > o.max + (o.key === "batteries" ? 1 : 0)
+    )
       throw Error("Invalid life support");
 }
 function validCamp(c: any) {
-  return c &&
-    ["shelter", "solar", "battery", "antenna", "storage", "sensor", "broken", "sent"]
-      .every(k => typeof c[k] === "boolean") &&
-    ["power", "samples", "science"].every(k => finite(c[k]) && c[k] >= 0);
+  return (
+    c &&
+    [
+      "shelter",
+      "solar",
+      "battery",
+      "antenna",
+      "storage",
+      "sensor",
+      "broken",
+      "sent",
+    ].every((k) => typeof c[k] === "boolean") &&
+    ["power", "samples", "science"].every((k) => finite(c[k]) && c[k] >= 0)
+  );
 }
 function report(r: any): r is Report {
   return (
@@ -61,16 +77,52 @@ function report(r: any): r is Report {
     r.score >= 0 &&
     r.score <= 100 &&
     typeof r.rank === "string" &&
-    ["science", "resources", "condition", "crew", "power", "fuel", "communications",
-      "experiments", "samples", "optional", "minutes", "timestamp"]
-      .every(k => finite(r[k]) && r[k] >= 0) &&
-    Array.isArray(r.good) && r.good.every((v: unknown) => typeof v === "string") &&
-    Array.isArray(r.improve) && r.improve.every((v: unknown) => typeof v === "string")
+    !!r.remaining &&
+    [r.remaining.fuel, r.remaining.battery, r.remaining.science].every(
+      finite,
+    ) &&
+    ["SUCCESS", "PARTIAL SUCCESS", "FAILURE"].includes(r.outcome) &&
+    Array.isArray(r.optionalResults) &&
+    Array.isArray(r.unlocks) &&
+    !!r.finance &&
+    [
+      "before",
+      "allocation",
+      "assistance",
+      "cost",
+      "base",
+      "optional",
+      "science",
+      "efficiency",
+      "recovery",
+      "insurance",
+      "repair",
+      "earned",
+      "after",
+    ].every((k) => finite(r.finance[k]) && r.finance[k] >= 0) &&
+    [
+      "science",
+      "resources",
+      "condition",
+      "crew",
+      "power",
+      "fuel",
+      "communications",
+      "experiments",
+      "samples",
+      "optional",
+      "minutes",
+      "timestamp",
+    ].every((k) => finite(r[k]) && r[k] >= 0) &&
+    Array.isArray(r.good) &&
+    r.good.every((v: unknown) => typeof v === "string") &&
+    Array.isArray(r.improve) &&
+    r.improve.every((v: unknown) => typeof v === "string")
   );
 }
 export function decodeStore(raw: string): Store {
   const v = JSON.parse(raw);
-  if (v.version !== 2) throw Error("Unsupported save version");
+  if (v.version !== 3) throw Error("Unsupported save version");
   configuration(v.design, v.life);
   if (
     !v.progress ||
@@ -82,19 +134,87 @@ export function decodeStore(raw: string): Store {
   for (const [id, r] of Object.entries(v.progress.completed))
     if (!report(r) || (r as Report).missionId !== id || !(r as Report).success)
       throw Error("Invalid mission completion");
+  const economy = v.progress.economy;
+  if (
+    !economy ||
+    !finite(economy.balance) ||
+    economy.balance < 0 ||
+    !["funded", "settled", "launched", "unlocks", "ledger"].every((k) =>
+      Array.isArray(economy[k]),
+    )
+  )
+    throw Error("Invalid Agency Budget");
+  if (
+    [...economy.funded, ...economy.settled, ...economy.launched].some(
+      (id) => typeof id !== "string",
+    ) ||
+    economy.unlocks.some((id: string) => !(id in technologies))
+  )
+    throw Error("Invalid economy records");
+  for (const row of economy.ledger)
+    if (
+      typeof row.id !== "string" ||
+      typeof row.label !== "string" ||
+      !finite(row.amount) ||
+      !finite(row.balance)
+    )
+      throw Error("Invalid funding ledger");
   v.progress.history = v.progress.history.filter(report).slice(0, 100);
   v.progress.tutorials = v.progress.tutorials.filter(
     (s: any) => typeof s === "string",
   );
   v.progress.outposts = v.progress.outposts || {};
   for (const [destination, camp] of Object.entries(v.progress.outposts))
-    if (!["earth", "moon", "mars", "asteroid", "deep-space", "europa"].includes(destination) || !validCamp(camp))
+    if (
+      !["earth", "moon", "mars", "asteroid", "deep-space", "europa"].includes(
+        destination,
+      ) ||
+      !validCamp(camp)
+    )
       throw Error("Invalid saved outpost");
   if (v.session) {
     const s = v.session as Session;
     const m = missionById(s.missionId);
     configuration(s.design, s.life);
     if (
+      !Array.isArray(s.upgrades) ||
+      s.upgrades.some((id) => !(id in technologies)) ||
+      !Array.isArray(s.optionalDone) ||
+      ![1, 5, 20, 100].includes(s.simRate) ||
+      !s.flight ||
+      !s.systems ||
+      !s.finance
+    )
+      throw Error("Invalid flight checkpoint");
+    if (
+      !["pad", "ascent", "orbit", "returning", "recovered"].includes(
+        s.flight.status,
+      ) ||
+      !Array.isArray(s.flight.checks) ||
+      [
+        s.flight.altitude,
+        s.flight.velocity,
+        s.flight.throttle,
+        s.flight.pitch,
+        s.flight.countdown,
+        s.systems.campExposure,
+      ].some((v) => !finite(v))
+    )
+      throw Error("Invalid flight controls");
+    if (
+      [
+        s.finance.before,
+        s.finance.allocation,
+        s.finance.assistance,
+        s.finance.cost,
+      ].some((v) => !finite(v) || v < 0) ||
+      typeof s.finance.practice !== "boolean"
+    )
+      throw Error("Invalid flight spending");
+    if (!v.progress.economy.launched.includes(s.id))
+      throw Error("Mission spending record missing");
+    if (
+      !missions.some((candidate) => candidate.id === s.missionId) ||
       !m.implemented ||
       s.revision !== m.revision ||
       !s.state ||
@@ -160,12 +280,20 @@ export function decodeStore(raw: string): Store {
       if (!finite(s.camp[k]) || s.camp[k] < 0)
         throw Error("Invalid camp resources");
     if (
-      ["inner", "outer"].some(k => typeof (s.airlock as any)[k] !== "boolean") ||
+      ["inner", "outer"].some(
+        (k) => typeof (s.airlock as any)[k] !== "boolean",
+      ) ||
       typeof s.suit.equipped !== "boolean" ||
       typeof s.suit.oxygenChecked !== "boolean" ||
       typeof s.suit.powerChecked !== "boolean"
-    ) throw Error("Invalid suit/airlock state");
-    if (!finite(s.airlock.pressure) || s.airlock.pressure < 0 || s.airlock.pressure > 101.3 || !Array.isArray(s.state.log))
+    )
+      throw Error("Invalid suit/airlock state");
+    if (
+      !finite(s.airlock.pressure) ||
+      s.airlock.pressure < 0 ||
+      s.airlock.pressure > 101.3 ||
+      !Array.isArray(s.state.log)
+    )
       throw Error("Invalid airlock/log");
     if (
       (s.airlock.inner && s.airlock.outer) ||
@@ -178,7 +306,14 @@ export function decodeStore(raw: string): Store {
     if (!campaignWalkable(s.position.x, s.position.z, s))
       s.position = { ...spawn };
     s.state.paused = true;
-    if (s.report && !report(s.report)) throw Error("Invalid report");
+    s.simRate = 1;
+    if (
+      s.report &&
+      (!report(s.report) ||
+        s.report.runId !== s.id ||
+        s.report.missionId !== s.missionId)
+    )
+      throw Error("Invalid report");
   }
   return v as Store;
 }
@@ -203,7 +338,7 @@ export function loadStore(storage: Pick<Storage, "getItem">): {
     const raw = storage.getItem(SAVE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.version > 2)
+      if (parsed.version > 3)
         return {
           store: newStore(),
           warning:
@@ -233,6 +368,46 @@ export function loadStore(storage: Pick<Storage, "getItem">): {
     };
   }
   const store = newStore();
+  try {
+    const older = storage.getItem("orbital-campaign-v2");
+    if (older) {
+      const previous = decodeLegacy(older);
+      store.design = previous.design;
+      store.life = previous.life;
+      store.progress.outposts = previous.progress.outposts;
+      const trainingComplete = [1, 2, 3, 4, 5, 6].every(
+        (n) => previous.progress.completed[`level-${n}`],
+      );
+      const lunarComplete = [7, 8, 9, 10, 11, 12].every(
+        (n) => previous.progress.completed[`level-${n}`],
+      );
+      store.progress.archive = {
+        completed: previous.progress.completed,
+        history: previous.progress.history,
+        checkpoint: previous.session,
+        chapters: [
+          ...(trainingComplete ? ["Command Training"] : []),
+          ...(lunarComplete ? ["Lunar Expedition"] : []),
+        ],
+      };
+      if (trainingComplete) store.progress.economy.unlocks = ["highGain"];
+      return {
+        store,
+        warning:
+          "Previous task-level achievements, results, spacecraft and checkpoint are archived. Complete missions now begin with Orbital Qualification. The original v2 save is untouched.",
+        readOnly: false,
+        legacy,
+      };
+    }
+  } catch {
+    return {
+      store,
+      warning:
+        "The older campaign could not be migrated safely. It remains untouched; a new campaign is available.",
+      readOnly: false,
+      legacy,
+    };
+  }
   if (legacy) {
     try {
       const old = JSON.parse(storage.getItem("orbital-commander-v1")!);
@@ -260,8 +435,11 @@ export function persist(
     let version = 0;
     try {
       version = JSON.parse(previous).version;
-    } catch { /* Replace corrupt data only after validating the new checkpoint. */ }
-    if (version > 2) throw Error("A newer campaign save cannot be overwritten.");
+    } catch {
+      /* Replace corrupt data only after validating the new checkpoint. */
+    }
+    if (version > 3)
+      throw Error("A newer campaign save cannot be overwritten.");
     try {
       decodeStore(previous);
       storage.setItem(SAVE_KEY + ".backup", previous);

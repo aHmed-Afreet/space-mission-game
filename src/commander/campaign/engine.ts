@@ -1,4 +1,16 @@
 import {
+  initialEconomy,
+  launchFinance,
+  bookLaunch,
+  financialReport,
+  settle,
+  technologies,
+  type Technology,
+  type Economy,
+  type LaunchFinance,
+  type FinancialReport,
+} from "./economy";
+import {
   act,
   tick,
   newMission,
@@ -9,7 +21,7 @@ import {
   type Action,
 } from "../simulation";
 import { deck, spawn, nearby, walkable, type Position } from "../layout";
-import type { Design } from "../../game";
+import { rockets, type Design } from "../../game";
 import {
   missionById,
   missions,
@@ -93,6 +105,26 @@ export type Session = {
   completionMessage: string;
   report?: Report;
   notice: string;
+  finance: LaunchFinance;
+  upgrades: Technology[];
+  optionalDone: string[];
+  simRate: number;
+  flight: {
+    status: "pad" | "ascent" | "orbit" | "returning" | "recovered";
+    countdown: number;
+    altitude: number;
+    velocity: number;
+    throttle: number;
+    pitch: number;
+    separated: boolean;
+    checks: string[];
+  };
+  systems: {
+    satelliteDiagnosed: boolean;
+    satelliteRepaired: boolean;
+    satelliteOnline: boolean;
+    campExposure: number;
+  };
 };
 export type Report = {
   missionId: string;
@@ -114,18 +146,36 @@ export type Report = {
   good: string[];
   improve: string[];
   timestamp: number;
+  outcome: "SUCCESS" | "PARTIAL SUCCESS" | "FAILURE";
+  finance?: FinancialReport;
+  optionalResults: {
+    id: string;
+    title: string;
+    complete: boolean;
+    reward: number;
+  }[];
+  unlocks: Technology[];
+  remaining: { fuel: number; battery: number; science: number };
 };
 export type Progress = {
   completed: Record<string, Report>;
   history: Report[];
   tutorials: string[];
   outposts: Partial<Record<Destination, Camp>>;
+  economy: Economy;
+  archive?: {
+    completed: Record<string, unknown>;
+    history: unknown[];
+    checkpoint?: unknown;
+    chapters: string[];
+  };
 };
 export const emptyProgress = (): Progress => ({
   completed: {},
   history: [],
   tutorials: [],
   outposts: {},
+  economy: initialEconomy(),
 });
 export const fieldSites: Record<
   string,
@@ -143,7 +193,7 @@ export function sitePosition(site: Site, destination: Destination) {
   if (site in deck) return deck[site as Area];
   const p = fieldSites[site];
   if (destination === "earth" && site === "survey")
-    return { x: 1.8, z: 14, name: "Training target" };
+    return { x: 1.8, z: 14, name: "Orbital work platform" };
   return p;
 }
 export const distance = (a: Position, b: { x: number; z: number }) =>
@@ -159,6 +209,7 @@ export function atSite(s: Session, site: Site) {
 export const outside = (s: Session) => s.position.z > 10.4;
 export function canStart(m: MissionDefinition, p: Progress) {
   return (
+    missions.some((candidate) => candidate.id === m.id) &&
     m.implemented &&
     environments[m.destination].available &&
     m.prerequisites.every((id) => !!p.completed[id])
@@ -169,6 +220,7 @@ export function engineeringCampaign(
   life: LifeSupport,
   gear: EquipmentId[],
   eva: boolean,
+  upgrades: Technology[] = [],
 ) {
   const e = engineering(design, life);
   return {
@@ -176,9 +228,16 @@ export function engineeringCampaign(
     mass:
       e.mass +
       gear.reduce((sum, id) => sum + equipment[id].mass, 0) +
-      (eva ? 140 : 0),
-    cost: e.cost + packCost(gear) + (eva ? 12 : 0),
-    power: e.power - (eva ? 10 : 0),
+      (eva ? 140 : 0) +
+      upgrades.reduce((n, id) => n + technologies[id].mass, 0),
+    cost:
+      e.cost +
+      packCost(gear) +
+      (eva ? 12 : 0) +
+      upgrades.reduce((n, id) => n + technologies[id].cost, 0),
+    power:
+      e.power - (eva ? 10 : 0) + (upgrades.includes("advancedSolar") ? 60 : 0),
+    capacity: e.capacity + (upgrades.includes("reserveBattery") ? 1 : 0),
   };
 }
 export function createSession(
@@ -187,10 +246,17 @@ export function createSession(
   l: LifeSupport,
   gear: EquipmentId[],
   p: Progress,
+  upgrades: Technology[] = [],
 ): Session {
   if (!canStart(m, p))
     throw new Error("This mission is locked or not implemented.");
-  const state = newMission(d, l);
+  const problems = preflight(m, d, l, gear, p, upgrades);
+  if (problems.length) throw Error(problems.join(" "));
+  const effectiveLife = {
+    ...l,
+    batteries: l.batteries + (upgrades.includes("reserveBattery") ? 1 : 0),
+  };
+  const state = newMission(d, effectiveLife);
   state.notice =
     "Follow the current task. Use the waypoint to find the right equipment.";
   const s: Session = {
@@ -199,7 +265,7 @@ export function createSession(
     revision: m.revision,
     state,
     design: structuredClone(d),
-    life: { ...l },
+    life: effectiveLife,
     selectedGear: [...gear],
     pack: [],
     position: { ...spawn },
@@ -241,8 +307,82 @@ export function createSession(
     eventIds: [],
     completionMessage: "",
     notice: state.notice,
+    finance: launchFinance(
+      m,
+      p,
+      engineeringCampaign(d, l, gear, m.eva, upgrades).cost,
+    ),
+    upgrades: [...upgrades],
+    optionalDone: [],
+    simRate: 1,
+    flight: {
+      status: "pad",
+      countdown: -1,
+      altitude: 0,
+      velocity: 0,
+      throttle: 0.85,
+      pitch: 90,
+      separated: false,
+      checks: [],
+    },
+    systems: {
+      satelliteDiagnosed: false,
+      satelliteRepaired: false,
+      satelliteOnline: false,
+      campExposure: 1,
+    },
   };
   return applyEvents(s);
+}
+export function launchMission(
+  m: MissionDefinition,
+  d: Design,
+  l: LifeSupport,
+  gear: EquipmentId[],
+  p: Progress,
+  upgrades: Technology[] = [],
+) {
+  const session = createSession(m, d, l, gear, p, upgrades);
+  return { session, progress: bookLaunch(p, session) };
+}
+export function preflight(
+  m: MissionDefinition,
+  d: Design,
+  l: LifeSupport,
+  gear: EquipmentId[],
+  p: Progress,
+  upgrades: Technology[] = [],
+) {
+  const e = engineeringCampaign(d, l, gear, m.eva, upgrades);
+  const errors: string[] = [];
+  if (!canStart(m, p)) errors.push("Mission is locked or planned.");
+  if (
+    new Set(gear).size !== gear.length ||
+    gear.some((g) => !m.allowedEquipment.includes(g))
+  )
+    errors.push("Invalid equipment loadout.");
+  if (
+    new Set(upgrades).size !== upgrades.length ||
+    upgrades.some((id) => !p.economy.unlocks.includes(id))
+  )
+    errors.push("Technology is not yet unlocked.");
+  if (e.mass > rockets[d.rocket].payload)
+    errors.push("Payload exceeds rocket capacity.");
+  if (e.power < 0)
+    errors.push("Electrical generation cannot support essential systems.");
+  if (e.fuel < (m.surface ? 20 : 12))
+    errors.push("Insufficient fuel for the full mission.");
+  if (!d.counts.antenna || !d.counts.spectrometer)
+    errors.push("An antenna and science spectrometer are required.");
+  if (packMass(gear) > PACK_CAPACITY) errors.push("EVA pack exceeds capacity.");
+  for (const id of m.requiredEquipment)
+    if (!gear.includes(id)) errors.push(`Pack the ${equipment[id].name}.`);
+  try {
+    launchFinance(m, p, e.cost);
+  } catch (error) {
+    errors.push((error as Error).message);
+  }
+  return errors;
 }
 export function currentObjective(s: Session) {
   return missionById(s.missionId).objectives[s.objective];
@@ -272,6 +412,7 @@ function advance(s: Session): Session {
     objectiveStarted: s.state.minutes,
     completed: [...s.completed, o.id],
     completionMessage: `${o.title} ✓`,
+    simRate: 1,
   };
   n = logged(
     n,
@@ -283,7 +424,7 @@ function advance(s: Session): Session {
     n.report = makeReport(n, true);
     n.notice = "Mission complete. Review your report to continue.";
   }
-  return n;
+  return applyEvents(n);
 }
 export function evaluate(s: Session): Session {
   if (s.report || s.state.paused || s.state.ended) return s;
@@ -307,13 +448,19 @@ export function evaluate(s: Session): Session {
     });
   if (o.type === "WAIT") {
     const passed =
-      o.condition === "vacuum"
-        ? s.airlock.pressure <= 0 && !s.airlock.cycling
-        : o.condition === "pressurized"
-          ? s.airlock.pressure >= 101.3 && !s.airlock.cycling
-          : o.condition === "science"
-            ? s.state.science >= (o.value || 30)
-            : s.state.minutes - s.objectiveStarted >= (o.value || 1);
+      o.condition === "countdown"
+        ? s.flight.countdown === 0
+        : o.condition === "staging"
+          ? s.flight.altitude >= 12
+          : o.condition === "orbitHeight"
+            ? s.flight.altitude >= 180 && s.flight.velocity >= 7.8
+            : o.condition === "vacuum"
+              ? s.airlock.pressure <= 0 && !s.airlock.cycling
+              : o.condition === "pressurized"
+                ? s.airlock.pressure >= 101.3 && !s.airlock.cycling
+                : o.condition === "science"
+                  ? s.state.science >= (o.value || 30)
+                  : s.state.minutes - s.objectiveStarted >= (o.value || 1);
     if (passed) return advance(s);
   }
   return s;
@@ -342,10 +489,33 @@ function applyEvents(s: Session) {
       );
     }
   }
+  const taskEvent = currentObjective(n);
+  if (taskEvent?.event && !n.eventIds.includes(taskEvent.id)) {
+    n = {
+      ...n,
+      simRate: 1,
+      eventIds: [...n.eventIds, taskEvent.id],
+      state: { ...n.state },
+      camp: { ...n.camp },
+    };
+    if (taskEvent.event === "power") n.state.malfunction = true;
+    if (taskEvent.event === "comms") n.state.communications = false;
+    if (taskEvent.event === "campPower") n.camp.broken = true;
+    n = logged(n, "Operational warning: " + taskEvent.title);
+  }
   return n;
 }
 export function tickSession(s: Session, minutes = 1): Session {
   if (s.state.paused || s.state.ended || s.report) return s;
+  const waiting = currentObjective(s);
+  if (waiting?.type === "WAIT" && waiting.condition === "minutes")
+    minutes = Math.min(
+      minutes,
+      Math.max(
+        0.01,
+        (waiting.value || 1) - (s.state.minutes - s.objectiveStarted),
+      ),
+    );
   const env = environments[missionById(s.missionId).destination];
   let n = {
     ...s,
@@ -353,8 +523,11 @@ export function tickSession(s: Session, minutes = 1): Session {
     airlock: { ...s.airlock },
     suit: { ...s.suit },
     camp: { ...s.camp },
+    flight: { ...s.flight },
   };
-  const solarDelta = (s.design.counts.solar || 0) * 85 * (env.solar - 1);
+  const solarDelta =
+    (s.design.counts.solar || 0) * 85 * (env.solar - 1) +
+    (s.upgrades.includes("advancedSolar") ? 60 * env.solar : 0);
   n.state.battery = Math.max(
     0,
     Math.min(
@@ -364,6 +537,34 @@ export function tickSession(s: Session, minutes = 1): Session {
           60000,
     ),
   );
+  const seconds = minutes * 2;
+  if (n.flight.status === "pad" && n.flight.countdown > 0)
+    n.flight.countdown = Math.max(0, n.flight.countdown - seconds);
+  if (n.flight.status === "ascent") {
+    const targetPitch = Math.max(25, 90 - n.flight.altitude * 0.3);
+    const guidance = Math.max(
+      0.25,
+      1 - Math.abs(targetPitch - n.flight.pitch) / 100,
+    );
+    n.flight.velocity = Math.max(
+      0,
+      n.flight.velocity + (n.flight.throttle * 0.18 - 0.025) * seconds,
+    );
+    n.flight.altitude += n.flight.velocity * guidance * seconds;
+    n.state.fuel = Math.max(
+      0,
+      n.state.fuel - n.flight.throttle * 0.035 * seconds,
+    );
+    if (n.state.fuel <= 0) {
+      n.state.ended = true;
+      n.notice = "Launch aborted: propellant exhausted.";
+    }
+    if (
+      (!n.flight.separated && n.flight.altitude >= 12) ||
+      n.flight.altitude >= 180
+    )
+      n.simRate = 1;
+  }
   if (s.airlock.cycling) {
     const delta = (101.3 / 3) * minutes;
     n.airlock.pressure = Math.max(
@@ -395,7 +596,9 @@ export function tickSession(s: Session, minutes = 1): Session {
   }
   if (n.camp.battery) {
     const watts =
-      (n.camp.solar && !n.camp.broken ? 80 * env.solar : 0) -
+      (n.camp.solar && !n.camp.broken
+        ? 80 * env.solar * s.systems.campExposure
+        : 0) -
       (n.camp.antenna ? 5 : 0) -
       (n.camp.sensor ? 5 : 0);
     n.camp.power = Math.max(
@@ -404,6 +607,15 @@ export function tickSession(s: Session, minutes = 1): Session {
     );
   }
   n = applyEvents(n);
+  if (
+    n.state.malfunction ||
+    n.camp.broken ||
+    n.state.battery / n.life.batteries < 0.2 ||
+    n.state.oxygen < 0.5 ||
+    n.state.energy < 25 ||
+    !n.state.communications
+  )
+    n.simRate = 1;
   if (n.state.ended) {
     n.report = makeReport(n, false);
     n.notice = n.notice.startsWith("EVA safety") ? n.notice : n.state.notice;
@@ -412,8 +624,17 @@ export function tickSession(s: Session, minutes = 1): Session {
   return evaluate(n);
 }
 export function moveSession(s: Session, p: Position) {
-  if (s.state.paused || s.state.sleeping || s.state.ended) return s;
-  for (const [z, open] of [[7.75, s.airlock.inner], [10.25, s.airlock.outer]] as const) {
+  if (
+    s.state.paused ||
+    s.state.sleeping ||
+    s.state.ended ||
+    s.flight?.status === "ascent"
+  )
+    return s;
+  for (const [z, open] of [
+    [7.75, s.airlock.inner],
+    [10.25, s.airlock.outer],
+  ] as const) {
     if ((s.position.z - z) * (p.z - z) < 0 && !open) return s;
   }
   if (!campaignWalkable(p.x, p.z, s)) return s;
@@ -434,6 +655,12 @@ export function campaignWalkable(x: number, z: number, s: Session) {
     if (Math.abs(z - 10.25) < 0.22 && !s.airlock.outer) return false;
     return true;
   }
+  if (
+    s.flight &&
+    (s.flight.status !== "orbit" ||
+      (missionById(s.missionId).surface && !s.landed))
+  )
+    return false;
   if (!s.suit.equipped || (s.airlock.pressure > 1 && s.airlock.outer))
     return false;
   const dest = missionById(s.missionId).destination;
@@ -478,13 +705,50 @@ export function command(s: Session, action: CampaignAction): Session {
   const m = missionById(s.missionId),
     o = currentObjective(s);
   if (!o) return s;
-  const matching = o.action === action;
+  const matching =
+    o.action === action || !!o.choices?.some((c) => c.action === action);
   if (matching && o.type === "TRANSMIT" && s.pendingTransmit > 0)
     return say(s, "The message is sending. Wait for confirmation.");
   const locked = m.objectives
     .slice(s.objective + 1)
-    .some((v) => v.action === action);
+    .some(
+      (v) => v.action === action || v.choices?.some((c) => c.action === action),
+    );
   if (!matching && locked) return say(s, "First: " + o.title);
+  if (
+    !matching &&
+    [
+      "verifyPower",
+      "verifyLife",
+      "verifyRadio",
+      "verifyFuel",
+      "sealHatch",
+      "armLaunch",
+      "ignite",
+      "separate",
+      "insertOrbit",
+      "returnBurn",
+      "recoverVehicle",
+      "powerSafe",
+      "powerScience",
+      "eventReset",
+      "eventReroute",
+      "selectCamp",
+      "alignSolar",
+      "diagnoseSatellite",
+      "repairSatellite",
+      "testSatellite",
+      "approach",
+      "land",
+    ].includes(action)
+  )
+    return say(s, "Follow the current flight procedure first.");
+  if (
+    m.surface &&
+    !s.landed &&
+    ["openInner", "vent", "openOuter"].includes(action)
+  )
+    return say(s, "Complete lunar landing before surface EVA.");
   let n: Session = {
     ...s,
     state: { ...s.state },
@@ -492,6 +756,8 @@ export function command(s: Session, action: CampaignAction): Session {
     suit: { ...s.suit },
     camp: { ...s.camp },
     pack: [...s.pack],
+    flight: { ...s.flight, checks: [...s.flight.checks] },
+    systems: { ...s.systems },
   };
   let success = false;
   const fail = (message: string) => say(s, message);
@@ -545,6 +811,151 @@ export function command(s: Session, action: CampaignAction): Session {
       return fail("Suit battery is too low. Return to the spacecraft.");
     if (req) n.suit.power = Math.max(0, n.suit.power - equipment[req].power);
     switch (action) {
+      case "verifyPower":
+      case "verifyLife":
+      case "verifyRadio":
+      case "verifyFuel":
+        if (
+          action === "verifyPower" &&
+          (s.state.battery < 0.1 || s.state.malfunction)
+        )
+          return fail("Electrical power is not ready for launch.");
+        if (
+          action === "verifyLife" &&
+          (s.state.oxygen < 0.3 ||
+            s.state.water <= 0 ||
+            s.state.food <= 0 ||
+            s.state.pressure < 90)
+        )
+          return fail("Restore cabin supplies and pressure before launch.");
+        if (action === "verifyRadio" && !s.state.communications)
+          return fail("Restore the radio link before launch.");
+        if (action === "verifyFuel" && s.state.fuel < 12)
+          return fail("Insufficient propellant for departure and return.");
+        n.flight.checks.push(action);
+        break;
+      case "sealHatch":
+        if (
+          !["verifyPower", "verifyLife", "verifyRadio", "verifyFuel"].every(
+            (k) => s.flight.checks.includes(k),
+          ) ||
+          !s.state.course
+        )
+          return fail(
+            "Finish the power, life support, radio, navigation and fuel checks first.",
+          );
+        n.flight.checks.push("sealed");
+        break;
+      case "armLaunch":
+        if (!s.flight.checks.includes("sealed"))
+          return fail("Seal the vehicle after pre-launch checks.");
+        n.flight.countdown = 6;
+        n.simRate = 1;
+        break;
+      case "ignite":
+        if (s.flight.countdown !== 0 || s.flight.status !== "pad")
+          return fail("Complete the launch countdown first.");
+        n.flight.status = "ascent";
+        n.flight.throttle = 0.85;
+        break;
+      case "separate":
+        if (
+          s.flight.status !== "ascent" ||
+          s.flight.altitude < 12 ||
+          s.flight.separated
+        )
+          return fail("Booster separation is not yet available.");
+        n.flight.separated = true;
+        n.state.fuel -= 1;
+        break;
+      case "insertOrbit":
+        if (
+          !s.flight.separated ||
+          s.flight.altitude < 180 ||
+          s.flight.velocity < 7.8
+        )
+          return fail("Reach 180 km and 7.8 km/s after booster separation.");
+        n.flight.status = "orbit";
+        n.simRate = 1;
+        n.state.fuel -= 1;
+        break;
+      case "returnBurn":
+        if (outside(s) || s.airlock.outer || s.state.fuel < (s.landed ? 6 : 3))
+          return fail(
+            "Return inside, close the outer hatch and reserve enough fuel for recovery.",
+          );
+        n.state.fuel -= s.landed ? 6 : 3;
+        n.landed = false;
+        n.flight.status = "returning";
+        n.simRate = 1;
+        break;
+      case "recoverVehicle":
+        if (s.flight.status !== "returning")
+          return fail("Perform the return burn first.");
+        n.flight.status = "recovered";
+        break;
+      case "powerSafe":
+        n.state.battery = Math.min(s.life.batteries, s.state.battery + 0.1);
+        break;
+      case "powerScience":
+        if (s.state.battery < 0.16)
+          return fail("The high-resolution observation needs 0.16 kWh.");
+        n.state.battery -= 0.16;
+        n.state.science = Math.min(100, s.state.science + 20);
+        break;
+      case "eventReset":
+      case "eventReroute": {
+        const campFault = o.event === "campPower";
+        if (action === "eventReset") {
+          if (s.state.parts < 1)
+            return fail("No spare parts remain. Use the bypass option.");
+          n.state.parts--;
+        } else if (campFault) {
+          if (s.camp.power < 0.16)
+            return fail("The camp bypass needs 0.16 kWh.");
+          n.camp.power -= 0.16;
+        } else {
+          if (s.state.battery < 0.12) return fail("The bypass needs 0.12 kWh.");
+          n.state.battery -= 0.12;
+          n.state.science = Math.max(0, s.state.science - 8);
+        }
+        if (campFault) n.camp.broken = false;
+        else n.state.malfunction = false;
+        n.simRate = 1;
+        break;
+      }
+      case "selectCamp":
+        n.systems.campExposure = 0.8;
+        break;
+      case "alignSolar":
+        n.systems.campExposure = 1;
+        n.suit.condition = Math.max(0, s.suit.condition - 4);
+        break;
+      case "diagnoseSatellite":
+        n.systems.satelliteDiagnosed = true;
+        break;
+      case "repairSatellite":
+        if (
+          !outside(s) ||
+          !atSite(s, "survey") ||
+          !s.pack.includes("repair") ||
+          !s.systems.satelliteDiagnosed ||
+          s.state.parts < 1
+        )
+          return fail(
+            "Inspect the satellite outside with a toolkit and spare part.",
+          );
+        n.state.parts--;
+        n.suit.power = Math.max(0, n.suit.power - 0.05);
+        n.systems.satelliteRepaired = true;
+        break;
+      case "testSatellite":
+        if (!outside(s) || !s.systems.satelliteRepaired)
+          return fail("Repair the satellite connector first.");
+        n.systems.satelliteOnline = true;
+        n.state.science += 30;
+        break;
+
       case "equipSuit":
         if (!atSite(s, "equipment")) return fail("Go to the equipment locker.");
         if (!s.selectedGear.includes("suit"))
@@ -554,16 +965,20 @@ export function command(s: Session, action: CampaignAction): Session {
             "Your field pack is too heavy. Change your loadout before the mission.",
           );
         if (!s.suit.equipped) {
-          if (s.state.oxygen < 0.35 || s.state.battery < 0.15)
+          if (
+            s.state.oxygen <
+              (s.upgrades.includes("improvedSuit") ? 0.5 : 0.35) ||
+            s.state.battery < 0.15
+          )
             return fail(
               "You need 0.35 kg spacecraft oxygen and 0.15 kWh to charge the suit.",
             );
-          n.state.oxygen -= 0.35;
+          n.state.oxygen -= s.upgrades.includes("improvedSuit") ? 0.5 : 0.35;
           n.state.battery -= 0.15;
           n.suit = {
             equipped: true,
-            oxygen: 0.35,
-            power: 1,
+            oxygen: s.upgrades.includes("improvedSuit") ? 0.5 : 0.35,
+            power: s.upgrades.includes("improvedSuit") ? 1.25 : 1,
             condition: 100,
             oxygenChecked: false,
             powerChecked: false,
@@ -760,9 +1175,11 @@ export function command(s: Session, action: CampaignAction): Session {
   }
   if (success && matching) {
     if (o.type === "TRANSMIT") {
-      n.pendingTransmit = s.state.minutes +
+      n.pendingTransmit =
+        s.state.minutes +
         Math.max(1.5, environments[m.destination].communicationDelay / 10) /
-        Math.max(1, s.design.counts.antenna || 1);
+          (Math.max(1, s.design.counts.antenna || 1) *
+            (s.upgrades.includes("highGain") ? 1.5 : 1));
       return say(n, "Sending data. Wait for the radio confirmation.");
     }
     n.repetitions++;
@@ -822,7 +1239,34 @@ export function makeReport(s: Session, success: boolean): Report {
     communications,
     experiments: s.experiments.length,
     samples: s.samples.length + s.camp.samples,
-    optional: 0,
+    remaining: {
+      fuel: s.state.fuel,
+      battery: s.state.battery,
+      science: s.state.science,
+    },
+    optional: completedOptional(s).length,
+    optionalResults: (missionById(s.missionId).optional || []).map((o) => ({
+      id: o.id,
+      title: o.title,
+      reward: o.reward,
+      complete: completedOptional(s).includes(o.id),
+    })),
+    outcome: success
+      ? "SUCCESS"
+      : s.state.science >= 30
+        ? "PARTIAL SUCCESS"
+        : "FAILURE",
+    finance: financialReport(
+      s,
+      missionById(s.missionId),
+      success,
+      (missionById(s.missionId).optional || [])
+        .filter((o) => completedOptional(s).includes(o.id))
+        .reduce((sum, o) => sum + o.reward, 0),
+    ),
+    unlocks: success
+      ? ((missionById(s.missionId).unlocks || []) as Technology[])
+      : [],
     minutes: s.state.minutes,
     good: [
       success
@@ -847,7 +1291,9 @@ export function makeReport(s: Session, success: boolean): Report {
   };
 }
 export function recordReport(p: Progress, s: Session): Progress {
-  if (!s.report || p.history.some((r) => r.runId === s.id)) return p;
+  if (!s.report) return p;
+  p = settle(p, s);
+  if (p.history.some((r) => r.runId === s.id)) return p;
   const r = s.report;
   return {
     ...p,
@@ -882,6 +1328,7 @@ export const unlockedChapters = (p: Progress) => [
 export function currentPhase(s: Session) {
   const m = missionById(s.missionId);
   if (s.report) return "MISSION REPORT";
+  if (currentObjective(s)?.phase) return currentObjective(s)!.phase!;
   const returnIndex = m.objectives.findIndex((o) => o.type === "RETURN");
   if (m.eva && returnIndex >= 0 && s.objective >= returnIndex)
     return "RETURN TO SPACECRAFT";
@@ -894,4 +1341,127 @@ export function currentPhase(s: Session) {
   }
   if (m.eva) return s.position.z > 7.7 ? "EVA" : "EVA PREPARATION";
   return m.phases[0];
+}
+
+export function completedOptional(s: Session): string[] {
+  const m = missionById(s.missionId);
+  return (m.optional || [])
+    .filter(
+      (o) =>
+        s.optionalDone.includes(o.id) ||
+        (o.condition === "battery" &&
+          s.state.battery / s.life.batteries >= (o.value || 0)) ||
+        (o.condition === "fuel" && s.state.fuel > (o.value || 0)) ||
+        (o.condition === "samples" &&
+          s.samples.length + s.camp.samples >= (o.value || 0)) ||
+        (o.condition === "suit" &&
+          s.suit.equipped &&
+          s.suit.oxygen / (s.upgrades.includes("improvedSuit") ? 0.5 : 0.35) >=
+            (o.value || 0) &&
+          s.suit.power >= (o.value || 0)),
+    )
+    .map((o) => o.id);
+}
+export function optionalCommand(s: Session, id: string): Session {
+  if (
+    s.state.paused ||
+    s.state.sleeping ||
+    s.report ||
+    s.state.ended ||
+    s.flight.status !== "orbit"
+  )
+    return s;
+  const o = missionById(s.missionId).optional?.find((o) => o.id === id);
+  if (!o?.action || s.optionalDone.includes(id))
+    return say(s, "This optional operation is unavailable or complete.");
+  if (o.site && !atSite(s, o.site))
+    return say(
+      s,
+      "Optional task: go to " +
+        sitePosition(o.site, missionById(s.missionId).destination).name +
+        ".",
+    );
+  if (o.gear && !s.pack.includes(o.gear))
+    return say(
+      s,
+      "This optional task needs the " + equipment[o.gear].name + ".",
+    );
+  const exterior = o.site && !(o.site in deck);
+  if (exterior && (!outside(s) || !s.suit.equipped || s.suit.power < 0.06))
+    return say(
+      s,
+      "This task requires an EVA suit with power, outside the spacecraft.",
+    );
+  if (o.id === "rare" && s.samples.length >= 6)
+    return say(
+      s,
+      "The sample containers are full. Leave capacity for this optional sample.",
+    );
+  const usesPart = o.action === "repairSecondary" || o.id === "recover";
+  if (usesPart && s.state.parts < 1)
+    return say(s, "Keep a spare part for this optional recovery.");
+  if (!exterior && s.state.battery < 0.1)
+    return say(s, "The calibration needs 0.10 kWh battery reserve.");
+  const n = {
+    ...s,
+    state: { ...s.state },
+    suit: { ...s.suit },
+    optionalDone: [...s.optionalDone, id],
+    samples: [...s.samples],
+    simRate: 1,
+  };
+  n.state.parts -= usesPart ? 1 : 0;
+  n.state.energy = Math.max(0, n.state.energy - 5);
+  if (exterior) n.suit.power -= 0.06;
+  else n.state.battery -= 0.1;
+  n.state.science = Math.min(100, n.state.science + 12);
+  if (o.id === "rare")
+    n.samples.push({
+      id: s.id + ":rare",
+      kind: "Distant survey sample",
+      destination: missionById(s.missionId).destination,
+    });
+  return logged(
+    n,
+    `OPTIONAL COMPLETE: ${o.title}. +$${o.reward}M on successful recovery.`,
+  );
+}
+export function setSimRate(s: Session, rate: number): Session {
+  if (![1, 5, 20, 100].includes(rate) || s.report) return s;
+  // Do not accelerate ascent, EVA, low reserves or a live warning/decision.
+  const o = currentObjective(s);
+  if (
+    rate > 1 &&
+    (s.flight.status === "pad" ||
+      s.flight.status === "ascent" ||
+      outside(s) ||
+      s.airlock.cycling ||
+      o?.choices ||
+      o?.type !== "WAIT" ||
+      s.state.malfunction ||
+      s.camp.broken ||
+      s.state.battery / s.life.batteries < 0.2 ||
+      s.state.oxygen < 0.5 ||
+      s.state.energy < 25)
+  )
+    return say(
+      { ...s, simRate: 1 },
+      "Normal speed is required for active operations or low reserves. Acceleration is available during monitored travel and rest waits.",
+    );
+  return { ...s, simRate: rate };
+}
+export function flightControls(
+  s: Session,
+  throttle: number,
+  pitch: number,
+): Session {
+  if (s.state.paused || s.flight.status !== "ascent") return s;
+  return {
+    ...s,
+    flight: {
+      ...s.flight,
+      throttle: Math.max(0, Math.min(1, throttle)),
+      pitch: Math.max(0, Math.min(90, pitch)),
+    },
+  };
 }

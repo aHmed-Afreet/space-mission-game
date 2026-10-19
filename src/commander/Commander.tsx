@@ -14,7 +14,11 @@ import {
 } from "./campaign/definitions";
 import {
   canStart,
-  createSession,
+  launchMission,
+  optionalCommand,
+  setSimRate,
+  flightControls,
+  makeReport,
   command,
   moveSession,
   tickSession,
@@ -29,6 +33,7 @@ import {
   toggleGear,
   type Store,
 } from "./campaign/save";
+import type { Technology } from "./campaign/economy";
 import type { EquipmentId } from "./campaign/equipment";
 import "./commander.css";
 import "./campaign/campaign.css";
@@ -55,6 +60,7 @@ export default function Commander({
     ),
     [selected, setSelected] = useState<MissionDefinition>(missions[0]),
     [gear, setGear] = useState<EquipmentId[]>([]),
+    [upgrades, setUpgrades] = useState<Technology[]>([]),
     [saveError, setSaveError] = useState("");
   const latest = useRef(store);
   latest.current = store;
@@ -113,7 +119,7 @@ export default function Commander({
       if (!document.hidden)
         setStore((v) => {
           if (!v.session) return v;
-          const next = tickSession(v.session, 0.5);
+          const next = tickSession(v.session, 0.5 * v.session.simRate);
           return next === v.session
             ? v
             : { ...v, session: next, progress: recordReport(v.progress, next) };
@@ -162,6 +168,7 @@ export default function Commander({
     if (!canStart(m, store.progress) || loaded.readOnly) return;
     setSelected(m);
     setGear([...m.requiredEquipment]);
+    setUpgrades([]);
     setMode("prepare");
   };
   if (mode === "legacy")
@@ -185,6 +192,13 @@ export default function Commander({
         </div>
         <Preparation
           mission={selected}
+          progress={store.progress}
+          upgrades={upgrades}
+          onUpgrade={(id) =>
+            setUpgrades((v) =>
+              v.includes(id) ? v.filter((x) => x !== id) : [...v, id],
+            )
+          }
           design={store.design}
           setDesign={(value) =>
             setStore((v) => ({
@@ -206,19 +220,31 @@ export default function Commander({
               store.session &&
               !store.session.report &&
               !window.confirm(
-                "Start this mission? Your unfinished campaign checkpoint will be replaced. Your completed levels are kept.",
+                "Start this mission? The unfinished flight will be recorded as an abort and its insurance settled. Your completed missions are kept.",
               )
             )
               return;
             try {
-              const session = createSession(
+              let progress = store.progress;
+              if (store.session && !store.session.report) {
+                const ended = {
+                  ...store.session,
+                  state: { ...store.session.state, ended: true },
+                };
+                progress = recordReport(progress, {
+                  ...ended,
+                  report: makeReport(ended, false),
+                });
+              }
+              const started = launchMission(
                 selected,
                 store.design,
                 store.life,
                 gear,
-                store.progress,
+                progress,
+                upgrades,
               );
-              setStore((v) => ({ ...v, session }));
+              setStore((v) => ({ ...v, ...started }));
               setMode("flight");
             } catch (error) {
               setSaveError(
@@ -238,13 +264,30 @@ export default function Commander({
     );
     return (
       <Flight
+        onOptional={(id) => updateSession((s) => optionalCommand(s, id))}
+        onRate={(rate) => updateSession((s) => setSimRate(s, rate))}
+        onControls={(throttle, pitch) =>
+          updateSession((s) => flightControls(s, throttle, pitch))
+        }
+        onAbort={() => {
+          if (
+            window.confirm(
+              "Abort this flight and recover insured hardware? Performance bonuses will be lost.",
+            )
+          )
+            updateSession((s) => ({
+              ...s,
+              state: { ...s.state, ended: true, paused: false },
+              report: makeReport(s, false),
+            }));
+        }}
         session={store.session}
         progress={store.progress}
         onMove={onMove}
         onTickPause={pause}
         onCommand={onCommand}
         onHome={home}
-        onNext={next ? () => prepare(next) : undefined}
+        onNext={next ? home : undefined}
         onDismissTutorial={(id) =>
           setStore((v) => ({
             ...v,

@@ -139,6 +139,21 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
     sun.position.set(-6, 12, 10);
     group.add(sun);
   }
+  const satellite = new T.Group();
+  satellite.position.set(2.4, 0, 15);
+  group.add(satellite);
+  box(0, 1.2, 0, 0.8, 0.8, 0.8, gold, satellite);
+  box(0, 1.2, 0, 3.7, 0.04, 0.8, solar, satellite);
+  box(0, 1.9, 0, 0.035, 0.7, 0.035, alloy, satellite);
+  const dishGeometry = new T.CylinderGeometry(0.42, 0.12, 0.12, 12);
+  geometries.push(dishGeometry);
+  const dish = new T.Mesh(dishGeometry, white);
+  dish.position.set(0, 2.2, 0);
+  dish.rotation.x = 0.35;
+  satellite.add(dish);
+  const serviceMaterial = new T.MeshBasicMaterial({ color: "#d0a265" });
+  materials.push(serviceMaterial);
+  box(-0.42, 1.2, 0.2, 0.04, 0.12, 0.12, serviceMaterial, satellite);
   const camp = new T.Group();
   camp.position.set(fieldSites.camp.x, 0, fieldSites.camp.z);
   group.add(camp);
@@ -167,6 +182,14 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
   const result = box(0, 0.9, 1.07, 0.45, 0.07, 0.3, solar, camp);
   return {
     update(s: Session) {
+      satellite.visible = s.missionId === "mission-2";
+      serviceMaterial.color.set(
+        s.systems.satelliteOnline
+          ? "#a5d3ba"
+          : s.systems.satelliteRepaired
+            ? "#aac6d5"
+            : "#d0a265",
+      );
       inner.position.x +=
         ((s.airlock.inner ? -1.5 : 0) - inner.position.x) * 0.12;
       outer.position.x +=

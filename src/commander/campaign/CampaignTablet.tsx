@@ -1,3 +1,4 @@
+import { money } from "./economy";
 import { useEffect, useRef, useState } from "react";
 import Icon, { type IconName } from "../Icons";
 import { DeckMap, missionTime } from "../MissionTablet";
@@ -5,6 +6,7 @@ import { deck, nearby } from "../layout";
 import { lifeOptions, alerts } from "../simulation";
 import { components } from "../../game";
 import {
+  atSite,
   currentObjective,
   currentPhase,
   fieldSites,
@@ -145,7 +147,13 @@ export default function CampaignTablet({
   onHome,
   onResetTutorials,
   saveError,
+  onOptional,
+  onGuideOptional,
+  onAbort,
 }: {
+  onOptional: (id: string) => void;
+  onGuideOptional: (id: string) => void;
+  onAbort: () => void;
   s: Session;
   progress: Progress;
   tab: CampaignTab;
@@ -260,7 +268,7 @@ export default function CampaignTablet({
               <div className="cmd-section-heading">
                 <div>
                   <small>
-                    LEVEL {m.level} / {currentPhase(s)}
+                    MISSION {m.level} / {currentPhase(s)}
                   </small>
                   <h2>{m.title}</h2>
                 </div>
@@ -292,6 +300,46 @@ export default function CampaignTablet({
                   }}
                 />
               </div>
+              <section className="campaign-optionals">
+                <h3>Optional challenges</h3>
+                <p>
+                  Not required. Small bonuses are paid only after successful
+                  recovery.
+                </p>
+                {m.optional?.map((c) => (
+                  <article key={c.id}>
+                    <small>OPTIONAL · +{money(c.reward)}</small>
+                    <h4>{c.title}</h4>
+                    <p>{c.description}</p>
+                    {c.action ? (
+                      s.optionalDone.includes(c.id) ? (
+                        <strong>✓ COMPLETE</strong>
+                      ) : (
+                        <div>
+                          <button
+                            onClick={() => {
+                              onGuideOptional(c.id);
+                              onClose();
+                            }}
+                          >
+                            Guide me there
+                          </button>
+                          <button
+                            disabled={
+                              state.paused || (!!c.site && !atSite(s, c.site))
+                            }
+                            onClick={() => onOptional(c.id)}
+                          >
+                            Perform optional task
+                          </button>
+                        </div>
+                      )
+                    ) : (
+                      <small>Assessed from final reserves at recovery.</small>
+                    )}
+                  </article>
+                ))}
+              </section>
               <ol className="cmd-objectives">
                 {m.objectives.map((task, i) => (
                   <li
@@ -314,6 +362,7 @@ export default function CampaignTablet({
                       )}
                     </span>
                     <div>
+                      <small>{task.phase}</small>
                       <strong>{task.title}</strong>
                       <small>
                         {i < s.objective
@@ -346,7 +395,7 @@ export default function CampaignTablet({
                         : v.id !== m.id
                           ? "🔒"
                           : "○"}{" "}
-                      LEVEL {v.level}
+                      MISSION {v.level}
                     </span>
                   ))}
               </div>
@@ -447,7 +496,9 @@ export default function CampaignTablet({
                   </div>
                   <p className="cmd-footnote">
                     {s.suit.equipped
-                      ? !s.state.communications ? "Suit equipped · radio link unavailable. Restore communications." : "Suit equipped · radio linked to spacecraft."
+                      ? !s.state.communications
+                        ? "Suit equipped · radio link unavailable. Restore communications."
+                        : "Suit equipped · radio linked to spacecraft."
                       : "Suit is stored in the equipment locker."}
                   </p>
                   <div className="campaign-airlock">
@@ -515,6 +566,15 @@ export default function CampaignTablet({
                   </div>
                 </>
               )}
+              <p className="cmd-footnote">
+                Flight cost {money(s.finance.cost)} · allocation{" "}
+                {money(s.finance.allocation)} · Agency Budget{" "}
+                {money(progress.economy.balance)}
+                {s.finance.practice ? " · TRAINING REPLAY" : ""}
+              </p>
+              <button className="campaign-details-button" onClick={onAbort}>
+                Abort flight & recover hardware
+              </button>
               <button
                 className="campaign-details-button"
                 aria-expanded={details}
@@ -793,6 +853,15 @@ export default function CampaignTablet({
                   {r.success ? "Complete" : "Aborted"} · {r.score}/100
                 </p>
               ))}
+              <p className="cmd-footnote">
+                Flight cost {money(s.finance.cost)} · allocation{" "}
+                {money(s.finance.allocation)} · Agency Budget{" "}
+                {money(progress.economy.balance)}
+                {s.finance.practice ? " · TRAINING REPLAY" : ""}
+              </p>
+              <button className="campaign-details-button" onClick={onAbort}>
+                Abort flight & recover hardware
+              </button>
               <button
                 className="campaign-details-button"
                 onClick={onResetTutorials}

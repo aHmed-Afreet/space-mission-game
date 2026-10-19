@@ -57,62 +57,77 @@ The success percentage is a game performance score, not a physical probability o
 
 Large touch controls support iPad and desktop. Choices use native buttons with keyboard focus and selection state. The game is held in memory; refreshing resets the mission. No copyrighted artwork, NASA branding or agency affiliation is used.
 
-## Commander campaign
+## Commander complete-mission campaign
 
-Commander Mode keeps the existing procedural cabin, life-support simulation and Strategy Mode, and adds a sequential training campaign. **Levels 1–12 are playable.** All 24 mission definitions are included, but levels 13–24 (Mars and deep space) are explicitly marked planned and cannot be launched. They are not completed destinations.
+Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no longer count as campaign levels. The original professional cabin, life support, touch controls, temporary tablet, EVA/airlock, Moon environment, inventory, science, camp, PWA and Strategy Mode are preserved.
 
-### Playable missions
+### Fully playable flights
 
-| Levels | Missions |
-| --- | --- |
-| 1–6 · Command Training | Navigation, meals and hydration, science and rest, communications, repair training, orbital EVA |
-| 7–12 · Lunar Operations | Lunar approach, guided landing, first surface EVA, geological survey and samples, research camp deployment, camp repair and transmission |
+| Mission                   | Purpose and distinctive operations                                                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 · Orbital Qualification | Pre-launch checks, guided ascent, orbital science/power decision, meals, hydration, rest, power-bus failure and controlled recovery.                                                  |
+| 2 · Satellite Repair      | Launch and rendezvous, independent relay diagnostics, tethered EVA, physical satellite connector repair and radio test, safe return and vehicle recovery.                             |
+| 3 · Lunar Science Landing | Launch, transfer duty/rest, approach and guided landing, geological scan, temperature, crater rock and subsurface sampling, context photographs, fault resolution and return.         |
+| 4 · Lunar Research Camp   | Launch and cargo landing, camp-site engineering choice, actual carried equipment deployment, powered experiments, connector-trip response, communications commissioning and recovery. |
 
-Complete a mission to unlock the next. Replay any completed mission; best scores are retained and recent attempts appear in the log. Each mission displays one current task, a plain-language instruction and a single waypoint. Ordered objectives prevent skipping safety checks or completing later tasks early. Short, dismissible tutorials introduce systems once and can be reset from the tablet.
+Each flight has 4–9 phases, a short briefing, required equipment, multiple stations, resource decisions, a mandatory challenge, two optional objectives and a full report. Granular launch and airlock safety procedures produce 28–57 individual task steps. First-time play targets 15–30 minutes, but this is a design target rather than a measured promise; familiarity, exploration, optional detours and acceleration change duration. Tasks are sequential and only the current one is prominent.
 
-### Design and equipment
+Twelve further missions (additional lunar operations, Mars, asteroid and deep-space expeditions) are **PLANNED and cannot be launched**. Only the four flights above are implemented. Adding another mission does not require changing a fixed mission-count limit.
 
-The spacecraft builder preserves hardware, rocket, trajectory and Life Support controls. Food, water, recycling, oxygen, environmental control and batteries change real mission mass, cost, consumption and endurance. Required and optional field equipment adds mass and cost; EVA adds an airlock and its operating power. Payload, budget, power, fuel and carried-load constraints are checked before starting. Engineering details collapse by default for beginners.
+### Launch, travel and controls
 
-Every mission is a separately provisioned sortie using the selected design, rather than a continuous multi-month transit. Destination parameters are simplified educational scenarios, not flight-planning or life-support certification data. Landing and approach use guided system procedures and countdowns, not an orbital flight-physics model.
+Before flight: read the briefing and Agency Budget, configure spacecraft/life support, choose field equipment and unlocked technology, review risk advisories, then commit the flight. Impossible payload, power, essential-equipment, fuel and funding configurations are blocked. Marginal endurance/fuel configurations can display an advisory without blocking launch.
 
-### Walk, eat, repair and explore
+Pre-launch happens inside the existing cabin at the launch site. Visit power, life support, radio and navigation, verify propellant, and seal the vehicle. The launch display then runs a six-second countdown and live ascent. Thrust changes acceleration and fuel consumption; pitch relative to guidance changes climb efficiency. Separate the booster above 12 km and reach 180 km plus 7.8 km/s before orbital insertion. Vehicle appearance, telemetry, exhaust and stage state reflect the actual flight state. Operation logs and serializable flight states provide hooks for future sound effects; audio is not implemented.
 
-- Desktop: WASD/arrows to walk, drag the view to look, E to interact. Space hops on the Moon.
-- Touch: a large analog joystick moves; drag the separate look area to turn simultaneously. Release stops movement. A surface hop control appears where applicable.
-- Galley: take a meal, fill a 1 L bottle, or use the dispenser. Eat or drink carried supplies from inventory. Actual stored and carried quantities decrease; hydration, nutrition, rest and duty time affect crew readiness. Meal and drink cooldowns discourage repeated consumption.
-- Cabin: sleep, collect tools, repair faults with spare parts, gather science, manage communications and verify trajectory. The original station systems remain available.
-- EVA: collect the selected suit and equipment, check oxygen and power, enter the airlock, close the inner hatch, depressurize, open the outer hatch and physically walk outside. Hatches are interlocked. Return, close the outer hatch, repressurize and open the inner hatch before re-entering. Suit oxygen, power and condition decrease outside. Meals and drinks are unavailable in vacuum.
-- Moon: scan geology, collect physical samples, drill and photograph sites. A research camp consumes carried deployment equipment and includes solar generation, battery storage, antenna, environmental sensor, sample storage and an **unpressurized instrument shelter**. Powered experiments and transmissions consume energy. A successful camp persists into the repair mission; a repair consumes a spare part.
+These are simplified flight-training dynamics. Orbital rendezvous, lunar approach, landing and return use guided procedures, reserves and monitored time intervals rather than a precision orbital/landing physics simulator. Lunar ascent/return is represented by the controlled return burn and recovery corridor.
 
-The temporary Mission Tablet has **MISSION, STATUS, INVENTORY, MAP and LOG** sections. Simple status cards use GOOD, WARNING and CRITICAL; optional engineering details expose cabin pressure, temperature, generation, net power, radiation and configuration. The deck/surface schematic shows actual position and current objective. The view fills the available viewport, with safe-area spacing and a tablet that starts closed.
+- Desktop: WASD/arrows, drag to look, E to interact; Space hops on the Moon.
+- Touch: large analog joystick with a larger invisible hit area; separate multitouch look area. Releasing centers the stick and stops movement.
+- SIM RATE: 1×, 5×, 20× and 100×. Acceleration is permitted during monitored travel/rest waits, not ascent, EVA, hatch cycling, choices or low reserves. Task/phase transitions and warnings return to 1×. Long waits clamp to their endpoint instead of overshooting the clock.
+- At 1×, one real second advances 0.5 mission minutes. Launch countdown and ascent use a separate compressed flight-dynamics clock. Pause freezes all consumption; hidden tabs pause; closed apps accrue no elapsed resource use.
 
-Mission reports include overall score, science, resources, spacecraft condition, crew readiness, power, fuel, communications, samples and experiments, with practical feedback. Scores are educational performance measures, not real probabilities. Resource exhaustion or unsafe crew conditions can abort a sortie.
+The five-section Mission Tablet starts on MISSION and remains closed by default. STATUS uses GOOD/WARNING/CRITICAL with optional engineering details. INVENTORY, MAP and LOG retain their visual cards, live position and saved records. Optional task guidance temporarily replaces the main waypoint with one clearly labelled detour; cancelling restores the required waypoint.
 
-### Saving and offline use
+### Agency Budget and rewards
 
-The versioned campaign save (`orbital-campaign-v2`) includes configuration, progress, position/heading, current ordered objective, resources, suit, airlock, inventory, samples, camp, tutorials and reports. Restored checkpoints start paused. Hidden tabs pause automatically; no supplies are consumed while closed. A previous valid save is retained as a backup, invalid saves are handled visibly, and newer save versions are protected from overwrite.
+All values are in-game millions, not real mission cost estimates.
 
-The old `orbital-commander-v1` readiness sortie is preserved separately and remains playable through “Resume previous sortie.” Its design can be imported without granting campaign unlocks. Legacy sorties retain their original six-hour objectives, tablet and clock speed. New campaign time advances by 0.5 mission minutes per real second. Strategy remains in memory and is unchanged.
+- Start with **$425M** persistent Agency Budget.
+- Initial allocations for Missions 1–4: **$80M / $100M / $130M / $150M**, credited on first flight commitment only.
+- The selected complete spacecraft, rocket/profile, fuel hardware, instruments, life support/supplies, EVA and field equipment are charged atomically with that allocation. Unused funds remain in the programme.
+- Success base rewards: **$110M / $125M / $145M / $155M**. Optional objectives pay **$2–5M** each; science pays at most **$4M**, reserve efficiency at most **$3M**, and applicable equipment recovery **$2M**.
+- Active optional work spends actual power, crew energy and sometimes a spare part; it requires the correct location and carried tools. Reserve challenges are assessed at recovery. Main objectives never require optional completion.
+- Settlement uses a run ID and is applied once. The ledger records each allocation/purchase and settlement. Reloading reports cannot repeat rewards.
+- Completed flights replay as **training simulations**: no spending, allocation or cash rewards, but best scores and attempts are saved. This prevents money farming while allowing practice.
 
-A web manifest, original icons and production service worker support standalone installation and offline reload after a successful online load. Serve `dist/` over HTTPS (or localhost). Browser installation UI varies; the app does not force browser fullscreen or hide browser controls through unsupported APIs. LocalStorage and service-worker availability depend on browser settings. There is no server synchronization.
+A failed flight earns no performance bonuses and does not unlock the next mission. A flight with substantial science can receive PARTIAL SUCCESS, but still needs replaying. Insured recovery returns 80% of eligible hardware spending, less a repair charge up to $3M; unrefunded spending represents losses. If funds run out, a standard configuration up to $285M receives a shortfall-only recovery underwriting payment. That amount is spent immediately on the flight and excluded from insurance; it cannot be withdrawn or farmed. Higher-cost configurations need sufficient agency funds. The campaign remains retryable.
 
-### Architecture and performance
+Reports show budget before, allocation, underwriting if used, flight cost, base reward, each bonus category, optional results, insurance/repair charges, total earned and budget after, alongside score/rank, science, crew, resources, actual fuel/battery remaining and samples/experiments.
 
-- `src/commander/campaign/definitions.ts`: typed mission/objective definitions, phases, prerequisites and availability.
-- `environments.ts` / `equipment.ts`: destination scenarios and equipment trade-offs.
-- `engine.ts`: pure ordered progression, actions, EVA, resources, camp, scoring and unlocks.
-- `save.ts`: versioned checkpoint validation, backup and legacy migration.
-- `CampaignHome.tsx`, `Preparation.tsx`, `Flight.tsx`, `CampaignTablet.tsx`, `Report.tsx`: campaign presentation.
-- `world.ts`: lazily loaded orbital platform, Moon surface, airlock and deployed camp.
-- `src/commander/simulation.ts`: original crew/life-support model; campaign opts out of legacy timed communications/equipment incidents and uses mission-defined incidents.
-- `Cabin.tsx`, `interior.ts`, `layout.ts`: retained cabin rendering, physical layout and movement.
-- `LegacyCommander.tsx`: previous readiness sortie UI and save compatibility.
+### Technology and engineering
 
-Rendering uses shared primitive geometry, instanced fittings/rocks, small procedural textures, capped pixel ratio (1.5), a 30 fps touch rendering target, no real-time shadows or post-processing, and bounded terrain. The field module loads only for EVA missions. Rendering stops in hidden tabs. A graphics failure pauses play. These are performance budgets, not a guarantee for every iPad; validate physical Safari hardware before a presentation.
+Mission 1 unlocks a high-gain radio (faster acknowledgement). Mission 2 unlocks an extra 1 kWh reserve battery and extended-duration suit (0.50 kg oxygen, 25% more battery). Mission 3 unlocks a 60 W solar wing. Access persists; installing a mission-fit upgrade costs money and adds mass on each real flight. Basic controls, standard hardware and required mission equipment are never locked behind a purchase.
 
-### Validation
+Builder decisions still initialize actual resources. Water/food increase mass and cost; water/oxygen recycling consumes power and improves endurance; batteries add reserve and mass. Required portable tools affect experiments and repairs. A 28 kg field-pack limit excludes the worn suit. A research shelter is **unpressurized instrument protection**, not a place to remove a helmet.
 
-`npm test` covers Strategy calculations, legacy Commander simulation/navigation and campaign definitions, ordered progression, all 12 complete mission flows, unlocks, supplies, suit/airlock safety, equipment trade-offs, environment differences, saving, joystick response and PWA metadata. `npm run build` checks TypeScript and produces the static application.
+### Persistence and migration
 
-Browser validation uses WebGL Chromium with desktop, iPad landscape/portrait and phone viewport sizes, touch/look input, modal bounds, saved restoration and offline reload. Emulation does not replace physical iPad/Safari performance testing. All artwork and cabin graphics are original procedural assets; no agency branding or external artwork is used.
+`orbital-campaign-v3` stores Agency Budget/ledger, unlocked technology, configuration, full mission/phase/task progress, flight controls, resources, suit/airlock, carried equipment, optional work, camp, reports and tutorial dismissals. Checkpoints resume paused at 1×. Previous valid data is backed up; invalid saves produce a visible warning; newer versions are protected from overwrite.
+
+A v2 task-level campaign migrates spacecraft configuration, outposts and prior results into a visible programme archive. Completed old chapters are recorded; completed Command Training grants high-gain research access. Old task-level achievements do **not** skip the new complete-flight sequence. The old checkpoint, including supplies and position, remains archived; new funded flights provision a fresh spacecraft. The original v2 storage entry remains untouched. The older `orbital-commander-v1` readiness sortie also remains separately playable and uses its original systems and timing.
+
+The original manifest/icons, standalone mode, safe-area layout and production service worker remain. Serve `dist/` over HTTPS/localhost; after the first successful online load it supports offline reload. Normal browser play does not require installation, fullscreen APIs or an account. Browser storage permissions still govern local saving. No server/cloud save is used.
+
+### Architecture and validation
+
+- `definitions.ts`: complete-flight chapters, phases, tasks, event choices, optionals, rewards, technology unlocks and planned content.
+- `engine.ts`: ordered progression, guided flight, resources, actions, EVA, science, camp and reports.
+- `economy.ts`: funding, purchases, idempotent settlement, failure recovery and technology catalog.
+- `save.ts`: v3 validation, backup, archive migration and protected future versions; `legacyDefinitions.ts` / `legacySave.ts` preserve v2 interpretation.
+- `LaunchView.tsx`: lightweight original SVG/CSS flight display; `CampaignHome`, `Preparation`, `Flight`, `CampaignTablet`, `Report`: programme interface.
+- `world.ts`: lazy orbital platform/satellite, lunar terrain and live deployed camp; existing `Cabin`, `interior`, `layout` and `simulation` retain cabin and living systems.
+
+`npm test` covers the original Strategy/Commander simulations plus complete flights, phase/task order, money conservation, funding/spending/settlement idempotency, optional work, unlocks, failed retry, migration/checkpoint restore, flight and hatch safety, equipment effects, environments, touch-vector logic, PWA metadata and exact Strategy source fingerprints. `npm run build` checks TypeScript and bundles the application.
+
+Browser checks cover the launch interface/dynamics, Mission Control and purchase/restore flow, optional task guidance, camp failure choices, financial reports and desktop/iPad/phone layouts. They use WebGL Chromium emulation; physical iPad/Safari frame rate and first-time play duration have not been measured. Rendering retains instancing, low-poly geometry, small textures, capped pixel ratio, touch frame budget, no real-time shadows/post-processing, lazy field loading and reduced-motion support. All visual assets remain original; no agency branding or external artwork is used.

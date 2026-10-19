@@ -1040,3 +1040,436 @@
 .campaign-engineering[open] > summary {
   margin-bottom: 25px;
 }
+/* Complete-flight programme and Agency Budget. */
+.mission-control-dashboard,
+.mission-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+.mission-brief-grid {
+  grid-template-columns: 1.5fr 1fr;
+}
+.mission-control-dashboard article {
+  padding: 24px;
+  background: linear-gradient(140deg, #15232e, #0b151e);
+  border: 1px solid #a5c2bd26;
+  border-radius: 12px;
+}
+.mission-control-dashboard small,
+.mission-brief-grid small {
+  letter-spacing: 1.8px;
+  color: #9ab6b0;
+  font-size: 10px;
+}
+.mission-control-dashboard h2 {
+  margin: 12px 0;
+  color: #e3eeea;
+}
+.agency-finance h2 {
+  font-size: 40px !important;
+  letter-spacing: -1px;
+  color: #b7e0ce;
+}
+.agency-finance p {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 13px;
+}
+.tech-chip {
+  display: inline-block;
+  padding: 7px 10px;
+  margin: 4px;
+  border: 1px solid #8bbcad44;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.campaign-home details.panel {
+  margin: 16px 0;
+}
+.campaign-optionals {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #bca77a44;
+  border-radius: 9px;
+  background: #b6a07808;
+}
+.campaign-optionals h3,
+.campaign-optionals h4 {
+  margin: 8px 0;
+}
+.campaign-optionals > p,
+.campaign-optionals article p {
+  font-size: 12px;
+  line-height: 1.65;
+  color: #adc1c4;
+}
+.campaign-optionals article {
+  padding: 15px 0;
+  border-top: 1px solid #b8b18c25;
+}
+.campaign-optionals article small {
+  color: #c8b68f;
+  font-size: 10px;
+}
+.campaign-optionals article button {
+  font-size: 11px;
+  margin: 5px 5px 0 0;
+  padding: 10px;
+  background: #22333d;
+  border: 1px solid #a0bcb533;
+  color: #d6e4df;
+  border-radius: 5px;
+}
+.campaign-phase {
+  font-size: 9px !important;
+  letter-spacing: 1px;
+  color: #91b8c7 !important;
+  margin: 12px 0 !important;
+}
+.optional-detour {
+  color: #dfc394 !important;
+  font-size: 10px !important;
+}
+.cmd-action-menu button span {
+  display: grid;
+  gap: 6px;
+}
+.cmd-action-menu button small {
+  font-weight: 400;
+  max-width: 300px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #aebfc1;
+}
+.mission-settlement {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 25px;
+  margin: 24px 0;
+}
+.mission-settlement h2 {
+  font-size: 42px;
+  color: #c0e3cf;
+}
+.mission-settlement table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.mission-settlement th {
+  text-align: left;
+  font-weight: 400;
+  color: #a4bdc1;
+}
+.mission-settlement td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.mission-settlement th,
+.mission-settlement td {
+  padding: 8px;
+  border-bottom: 1px solid #a5c1bd20;
+}
+.mission-settlement tr:last-child {
+  color: #b9e2cf;
+  font-weight: bold;
+}
+.campaign-sim-rate {
+  position: absolute;
+  z-index: 7;
+  right: max(24px, env(safe-area-inset-right));
+  top: 84px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #a6c0bd;
+  background: #0f1e27c9;
+  padding: 6px 8px;
+  border: 1px solid #a4bfb72a;
+  border-radius: 6px;
+}
+.campaign-sim-rate select {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #d4e9dd;
+  border: 0;
+  background: #1a303b;
+  padding: 6px;
+  border-radius: 4px;
+}
+.campaign-launch {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(#05101c, #142c40 60%, #415b66);
+  background: linear-gradient(
+    #050a14,
+    rgba(37, 75, 99, calc(1 - var(--altitude))) 80%,
+    #1b3743
+  );
+}
+.launch-stars {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#b9d5dc 1px, transparent 1px);
+  background-size: 87px 81px;
+  opacity: var(--altitude);
+}
+.launch-limb {
+  position: absolute;
+  width: 170%;
+  height: 65%;
+  border-radius: 50%;
+  left: -50%;
+  bottom: -48%;
+  background: linear-gradient(
+    175deg,
+    #91bdc4,
+    #194c64 7%,
+    #19373b 25%,
+    #14242d
+  );
+  box-shadow: 0 -15px 70px #90b4c33b;
+  transform: rotate(-10deg);
+}
+.launch-vehicle {
+  position: absolute;
+  left: 32%;
+  top: 16%;
+  height: 76%;
+  width: 24%;
+  filter: drop-shadow(0 8px 24px #0005);
+  transition: top 1s;
+}
+.launch-vehicle .launch-plume {
+  transform-origin: 100px 335px;
+  transform: scaleY(calc(0.5 + var(--thrust) * 0.5));
+  opacity: 0.85;
+}
+.campaign-launch.firing .launch-vehicle {
+  animation: flight-vibration 0.19s infinite alternate;
+}
+.campaign-launch.firing .launch-plume {
+  animation: exhaust 0.12s infinite alternate;
+}
+.launch-console {
+  position: absolute;
+  right: max(25px, env(safe-area-inset-right));
+  width: 335px;
+  top: 150px;
+  bottom: 70px;
+  overflow: auto;
+  background: linear-gradient(145deg, #122632ed, #08141de8);
+  padding: 24px;
+  border: 1px solid #aec9c135;
+  border-radius: 12px;
+  box-shadow: 0 12px 50px #0003;
+  scrollbar-width: thin;
+}
+.launch-console > small {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #9cb8bd;
+}
+.launch-console h2 {
+  font-size: 26px;
+  margin: 14px 0;
+  color: #d8e9e1;
+}
+.launch-telemetry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 20px 0;
+}
+.launch-telemetry > span {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #93aeb3;
+}
+.launch-telemetry strong {
+  display: block;
+  font-size: 25px;
+  color: #e0ece6;
+  letter-spacing: -0.5px;
+  margin-top: 5px;
+}
+.launch-telemetry strong small {
+  font-size: 11px;
+}
+.launch-console label {
+  display: block;
+  font-size: 11px;
+  color: #afc6c3;
+  margin: 18px 0;
+}
+.launch-console label b {
+  float: right;
+  font-weight: 400;
+  color: #d3e3dd;
+}
+.launch-console input {
+  width: 100%;
+  margin-top: 14px;
+  accent-color: #a5d3c0;
+  height: 32px;
+}
+.launch-console p {
+  font-size: 11px;
+  color: #9fb9bc;
+  line-height: 1.7;
+}
+.launch-console button {
+  width: 100%;
+  margin: 12px 0;
+}
+.launch-guidance-meter {
+  height: 3px;
+  background: #30454b;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.launch-guidance-meter span {
+  display: block;
+  height: 100%;
+  background: #92bcd6;
+}
+.launch-active .campaign-footer-vitals {
+  display: none;
+}
+.launch-live {
+  padding: 15px 0;
+  border-top: 1px solid #a0beb52a;
+}
+.launch-active .cmd-cinema-shade {
+  pointer-events: none;
+}
+.campaign-guidance > p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #b1c6c7;
+}
+.campaign-guidance .optional-detour {
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+}
+@keyframes flight-vibration {
+  from {
+    translate: -0.5px 0;
+  }
+  to {
+    translate: 0.5px 1px;
+  }
+}
+@keyframes exhaust {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 1000px) {
+  .mission-control-dashboard {
+    grid-template-columns: 1fr 1fr;
+  }
+  .mission-control-dashboard article:last-child {
+    grid-column: 1/-1;
+  }
+  .launch-vehicle {
+    left: 26%;
+    width: 30%;
+  }
+  .launch-console {
+    width: 300px;
+    top: 145px;
+    padding: 18px;
+  }
+  .launch-active .campaign-guidance {
+    width: 260px;
+  }
+  .launch-active .campaign-guidance h2 {
+    font-size: 17px;
+  }
+}
+@media (max-width: 650px) {
+  .mission-control-dashboard,
+  .mission-brief-grid,
+  .mission-settlement {
+    grid-template-columns: 1fr;
+  }
+  .mission-control-dashboard article:last-child {
+    grid-column: auto;
+  }
+  .campaign-sim-rate {
+    top: 72px;
+    right: 12px;
+  }
+  .launch-active .campaign-guidance {
+    top: 105px;
+    width: calc(100% - 28px);
+    left: 14px;
+    max-width: none;
+    padding: 12px;
+  }
+  .launch-active .campaign-guidance .cmd-objective-progress,
+  .launch-active .campaign-guidance > p:not(.campaign-phase) {
+    display: none;
+  }
+  .launch-active .campaign-guidance h2 {
+    font-size: 15px;
+    margin: 5px 0;
+  }
+  .launch-active .campaign-guidance > button:last-child {
+    display: none;
+  }
+  .launch-console {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+    width: calc(100% - 24px);
+    max-height: 47%;
+    padding: 14px;
+  }
+  .launch-console h2 {
+    font-size: 20px;
+    margin: 6px 0;
+  }
+  .launch-telemetry {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    margin: 10px 0;
+  }
+  .launch-telemetry strong {
+    font-size: 18px;
+  }
+  .launch-console label {
+    margin: 6px 0;
+  }
+  .launch-console input {
+    height: 24px;
+    margin-top: 4px;
+  }
+  .launch-console > p {
+    font-size: 10px;
+    margin: 5px 0;
+  }
+  .launch-vehicle {
+    left: 25%;
+    top: 18%;
+    height: 50%;
+    width: 45%;
+  }
+  .launch-console > small:last-child {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .campaign-launch.firing .launch-vehicle,
+  .campaign-launch.firing .launch-plume {
+    animation: none;
+  }
+}

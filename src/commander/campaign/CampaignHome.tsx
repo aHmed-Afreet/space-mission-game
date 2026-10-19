@@ -1,3 +1,4 @@
+import { technologies, money } from "./economy";
 import { chapters, missions, type MissionDefinition } from "./definitions";
 import { canStart, type Progress, type Session } from "./engine";
 import { environments } from "./environments";
@@ -23,6 +24,9 @@ export default function CampaignHome({
   onLegacy: () => void;
   onExit: () => void;
 }) {
+  const next = missions.find(
+    (m) => !progress.completed[m.id] && canStart(m, progress),
+  );
   return (
     <div className="campaign-home">
       <div className="campaign-nav">
@@ -32,26 +36,113 @@ export default function CampaignHome({
       </div>
       <section className="campaign-hero">
         <span className="eyebrow">COMMANDER CAMPAIGN</span>
-        <h1>Your next frontier.</h1>
+        <h1>Mission Control.</h1>
         <p>
           Learn the spacecraft. Walk on the Moon. Build a working science camp.
           <br />
-          Finish each level to unlock the next one.
+          Plan a complete flight. Bring the crew and science home. Unlock the
+          next mission.
         </p>
         <div className="campaign-totals">
           <span>
-            <strong>{Object.keys(progress.completed).length}</strong> LEVELS
+            <strong>{Object.keys(progress.completed).length}</strong> MISSIONS
             COMPLETE
           </span>
           <span>
             <strong>{missions.filter((m) => m.implemented).length}</strong>{" "}
-            PLAYABLE LEVELS
+            PLAYABLE MISSIONS
           </span>
           <span>
             <strong>{chapters.length}</strong> CHAPTERS
           </span>
         </div>
       </section>
+      <section className="mission-control-dashboard">
+        <article>
+          <small>COMMANDER PROFILE</small>
+          <h2>Explorer Commander</h2>
+          <p>
+            {chapters.find((c) => c.id === next?.chapter)?.title ||
+              "Flight programme complete"}
+          </p>
+          <div className="cmd-objective-progress">
+            <span
+              style={{
+                width: `${(Object.keys(progress.completed).length / missions.filter((m) => m.implemented).length) * 100}%`,
+              }}
+            />
+          </div>
+          <p>
+            {Object.keys(progress.completed).length} /{" "}
+            {missions.filter((m) => m.implemented).length} available missions
+            complete
+          </p>
+        </article>
+        <article className="agency-finance">
+          <small>AGENCY BUDGET</small>
+          <h2>{money(progress.economy.balance)}</h2>
+          <p>Persistent programme funds · in-game money</p>
+          <small>NEXT MISSION</small>
+          <p>{next?.title || "Review a completed flight"}</p>
+          <p>
+            {next
+              ? `Allocation +${money(next.funding || 0)} on flight commitment`
+              : "Training replays do not change Agency Budget"}
+          </p>
+        </article>
+        <article>
+          <small>SPACECRAFT / EQUIPMENT ACCESS</small>
+          <h2>{progress.economy.unlocks.length} technologies</h2>
+          <p>
+            Standard spacecraft, life support and required mission equipment are
+            always available.
+          </p>
+          {progress.economy.unlocks.map((id) => (
+            <span className="tech-chip" key={id}>
+              {technologies[id].name}
+            </span>
+          ))}
+        </article>
+      </section>
+      {progress.archive && (
+        <details className="panel">
+          <summary>Previous programme achievements · preserved archive</summary>
+          <p>
+            {Object.keys(progress.archive.completed).length} earlier task-level
+            achievements. Completed chapters:{" "}
+            {progress.archive.chapters.join(", ") || "None"}. These are
+            preserved as prior training; complete flights start at Mission 1.
+          </p>
+          {progress.archive.history.slice(0, 24).map((r: any, i) => (
+            <p key={i}>
+              {r.missionId} · {r.score}/100 ·{" "}
+              {r.success ? "Complete" : "Attempt"}
+            </p>
+          ))}
+          <p>
+            Earlier supplies and position remain in the archived checkpoint; new
+            flight funding provisions a fresh spacecraft.
+          </p>
+        </details>
+      )}
+      <details className="panel">
+        <summary>Agency ledger & mission history</summary>
+        {[...progress.economy.ledger]
+          .reverse()
+          .slice(0, 30)
+          .map((t) => (
+            <p key={t.id}>
+              {t.label} · {t.amount >= 0 ? "+" : ""}
+              {money(t.amount)} · balance {money(t.balance)}
+            </p>
+          ))}
+        {progress.history.slice(0, 12).map((r) => (
+          <p key={r.runId}>
+            {missions.find((m) => m.id === r.missionId)?.title} · {r.outcome} ·{" "}
+            {r.score}/100
+          </p>
+        ))}
+      </details>
       {warning && <p className="cmd-alert caution">{warning}</p>}
       {session && (
         <section className="campaign-resume">
@@ -91,7 +182,7 @@ export default function CampaignHome({
                     className={`${completed ? "complete" : ready ? "ready" : "locked"} ${session?.missionId === m.id ? "current" : ""}`}
                   >
                     <div>
-                      <small>LEVEL {String(m.level).padStart(2, "0")}</small>
+                      <small>MISSION {String(m.level).padStart(2, "0")}</small>
                       <span>
                         {completed
                           ? "✓ COMPLETE"
@@ -108,6 +199,11 @@ export default function CampaignHome({
                       {environments[m.destination].name}
                     </span>
                     <p>{m.majorObjective}</p>
+                    <small>
+                      {m.implemented
+                        ? `${m.phases.length} phases · ${m.expectedMinutes} · allocation +${money(m.funding || 0)}`
+                        : "Future mission · unavailable"}
+                    </small>
                     <footer>
                       <span>
                         {completed
@@ -116,7 +212,7 @@ export default function CampaignHome({
                             ? "Not implemented in this release."
                             : ready
                               ? "Ready for preparation."
-                              : `Complete Level ${m.level - 1} first.`}
+                              : `Complete Mission ${m.level - 1} first.`}
                       </span>
                       <button
                         disabled={!ready || readOnly}
@@ -137,14 +233,14 @@ export default function CampaignHome({
           <h3>Previous readiness sortie</h3>
           <p>
             Your earlier six-hour mission is preserved. It does not unlock
-            campaign levels.
+            campaign missions.
           </p>
           <button onClick={onLegacy}>Continue previous sortie</button>
         </section>
       )}
       <p className="cmd-footnote">
-        Earth-orbit and lunar levels are playable. Mars and deep-space chapters
-        are definitions for future updates, not playable simulations.
+        Earth-orbit and lunar missions are playable. Mars and deep-space
+        chapters are definitions for future updates, not playable simulations.
       </p>
     </div>
   );
