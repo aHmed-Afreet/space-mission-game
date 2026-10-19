@@ -1,3 +1,4 @@
+import type { ShipState } from "./campaign/ship";
 import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -614,6 +615,7 @@ export function createInterior(
       telemetry: Telemetry,
       target?: Area | null,
       landed = false,
+      world?: ShipState,
     ) {
       planet.visible = !landed;
       if (fx && fx.id !== lastFx) {
@@ -625,14 +627,24 @@ export function createInterior(
         m.emissiveIntensity =
           id === near && (target === undefined || target === id) ? 0.65 : 0.08;
       alarmMat.emissiveIntensity = alarm ? 0.3 + Math.sin(t * 3) * 0.2 : 0.06;
-      const open = Math.abs(pos.z + 4.35) < 2.5 ? 1 : 0;
+      const open = world
+        ? Number(world.doors.flight.open)
+        : Math.abs(pos.z + 4.35) < 2.5
+          ? 1
+          : 0;
       hatchLeaves.forEach((m, i) => {
         const target = (i === 0 ? -1 : 1) * (0.53 + open * 1.05);
         m.position.x += (target - m.position.x) * 0.08;
       });
       const age = t - fxStart;
       cabinetPivot.rotation.y +=
-        ((action === "takeMeal" && age < 2 ? -0.9 : 0) -
+        ((world
+          ? world.lockers.food
+            ? -0.9
+            : 0
+          : action === "takeMeal" && age < 2
+            ? -0.9
+            : 0) -
           cabinetPivot.rotation.y) *
         0.08;
       handGroup.visible =

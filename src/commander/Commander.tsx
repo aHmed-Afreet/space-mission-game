@@ -1,3 +1,4 @@
+import { worldAction, service, serviceEquipment } from "./campaign/ship";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Design } from "../game";
 import type { LifeSupport } from "./simulation";
@@ -264,6 +265,7 @@ export default function Commander({
     );
     return (
       <Flight
+        onWorld={(action) => updateSession((s) => worldAction(s, action))}
         onOptional={(id) => updateSession((s) => optionalCommand(s, id))}
         onRate={(rate) => updateSession((s) => setSimRate(s, rate))}
         onControls={(throttle, pitch) =>
@@ -309,6 +311,12 @@ export default function Commander({
   }
   return (
     <CampaignHome
+      onServiceEquipment={(id) =>
+        setStore((v) => ({ ...v, progress: serviceEquipment(v.progress, id) }))
+      }
+      onService={(system) =>
+        setStore((v) => ({ ...v, progress: service(v.progress, system) }))
+      }
       progress={store.progress}
       session={store.session}
       legacy={loaded.legacy}

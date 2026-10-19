@@ -1,3 +1,4 @@
+import { createFixtures } from "./campaign/fixtures";
 import {
   useEffect,
   useRef,
@@ -88,6 +89,7 @@ export default function Cabin(props: Props) {
       console.error(error);
       return;
     }
+    const fixtures = props.world ? createFixtures(interior.scene) : undefined;
     let field:
       { update: (s: Session) => void; dispose: () => void } | undefined;
     let disposed = false;
@@ -205,7 +207,8 @@ export default function Cabin(props: Props) {
               missionById(current.current.world.session.missionId).destination
             ]
           : null;
-        const speed = camera.position.z > 10.4 && env ? env.movement : 1.8;
+        const speed =
+          camera.position.z > 10.4 && env ? env.movement * 0.88 : 1.8;
         const x =
           camera.position.x +
           (Math.cos(yaw) * sideways - Math.sin(yaw) * forward) * dt * speed;
@@ -258,8 +261,12 @@ export default function Cabin(props: Props) {
         current.current.world?.target,
         current.current.world?.session.landed ||
           current.current.world?.session.flight.status === "pad",
+        current.current.world?.session.world,
       );
-      if (current.current.world) field?.update(current.current.world.session);
+      if (current.current.world) {
+        field?.update(current.current.world.session);
+        fixtures?.update(current.current.world.session);
+      }
       if (!document.hidden && now - lastDraw >= frameDuration) {
         renderer.render(scene, camera);
         lastDraw = now;
@@ -289,6 +296,7 @@ export default function Cabin(props: Props) {
       window.removeEventListener("blur", clear);
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       clear();
+      fixtures?.dispose();
       interior.dispose();
       renderer.dispose();
       renderer.domElement.remove();
@@ -341,7 +349,9 @@ export default function Cabin(props: Props) {
   const moveLook = (e: ReactPointer<HTMLDivElement>) => {
     const p = lookPointer.current;
     if (!p || p.id !== e.pointerId || props.locked) return;
-    look.current.yaw -= (e.clientX - p.x) * 0.0035;
+    look.current.yaw -=
+      (e.clientX - p.x) *
+      (current.current.world?.session.position.z! > 10.4 ? 0.0028 : 0.0035);
     look.current.pitch = Math.max(
       -1.15,
       Math.min(1.15, look.current.pitch - (e.clientY - p.y) * 0.0035),

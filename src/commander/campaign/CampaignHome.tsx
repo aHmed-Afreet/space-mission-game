@@ -1,3 +1,10 @@
+import { equipment, type EquipmentId } from "./equipment";
+import {
+  categories,
+  nominalCondition,
+  equipmentServiceCost,
+  type Subsystem,
+} from "./ship";
 import { technologies, money } from "./economy";
 import { chapters, missions, type MissionDefinition } from "./definitions";
 import { canStart, type Progress, type Session } from "./engine";
@@ -13,7 +20,11 @@ export default function CampaignHome({
   onResume,
   onLegacy,
   onExit,
+  onService = () => {},
+  onServiceEquipment = () => {},
 }: {
+  onService?: (system: Subsystem) => void;
+  onServiceEquipment?: (id: EquipmentId) => void;
   progress: Progress;
   session: Session | null;
   legacy: boolean;
@@ -142,6 +153,64 @@ export default function CampaignHome({
             {r.score}/100
           </p>
         ))}
+      </details>
+      <details className="panel">
+        <summary>Spacecraft condition & pre-flight maintenance</summary>
+        <p>
+          Service between flights. Condition carries over from completed or
+          aborted real flights; training replays do not alter programme
+          hardware.
+        </p>
+        {categories.map((id) => {
+          const value = (progress.condition || nominalCondition())[id],
+            cost = Math.round((100 - value) * 4) / 100;
+          return (
+            <div className="ship-service-row" key={id}>
+              <span>
+                {id.toUpperCase()} · {value.toFixed(0)}% ·{" "}
+                {value >= 90
+                  ? "NOMINAL"
+                  : value >= 65
+                    ? "DEGRADED"
+                    : value >= 30
+                      ? "DAMAGED"
+                      : "CRITICAL"}
+              </span>
+              <button
+                disabled={
+                  value >= 100 ||
+                  progress.economy.balance < cost ||
+                  (!!session && !session.report)
+                }
+                onClick={() => onService(id)}
+              >
+                Service · ${cost.toFixed(2)}M
+              </button>
+            </div>
+          );
+        })}
+      </details>
+      <details className="panel">
+        <summary>Reusable equipment servicing</summary>
+        {Object.entries(progress.equipmentCondition || {}).map(
+          ([id, value]) => (
+            <div className="ship-service-row" key={id}>
+              <span>
+                {equipment[id as EquipmentId].name} · {value?.toFixed(1)}%
+              </span>
+              <button
+                disabled={
+                  (value || 100) >= 100 ||
+                  (!!session && !session.report) ||
+                  progress.economy.balance < equipmentServiceCost(value ?? 100)
+                }
+                onClick={() => onServiceEquipment(id as EquipmentId)}
+              >
+                Service · ${equipmentServiceCost(value ?? 100).toFixed(2)}M
+              </button>
+            </div>
+          ),
+        )}
       </details>
       {warning && <p className="cmd-alert caution">{warning}</p>}
       {session && (

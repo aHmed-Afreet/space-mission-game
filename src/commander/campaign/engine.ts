@@ -1,4 +1,13 @@
 import {
+  newShip,
+  tickShip,
+  nominalCondition,
+  faultCatalog,
+  doors,
+  type ShipState,
+  type Condition,
+} from "./ship";
+import {
   emptyObservations,
   withObservations,
   observe,
@@ -86,6 +95,7 @@ export const emptyCamp = (): Camp => ({
   sent: false,
 });
 export type Session = {
+  world: ShipState;
   observations: Observations;
   id: string;
   missionId: string;
@@ -106,7 +116,16 @@ export type Session = {
   airlock: Airlock;
   suit: Suit;
   camp: Camp;
-  samples: { id: string; kind: string; destination: Destination }[];
+  samples: {
+    id: string;
+    kind: string;
+    destination: Destination;
+    location?: string;
+    mass?: number;
+    collectedAt?: number;
+    status?: string;
+    scientificValue?: string;
+  }[];
   experiments: string[];
   pendingTransmit: number;
   landed: boolean;
@@ -165,6 +184,7 @@ export type Report = {
   }[];
   unlocks: Technology[];
   remaining: { fuel: number; battery: number; science: number };
+  sampleManifest?: Session["samples"];
 };
 export type Progress = {
   completed: Record<string, Report>;
@@ -172,6 +192,8 @@ export type Progress = {
   tutorials: string[];
   outposts: Partial<Record<Destination, Camp>>;
   economy: Economy;
+  condition?: Condition;
+  equipmentCondition?: ShipState["equipment"];
   archive?: {
     completed: Record<string, unknown>;
     history: unknown[];
@@ -317,6 +339,7 @@ export function createSession(
     completionMessage: "",
     notice: state.notice,
     observations: emptyObservations(),
+    world: newShip(gear, p.condition),
     finance: launchFinance(
       m,
       p,
@@ -342,6 +365,11 @@ export function createSession(
       campExposure: 1,
     },
   };
+  s.world.equipment = { ...s.world.equipment, ...p.equipmentCondition };
+  s.world.radioQueue.push({
+    due: 2,
+    text: "Mission Control: flight authorization confirmed. Review readiness and report when prepared.",
+  });
   return applyEvents(s);
 }
 export function launchMission(
@@ -401,7 +429,26 @@ function say(s: Session, message: string) {
   return { ...s, notice: message, state: { ...s.state, notice: message } };
 }
 function logged(s: Session, message: string) {
-  const n = say(s, message);
+  const n = s.world
+    ? {
+        ...say(s, message),
+        world: {
+          ...s.world,
+          messages: [
+            ...s.world.messages,
+            {
+              at: s.state.minutes,
+              source: (message.includes("science") || message.includes("sample")
+                ? "SCIENCE"
+                : message.includes("warning")
+                  ? "ALERTS"
+                  : "SPACECRAFT SYSTEM") as ShipState["messages"][number]["source"],
+              text: message,
+            },
+          ].slice(-120),
+        },
+      }
+    : say(s, message);
   n.state = {
     ...n.state,
     log: [
@@ -494,6 +541,13 @@ function applyEvents(s: Session) {
     if (taskEvent.event === "power") {
       n.state.malfunction = true;
       n.observations.powerDiagnosed = false;
+      n.world = {
+        ...n.world,
+        condition: {
+          ...n.world.condition,
+          power: Math.max(20, n.world.condition.power - 8),
+        },
+      };
     }
     if (taskEvent.event === "campPower") {
       n.camp.broken = true;
@@ -522,7 +576,25 @@ export function tickSession(s: Session, minutes = 1): Session {
   const env = environments[missionById(s.missionId).destination];
   let n = {
     ...s,
-    state: tick(s.state, s.design, s.life, minutes, { scriptedEvents: false }),
+    state: tick(
+      s.state,
+      s.design,
+      {
+        ...s.life,
+        waterRecycler:
+          s.world.switches.water &&
+          !s.world.faults.some((f) => f.kind === "water" && !f.verified)
+            ? s.life.waterRecycler
+            : 0,
+        oxygenRecycler:
+          s.world.switches.oxygen &&
+          !s.world.faults.some((f) => f.kind === "oxygen" && !f.verified)
+            ? s.life.oxygenRecycler
+            : 0,
+      },
+      minutes,
+      { scriptedEvents: false },
+    ),
     airlock: { ...s.airlock },
     suit: { ...s.suit },
     camp: { ...s.camp },
@@ -613,7 +685,35 @@ export function tickSession(s: Session, minutes = 1): Session {
       Math.min(0.5, n.camp.power + (watts * minutes) / 60000),
     );
   }
-  n = applyEvents(n);
+  n = tickShip(applyEvents(n), minutes);
+  const sw = n.world.switches,
+    active = n.world.faults.filter((f) => !f.verified);
+  const solarLoss =
+    !sw.solar || active.some((f) => f.kind === "solar")
+      ? (s.design.counts.solar || 0) * 85
+      : 0;
+  const savedLoad =
+    (!sw.science ? 25 : 0) +
+    (!sw.radio ? 12 : 0) +
+    (sw.emergency ? 20 : 0) -
+    (!sw.busB ? 18 : 0) -
+    (!sw.busA ? 10 : 0);
+  n.state.battery = Math.max(
+    0,
+    Math.min(
+      n.life.batteries,
+      n.state.battery + ((savedLoad - solarLoss) * minutes) / 60000,
+    ),
+  );
+  if (!sw.cooling || active.some((f) => f.kind === "cooling"))
+    n.state.temperature += 0.015 * minutes;
+  else
+    n.state.temperature +=
+      (n.world.setpoint - n.state.temperature) * Math.min(0.1, minutes * 0.005);
+  if (active.some((f) => f.kind === "bus")) n.state.malfunction = true;
+  if (active.some((f) => f.kind === "comms") && n.world.antenna === 1)
+    n.state.communications = false;
+  if (active.length) n.simRate = 1;
   if (
     n.state.malfunction ||
     n.camp.broken ||
@@ -638,6 +738,15 @@ export function moveSession(s: Session, p: Position) {
     s.flight?.status === "ascent"
   )
     return s;
+  for (const [id, d] of Object.entries(doors)) {
+    const state = s.world?.doors[id as keyof typeof doors];
+    if (
+      state &&
+      (s.position.z - d.z) * (p.z - d.z) < 0 &&
+      (!state.open || Date.now() < state.readyAt)
+    )
+      return s;
+  }
   for (const [z, open] of [
     [7.75, s.airlock.inner],
     [10.25, s.airlock.outer],
@@ -654,7 +763,18 @@ export function moveSession(s: Session, p: Position) {
   return evaluate({ ...s, position: p });
 }
 export function campaignWalkable(x: number, z: number, s: Session) {
-  if (z <= 7.15) return walkable(x, z);
+  if (z <= 7.15) {
+    for (const [id, d] of Object.entries(doors)) {
+      const gate = s.world?.doors[id as keyof typeof doors];
+      if (
+        gate &&
+        (!gate.open || Date.now() < gate.readyAt) &&
+        Math.abs(z - d.z) < 0.2
+      )
+        return false;
+    }
+    return walkable(x, z);
+  }
   if (!missionById(s.missionId).eva) return false;
   if (z < 10.45) {
     if (Math.abs(x) > 0.62) return false;
@@ -779,6 +899,37 @@ export function command(s: Session, action: CampaignAction): Session {
     !s.landed
   )
     return fail("Complete the lunar approach and landing before surface EVA.");
+  const access: Partial<Record<CampaignAction, keyof ShipState["lockers"]>> = {
+    takeMeal: "food",
+    fill: "water",
+    dispenser: "water",
+    tools: "repair",
+    packEquipment: "equipment",
+    equipSuit: "eva",
+  };
+  const locker = access[action];
+  if (locker && !s.world.lockers[locker])
+    return fail("Open the " + locker + " storage compartment first.");
+  const liveFaults = s.world.faults.filter((f) => !f.verified);
+  if (
+    ["science", "powerScience"].includes(action) &&
+    (!s.world.switches.science || liveFaults.some((f) => f.kind === "sensor"))
+  )
+    return fail("The science circuit is isolated or its sensor needs repair.");
+  if (
+    ["comms", "verifyRadio"].includes(action) &&
+    (!s.world.switches.radio ||
+      liveFaults.some((f) => f.kind === "comms" && s.world.antenna === 1))
+  )
+    return fail("Restore the radio circuit and antenna feed.");
+  if (
+    ["course", "approach", "land"].includes(action) &&
+    (!s.world.switches.navigation ||
+      liveFaults.some((f) => f.kind === "navigation"))
+  )
+    return fail("Restore the navigation computer circuit.");
+  if (["land", "returnBurn"].includes(action) && !s.world.switches.maneuver)
+    return fail("Arm the guarded manoeuvre confirmation at Navigation.");
   if (baseActions.has(action)) {
     if (
       (outside(s) ||
@@ -809,6 +960,13 @@ export function command(s: Session, action: CampaignAction): Session {
       return fail(
         "Inspect the power console to diagnose the fault before repairing it.",
       );
+    if (
+      action === "repair" &&
+      (!s.world.lockers.maintenance || s.world.switches.busB)
+    )
+      return fail(
+        "Open the maintenance panel and isolate Bus B before hardware repair.",
+      );
     if (action === "course" && s.state.course) n.state.course = false;
     if (s.pack.includes("repair")) n.state.tools = true;
     if (action === "comms" && s.state.battery < 0.01)
@@ -819,11 +977,34 @@ export function command(s: Session, action: CampaignAction): Session {
       action as Action,
       nearby(s.position.x, s.position.z),
       s.design,
-      s.life,
+      {
+        ...s.life,
+        waterRecycler:
+          s.world.switches.water && !liveFaults.some((f) => f.kind === "water")
+            ? s.life.waterRecycler
+            : 0,
+      },
     );
     success = result.log !== before.log;
     n.state = result;
     if (!success) return say(s, result.notice);
+    if (action === "tools") {
+      if (!n.pack.includes("repair") && n.world.stored.includes("repair")) {
+        n.pack.push("repair");
+        n.world = {
+          ...n.world,
+          stored: n.world.stored.filter((g) => g !== "repair"),
+        };
+      }
+    }
+    if (action === "repair")
+      n.world = {
+        ...n.world,
+        condition: {
+          ...n.world.condition,
+          power: Math.min(100, n.world.condition.power + 8),
+        },
+      };
     if (action === "comms")
       n.state.battery = Math.max(0, n.state.battery - 0.01);
     if (action === "eat") n.lastEat = s.state.minutes;
@@ -841,7 +1022,20 @@ export function command(s: Session, action: CampaignAction): Session {
       );
     if (req && s.suit.power < equipment[req].power)
       return fail("Suit battery is too low. Return to the spacecraft.");
-    if (req) n.suit.power = Math.max(0, n.suit.power - equipment[req].power);
+    if (req) {
+      const condition = s.world.equipment[req] || 100;
+      n.suit.power = Math.max(
+        0,
+        n.suit.power - equipment[req].power * (1 + (100 - condition) / 100),
+      );
+      n.world = {
+        ...n.world,
+        equipment: {
+          ...n.world.equipment,
+          [req]: Math.max(5, condition - 0.15),
+        },
+      };
+    }
     switch (action) {
       case "inspectPower":
       case "inspectLife":
@@ -898,9 +1092,25 @@ export function command(s: Session, action: CampaignAction): Session {
       case "packEquipment":
         if (!atSite(s, "equipment") || outside(s))
           return fail("Collect the prepared equipment from Equipment Storage.");
-        n.pack = s.selectedGear.filter(
-          (id) => id !== "suit" && !s.camp[id as keyof Camp],
+        const loading = s.world.stored.filter(
+          (id) =>
+            ![
+              "scanner",
+              "drill",
+              "camera",
+              "containers",
+              "sensor",
+              "radiation",
+              "experiment",
+              "repair",
+            ].includes(id),
         );
+        n.pack = [...new Set([...s.pack, ...loading])];
+        n.world = {
+          ...s.world,
+          stored: s.world.stored.filter((id) => !loading.includes(id)),
+        };
+
         break;
 
       case "verifyPower":
@@ -967,12 +1177,26 @@ export function command(s: Session, action: CampaignAction): Session {
           s.flight.velocity < 7.8
         )
           return fail("Reach 180 km and 7.8 km/s after booster separation.");
+        n.world = {
+          ...n.world,
+          radioQueue: [
+            ...n.world.radioQueue,
+            {
+              due: s.state.minutes + 1.5,
+              text: "Telemetry confirms stable orbit. Payload operations authorized when ready.",
+            },
+          ],
+        };
         n.flight.status = "orbit";
         n.observations.orbitMinute = s.state.minutes;
         n.simRate = 1;
         n.state.fuel -= 1;
         break;
       case "returnBurn":
+        if (s.world.target !== "earth")
+          return fail(
+            "Select Earth recovery at Navigation before the return burn.",
+          );
         if (s.flight.status !== "orbit")
           return fail("Return manoeuvres require a stable operational orbit.");
         if (
@@ -992,6 +1216,10 @@ export function command(s: Session, action: CampaignAction): Session {
           );
         n.state.fuel -= s.landed ? 6 : 3;
         n.landed = false;
+        n.world = {
+          ...n.world,
+          switches: { ...n.world.switches, maneuver: false },
+        };
         n.flight.status = "returning";
         n.observations.returnMinute = s.state.minutes;
         n.simRate = 1;
@@ -1039,6 +1267,12 @@ export function command(s: Session, action: CampaignAction): Session {
             : !s.observations.powerDiagnosed
         )
           return fail("Inspect and diagnose the affected power system first.");
+        if (
+          action === "eventReset" &&
+          !campFault &&
+          (!s.world.lockers.maintenance || s.world.switches.busB)
+        )
+          return fail("Open maintenance access and isolate Bus B for repair.");
         if (action === "eventReset") {
           if (!s.state.tools && !s.pack.includes("repair"))
             return fail(
@@ -1133,7 +1367,6 @@ export function command(s: Session, action: CampaignAction): Session {
             oxygenChecked: false,
             powerChecked: false,
           };
-          n.pack = s.selectedGear.filter((id) => id !== "suit");
         }
         break;
       case "checkOxygen":
@@ -1209,6 +1442,8 @@ export function command(s: Session, action: CampaignAction): Session {
         break;
       case "approach":
       case "land":
+        if (action === "land" && s.world.target !== "moon")
+          return fail("Select the lunar landing destination at Navigation.");
         if (s.flight.status !== "orbit")
           return fail("Establish orbit before approach operations.");
         if (
@@ -1235,7 +1470,20 @@ export function command(s: Session, action: CampaignAction): Session {
         if (s.state.fuel < (action === "land" ? 5 : 2))
           return fail("Not enough fuel for this manoeuvre.");
         n.state.fuel -= action === "land" ? 5 : 2;
-        if (action === "land") n.landed = true;
+        if (action === "land") {
+          n.landed = true;
+          n.world = {
+            ...n.world,
+            switches: { ...n.world.switches, maneuver: false },
+            radioQueue: [
+              ...n.world.radioQueue,
+              {
+                due: s.state.minutes + 2,
+                text: "Surface telemetry received. Verify vehicle condition before EVA.",
+              },
+            ],
+          };
+        }
         break;
       case "diagnose":
         n.observations.powerDiagnosed = s.state.malfunction;
@@ -1274,15 +1522,30 @@ export function command(s: Session, action: CampaignAction): Session {
       case "drill":
         if (!s.pack.includes("containers"))
           return fail("Sample containers were not packed.");
+        if (
+          packMass(s.pack) +
+            s.samples.reduce((sum, v) => sum + (v.mass || 0.42), 0) +
+            (action === "drill" ? 0.32 : 0.42) >
+          PACK_CAPACITY
+        )
+          return fail("Sample mass would exceed the field-pack limit.");
         if (s.samples.length >= 6)
           return fail("Sample containers are full. Store samples at the camp.");
         n.samples = [
           ...n.samples,
           {
-            id: `${s.id}-${s.samples.length}`,
+            id: `${s.id}-${s.world.storedSamples.length + s.samples.length}`,
             kind:
               action === "drill" ? "Shallow subsurface sample" : "Rock sample",
             destination: m.destination,
+            location:
+              (["survey", "crater", "relay", "camp"] as Site[]).find((site) =>
+                atSite(s, site),
+              ) || "surface",
+            mass: action === "drill" ? 0.32 : 0.42,
+            collectedAt: s.state.minutes,
+            status: "Carried · labelled",
+            scientificValue: action === "drill" ? "High" : "Contextual",
           },
         ];
         n.state.science = Math.min(100, n.state.science + 20);
@@ -1311,6 +1574,13 @@ export function command(s: Session, action: CampaignAction): Session {
           return fail("Use deployed sample storage at the research camp.");
         if (!s.samples.length)
           return fail("There are no carried samples to store.");
+        n.world = {
+          ...n.world,
+          storedSamples: [
+            ...n.world.storedSamples,
+            ...s.samples.map((v) => ({ ...v, status: "Stored at camp" })),
+          ],
+        };
         n.camp.samples += s.samples.length;
         n.samples = [];
         break;
@@ -1351,6 +1621,23 @@ export function command(s: Session, action: CampaignAction): Session {
     );
     success = true;
   }
+  if (success && baseActions.has(action))
+    n = {
+      ...n,
+      world: {
+        ...n.world,
+        messages: [
+          ...n.world.messages,
+          {
+            at: n.state.minutes,
+            source: (action === "science"
+              ? "SCIENCE"
+              : "CREW ACTION") as ShipState["messages"][number]["source"],
+            text: n.state.notice,
+          },
+        ].slice(-120),
+      },
+    };
   if (success) {
     if (action === "comms" || action === "campTransmit") {
       n = receipt(n, action);
@@ -1421,7 +1708,8 @@ export function makeReport(s: Session, success: boolean): Report {
     fuel,
     communications,
     experiments: s.experiments.length,
-    samples: s.samples.length + s.camp.samples,
+    samples: s.samples.length + s.world.storedSamples.length,
+    sampleManifest: [...s.samples, ...s.world.storedSamples],
     remaining: {
       fuel: s.state.fuel,
       battery: s.state.battery,
@@ -1491,6 +1779,13 @@ export function recordReport(p: Progress, s: Session): Progress {
         }
       : p.completed,
     history: [r, ...p.history].slice(0, 100),
+    condition: s.finance.practice ? p.condition : { ...s.world.condition },
+    equipmentCondition: s.finance.practice
+      ? p.equipmentCondition
+      : {
+          ...s.world.equipment,
+          ...(s.suit.equipped ? { suit: s.suit.condition } : {}),
+        },
     outposts:
       r.success && s.camp.shelter
         ? {

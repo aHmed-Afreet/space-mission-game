@@ -114,6 +114,18 @@ export default function Report({
           </article>
         ))}
       </section>
+      {!!result.sampleManifest?.length && (
+        <section className="panel">
+          <h2>Sample manifest</h2>
+          {result.sampleManifest.map((v) => (
+            <p key={v.id}>
+              {v.kind} · {v.location || v.destination} ·{" "}
+              {v.mass?.toFixed(2) || "—"} kg · {v.status || "Collected"} · value{" "}
+              {v.scientificValue || "Unclassified"}
+            </p>
+          ))}
+        </section>
+      )}
       <div className="campaign-report-counts">
         <span>{result.experiments} experiments completed</span>
         <span>{result.samples} samples collected</span>

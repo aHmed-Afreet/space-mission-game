@@ -1,3 +1,11 @@
+import {
+  newShip,
+  doors,
+  lockers,
+  nominalCondition,
+  categories,
+  faultCatalog,
+} from "./ship";
 import { emptyObservations } from "./observations";
 import { decodeStore as decodeLegacy } from "./legacySave";
 import { technologies } from "./economy";
@@ -164,6 +172,22 @@ export function decodeStore(raw: string): Store {
   v.progress.tutorials = v.progress.tutorials.filter(
     (s: any) => typeof s === "string",
   );
+  v.progress.condition ||= nominalCondition();
+  for (const category of categories)
+    if (
+      !finite(v.progress.condition[category]) ||
+      v.progress.condition[category] < 0 ||
+      v.progress.condition[category] > 100
+    )
+      throw Error("Invalid saved subsystem condition");
+  for (const [id, value] of Object.entries(v.progress.equipmentCondition || {}))
+    if (
+      !(id in equipment) ||
+      !finite(value) ||
+      (value as number) < 0 ||
+      (value as number) > 100
+    )
+      throw Error("Invalid saved equipment condition");
   v.progress.outposts = v.progress.outposts || {};
   for (const [destination, camp] of Object.entries(v.progress.outposts))
     if (
@@ -176,6 +200,74 @@ export function decodeStore(raw: string): Store {
   if (v.session) {
     const s = v.session as Session;
     const m = missionById(s.missionId);
+    if (!s.world) {
+      s.world = newShip(s.selectedGear);
+      for (const gate of Object.values(s.world.doors)) gate.open = true;
+      s.world.stored = s.world.stored.filter((id) => !s.pack.includes(id));
+    }
+    for (const id of Object.keys(doors) as (keyof typeof doors)[])
+      if (
+        typeof s.world.doors?.[id]?.open !== "boolean" ||
+        !finite(s.world.doors[id].readyAt)
+      )
+        throw Error("Invalid physical door");
+    for (const id of Object.keys(lockers) as (keyof typeof lockers)[])
+      if (typeof s.world.lockers?.[id] !== "boolean")
+        throw Error("Invalid locker");
+    if (
+      !Array.isArray(s.world.stored) ||
+      s.world.stored.some((id) => !(id in equipment)) ||
+      new Set([...s.world.stored, ...s.pack]).size !==
+        s.world.stored.length + s.pack.length
+    )
+      throw Error("Invalid stored equipment");
+    if (
+      !finite(s.world.partsStored) ||
+      s.world.partsStored < 0 ||
+      !Array.isArray(s.world.faults) ||
+      !Array.isArray(s.world.messages) ||
+      !Array.isArray(s.world.radioQueue)
+    )
+      throw Error("Invalid spacecraft state");
+    for (const id of categories) {
+      const value = s.world.condition[id];
+      if (!finite(value) || value < 0 || value > 100)
+        throw Error("Invalid spacecraft condition");
+    }
+    for (const key of Object.keys(newShip([]).switches))
+      if (typeof s.world.switches?.[key] !== "boolean")
+        throw Error("Invalid circuit state");
+    if (
+      !finite(s.world.rng) ||
+      !finite(s.world.nextFault) ||
+      !finite(s.world.setpoint) ||
+      s.world.setpoint < 18 ||
+      s.world.setpoint > 26 ||
+      !Number.isInteger(s.world.antenna) ||
+      s.world.antenna < 1 ||
+      s.world.antenna > (s.design.counts.antenna || 0) ||
+      !["earth", "moon"].includes(s.world.target)
+    )
+      throw Error("Invalid console controls");
+    for (const f of s.world.faults)
+      if (
+        !(f.kind in faultCatalog) ||
+        typeof f.id !== "string" ||
+        typeof f.diagnosed !== "boolean" ||
+        typeof f.repaired !== "boolean" ||
+        typeof f.verified !== "boolean" ||
+        !finite(f.at)
+      )
+        throw Error("Invalid fault record");
+    if (
+      !Array.isArray(s.world.storedSamples) ||
+      Object.values(s.world.equipment).some(
+        (v) => !finite(v) || v! < 0 || v! > 100,
+      )
+    )
+      throw Error("Invalid equipment condition");
+    for (const m of [...s.world.messages, ...s.world.radioQueue])
+      if (typeof m.text !== "string") throw Error("Invalid radio message");
     if (s.observations)
       s.observations = { ...emptyObservations(), ...s.observations };
     if (!s.observations)

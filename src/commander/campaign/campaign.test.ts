@@ -1,3 +1,4 @@
+import { doors, lockers, worldAction, equipmentLocker } from "./ship";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
@@ -53,7 +54,23 @@ function stand(
     pos.x += pos.x < 0 ? 1.1 : -1.1;
   if (site === "cockpit") pos.z += 1.05;
   if (site === "innerHatch") pos.z = 7.1;
-  return moveSession(s, pos);
+  const direction = pos.z > s.position.z ? 1 : -1;
+  for (const [id, d] of Object.entries(doors).sort(
+    (a, b) => direction * (a[1].z - b[1].z),
+  )) {
+    if (
+      (s.position.z - d.z) * (pos.z - d.z) < 0 &&
+      !s.world.doors[id as keyof typeof doors].open
+    ) {
+      s = moveSession(s, { x: 0, z: d.z - direction * 0.8, heading: 0 });
+      s = worldAction(s, { kind: "door", id: id as keyof typeof doors }, 0);
+    }
+  }
+  s = moveSession(s, pos);
+  for (const [id, l] of Object.entries(lockers))
+    if (l.area === site && !s.world.lockers[id as keyof typeof lockers])
+      s = worldAction(s, { kind: "locker", id: id as keyof typeof lockers }, 0);
+  return s;
 }
 /** Full public procedure driver: changes position through collisions, operates controls and waits for real state. */
 export function completeMission(
@@ -63,6 +80,13 @@ export function completeMission(
   bypass = false,
 ): Session {
   let s = createSession(m, design, life, [...m.requiredEquipment], p);
+  if (m.eva) {
+    for (const id of m.requiredEquipment.filter((g) => g !== "suit")) {
+      const locker = equipmentLocker(id);
+      s = stand(s, lockers[locker].area as any);
+      s = worldAction(s, { kind: "take", id }, 0);
+    }
+  }
   let guard = 0;
   while (!s.report && guard++ < 400) {
     const o = currentObjective(s);
@@ -102,7 +126,7 @@ export function completeMission(
       s = stand(s, "equipment");
       s = command(s, "tools");
       s = stand(s, "power");
-      s = command(s, "repair");
+      s = command(isolate(s), "repair");
       s = moveSession(s, pos);
     }
     if (o.type === "WAIT") {
@@ -142,6 +166,13 @@ export function completeMission(
         bypass && o.choices && o.event
           ? o.choices[o.choices.length - 1].action
           : o.action;
+      if (action === "eventReset" && o.event === "power") s = isolate(s);
+      if (["land", "returnBurn"].includes(action) && !s.world.switches.maneuver)
+        s = worldAction(s, { kind: "switch", id: "maneuver" }, 0);
+      if (action === "returnBurn")
+        s = worldAction(s, { kind: "target", value: "earth" }, 0);
+      if (["approach", "land"].includes(action) && m.surface)
+        s = worldAction(s, { kind: "target", value: "moon" }, 0);
       s = command(s, action);
       if (o.type === "TRANSMIT" && s.pendingTransmit) s = tickSession(s, 5);
       assert.ok(
@@ -788,13 +819,13 @@ test("real prerequisites remain enforced without using the current goal as a loc
   s = stand(s, "power");
   s.state.malfunction = true;
   const parts = s.state.parts;
-  assert.equal(command(s, "repair").state.parts, parts);
+  assert.equal(command(isolate(s), "repair").state.parts, parts);
   s = command(s, "inspectPower");
-  assert.equal(command(s, "repair").state.parts, parts);
+  assert.equal(command(isolate(s), "repair").state.parts, parts);
   s = stand(s, "equipment");
   s = command(s, "tools");
   s = stand(s, "power");
-  s = command(s, "repair");
+  s = command(isolate(s), "repair");
   assert.equal(s.state.parts, parts - 1);
   assert.equal(s.state.malfunction, false);
   s = stand(s, "galley");
@@ -818,7 +849,7 @@ test("normal repairs satisfy fault goals and earlier science cannot satisfy post
   s = command(s, "tools");
   s = stand(s, "power");
   s = command(s, "inspectPower");
-  s = command(s, "repair");
+  s = command(isolate(s), "repair");
   assert.ok(
     s.objective > missions[0].objectives.findIndex((o) => o.event === "power"),
   );
@@ -987,4 +1018,252 @@ test("field instruments remain usable at another valid site while a specific sur
   assert.ok(s.state.science > 0 && s.suit.power < 1);
   assert.equal(s.objective, goal);
   assert.ok(s.experiments.some((e) => e.includes("crater")));
+});
+
+function isolate(s: Session) {
+  s = stand(s, "power");
+  if (s.world.switches.busB)
+    s = worldAction(s, { kind: "switch", id: "busB" }, 0);
+  return s;
+}
+import {
+  service,
+  serviceEquipment,
+  tickShip,
+  shipAlerts,
+  nominalCondition,
+  equipmentServiceCost,
+} from "./ship";
+test("physical section doors block crossing, animate before clearance and reject closure on the player", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  const before = s.position;
+  s = moveSession(s, { x: 0, z: -3, heading: 0 });
+  assert.deepEqual(s.position, before);
+  s = worldAction(s, { kind: "door", id: "flight" });
+  assert.ok(s.world.doors.flight.open);
+  assert.deepEqual(
+    moveSession(s, { x: 0, z: -3, heading: 0 }).position,
+    before,
+  );
+  s.world.doors.flight.readyAt = 0;
+  s = moveSession(s, { x: 0, z: -3, heading: 0 });
+  assert.equal(s.position.z, -3);
+  s.position.z = -4.35;
+  const close = worldAction(s, { kind: "door", id: "flight" });
+  assert.equal(close.world.doors.flight.open, true);
+});
+test("food lockers and water service require physical opening and meals can be returned without duplication", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  s = stand(s, "galley");
+  s.world.lockers.food = false;
+  const food = s.state.food;
+  s = command(s, "takeMeal");
+  assert.equal(s.state.food, food);
+  s = worldAction(s, { kind: "locker", id: "food" });
+  s = command(s, "takeMeal");
+  assert.equal(s.state.food, food - 1);
+  s = worldAction(s, { kind: "returnMeal" });
+  assert.equal(s.state.food, food);
+  assert.equal(s.state.meals, 0);
+  assert.equal(worldAction(s, { kind: "returnMeal" }).state.food, food);
+  s.world.lockers.water = false;
+  assert.equal(command(s, "fill").state.bottle, 0);
+});
+test("individual field tools transfer between physical cabinets and the carried pack", () => {
+  let s = createSession(
+    missions[2],
+    design,
+    life,
+    missions[2].requiredEquipment,
+    qualified(2),
+  );
+  s = stand(s, "science");
+  assert.ok(s.world.stored.includes("scanner"));
+  s = worldAction(s, { kind: "take", id: "scanner" });
+  assert.ok(s.pack.includes("scanner"));
+  assert.equal(s.world.stored.includes("scanner"), false);
+  const twice = worldAction(s, { kind: "take", id: "scanner" });
+  assert.equal(twice.pack.filter((g) => g === "scanner").length, 1);
+  s = worldAction(s, { kind: "store", id: "scanner" });
+  assert.equal(s.pack.includes("scanner"), false);
+  assert.equal(s.world.stored.filter((g) => g === "scanner").length, 1);
+});
+test("spare parts and suits can be stowed and recovered through their local lockers", () => {
+  let s = createSession(
+    missions[1],
+    design,
+    life,
+    missions[1].requiredEquipment,
+    qualified(),
+  );
+  s = stand(s, "equipment");
+  const parts = s.state.parts;
+  s = worldAction(s, { kind: "storeParts" });
+  assert.equal(s.world.partsStored, 1);
+  s = worldAction(s, { kind: "takeParts" });
+  assert.equal(s.state.parts, parts);
+  const oxygen = s.state.oxygen;
+  s = command(s, "equipSuit");
+  assert.ok(s.suit.equipped);
+  s = worldAction(s, { kind: "stowSuit" });
+  assert.equal(s.suit.equipped, false);
+  assert.equal(s.state.oxygen, oxygen);
+});
+test("console switches change actual solar generation, recycler recovery and science availability", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  s = stand(s, "power");
+  s.state.battery = 0.5;
+  s.world.nextFault = 99999;
+  const normal = tickSession(s, 1);
+  const off = worldAction(s, { kind: "switch", id: "solar" });
+  assert.ok(tickSession(off, 1).state.battery < normal.state.battery);
+  s = worldAction(s, { kind: "switch", id: "water" });
+  s = stand(s, "galley");
+  s.state.bottle = 1;
+  const water = s.state.water;
+  s = command(s, "drink");
+  assert.equal(s.state.water, water);
+  s = stand(s, "power");
+  s = worldAction(s, { kind: "switch", id: "science" });
+  s = stand(s, "science");
+  const science = s.state.science;
+  s = command(s, "science");
+  assert.equal(s.state.science, science);
+});
+test("dynamic faults use persistent seeded state and do not stack or spam", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  s.flight.status = "orbit";
+  s.state.minutes = 180;
+  s.world.nextFault = 180;
+  let seed = 0;
+  while (seed < 20000) {
+    const value = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    if (value / 4294967296 < 0.11) break;
+    seed++;
+  }
+  s.world.rng = seed;
+  s = tickShip(s, 1);
+  assert.equal(s.world.faults.length, 1);
+  assert.ok(
+    shipAlerts(s).some((a) => a.level === "CAUTION" || a.level === "WARNING"),
+  );
+  const count = s.world.faults.length;
+  s.state.minutes = 1000;
+  s = tickShip(s, 1);
+  assert.equal(s.world.faults.length, count);
+});
+test("fault repair requires diagnosis, access, isolation, tools and one part, then verification", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  s = stand(s, "power");
+  s.world.faults = [
+    {
+      id: "test",
+      kind: "solar",
+      diagnosed: false,
+      repaired: false,
+      verified: false,
+      at: 0,
+    },
+  ];
+  s.world.lockers.maintenance = false;
+  const parts = s.state.parts;
+  s = worldAction(s, { kind: "repairFault", id: "test" });
+  assert.equal(s.state.parts, parts);
+  s = worldAction(s, { kind: "diagnose", id: "test" });
+  s = worldAction(s, { kind: "locker", id: "maintenance" });
+  s = worldAction(s, { kind: "switch", id: "solar" });
+  s.state.tools = true;
+  s = worldAction(s, { kind: "repairFault", id: "test" });
+  assert.equal(s.state.parts, parts - 1);
+  assert.equal(s.world.faults[0].verified, false);
+  assert.equal(
+    worldAction(s, { kind: "repairFault", id: "test" }).state.parts,
+    parts - 1,
+  );
+  s = worldAction(s, { kind: "switch", id: "solar" });
+  s = worldAction(s, { kind: "verifyFault", id: "test" });
+  assert.equal(s.world.faults[0].verified, true);
+});
+test("physical state, stocks, switches and condition persist; pre-update checkpoints migrate safely", () => {
+  const started = launchMission(missions[0], design, life, [], emptyProgress());
+  let s = stand(started.session, "galley");
+  s = command(s, "takeMeal");
+  s = worldAction(s, { kind: "returnMeal" });
+  const store = { ...newStore(), session: s, progress: started.progress };
+  const restored = decodeStore(JSON.stringify(store));
+  assert.deepEqual(restored.session!.world, s.world);
+  const previous = structuredClone(store);
+  delete (previous.session as Partial<Session>).world;
+  assert.ok(decodeStore(JSON.stringify(previous)).session!.world);
+  const invalid = structuredClone(store);
+  (invalid.session.world.switches as any).water = "bad";
+  assert.throws(() => decodeStore(JSON.stringify(invalid)), /circuit/);
+});
+test("spacecraft and equipment maintenance charge Agency Budget exactly once per repair", () => {
+  let p = emptyProgress();
+  p.condition = { ...nominalCondition(), communications: 70 };
+  p.equipmentCondition = { scanner: 91 };
+  const before = p.economy.balance;
+  p = service(p, "communications");
+  assert.equal(p.condition!.communications, 100);
+  assert.equal(p.economy.balance, before - 1.2);
+  assert.equal(service(p, "communications"), p);
+  const cost = equipmentServiceCost(91),
+    balance = p.economy.balance;
+  p = serviceEquipment(p, "scanner");
+  assert.equal(p.equipmentCondition!.scanner, 100);
+  assert.equal(p.economy.balance, Math.round((balance - cost) * 100) / 100);
+  assert.equal(serviceEquipment(p, "scanner"), p);
+});
+test("samples retain location, mass, time and scientific classification when stored", () => {
+  let s = createSession(
+    missions[2],
+    design,
+    life,
+    missions[2].requiredEquipment,
+    qualified(2),
+  );
+  s.flight.status = "orbit";
+  s.landed = true;
+  s.suit = {
+    equipped: true,
+    oxygen: 0.3,
+    power: 1,
+    condition: 100,
+    oxygenChecked: true,
+    powerChecked: true,
+  };
+  s.pack = ["drill", "containers"];
+  s.world.stored = s.world.stored.filter((g) => !s.pack.includes(g));
+  s.position = { x: -6, z: 23, heading: 0 };
+  s = command(s, "drill");
+  assert.equal(s.samples[0].mass, 0.32);
+  assert.equal(s.samples[0].location, "crater");
+  assert.equal(s.samples[0].scientificValue, "High");
+  s.position = { x: -1.1, z: -3.1, heading: 0 };
+  s.world.lockers.samples = true;
+  s = worldAction(s, { kind: "storeSamples" });
+  assert.equal(s.samples.length, 0);
+  assert.equal(s.world.storedSamples.length, 1);
+  assert.equal(makeReport(s, false).sampleManifest!.length, 1);
+  const archived = s.world.storedSamples[0];
+  s = worldAction(s, { kind: "retrieveSample", id: archived.id });
+  assert.equal(s.samples[0].id, archived.id);
+  assert.equal(s.samples[0].collectedAt, archived.collectedAt);
+  assert.equal(s.world.storedSamples.length, 0);
+  assert.equal(makeReport(s, false).sampleManifest!.length, 1);
+});
+test("Mission Control messages arrive on mission time and controls stay free-roam", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  assert.equal(
+    s.world.messages.some((m) => m.source === "MISSION CONTROL"),
+    false,
+  );
+  s = tickSession(s, 3);
+  assert.ok(s.world.messages.some((m) => m.source === "MISSION CONTROL"));
+  s = stand(s, "power");
+  const objective = s.objective;
+  s = worldAction(s, { kind: "switch", id: "emergency" });
+  assert.equal(s.world.switches.emergency, true);
+  assert.equal(s.objective, objective);
 });

@@ -1,3 +1,5 @@
+import SoundSettings from "./SoundSettings";
+import { shipAlerts } from "./ship";
 import { money } from "./economy";
 import { useEffect, useRef, useState } from "react";
 import Icon, { type IconName } from "../Icons";
@@ -715,7 +717,8 @@ export default function CampaignTablet({
               </h3>
               <p className="cmd-footnote">
                 Field pack {packMass(s.pack).toFixed(1)} / {PACK_CAPACITY} kg.
-                Your selected field items are packed when you put on the suit.
+                Collect field items from their storage lockers before leaving
+                the cabin.
               </p>
               <div className="cmd-inventory-grid">
                 {s.selectedGear.map((id) => (
@@ -734,6 +737,14 @@ export default function CampaignTablet({
                     </div>
                     <h3>{equipment[id].name}</h3>
                     <small>Quantity: 1 · {equipment[id].description}</small>
+                    <small>
+                      Condition{" "}
+                      {(id === "suit"
+                        ? s.suit.condition
+                        : (s.world.equipment[id] ?? 100)
+                      ).toFixed(1)}
+                      %
+                    </small>
                     <strong>
                       {id === "suit"
                         ? s.suit.equipped
@@ -787,7 +798,13 @@ export default function CampaignTablet({
                     <p>
                       {sample.kind}
                       <br />
-                      <small>{environments[sample.destination].name}</small>
+                      <small>
+                        {environments[sample.destination].name} ·{" "}
+                        {sample.location || "legacy survey"} ·{" "}
+                        {sample.mass?.toFixed(2) || "—"} kg ·{" "}
+                        {sample.status || "Carried"} · value{" "}
+                        {sample.scientificValue || "Unclassified"}
+                      </small>
                     </p>
                   </div>
                 ))
@@ -795,6 +812,12 @@ export default function CampaignTablet({
                 <p className="cmd-footnote">
                   No physical samples carried. Science observations:{" "}
                   {state.science} points.
+                </p>
+              )}
+              {s.world.storedSamples.length > 0 && (
+                <p>
+                  {s.world.storedSamples.length} labelled samples in physical
+                  storage.
                 </p>
               )}
               {s.camp.samples > 0 && (
@@ -849,6 +872,18 @@ export default function CampaignTablet({
                   <small>FLIGHT RECORDER</small>
                   <h2>Mission log</h2>
                 </div>
+              </div>
+              <SoundSettings />
+              <h3>Radio & system messages</h3>
+              <div className="cmd-log">
+                {[...s.world.messages].reverse().map((message, i) => (
+                  <article key={"radio" + i}>
+                    <small>
+                      MET {missionTime(message.at)} · {message.source}
+                    </small>
+                    <p>{message.text}</p>
+                  </article>
+                ))}
               </div>
               <div className="cmd-log">
                 {[...state.log].reverse().map((line, i) => (

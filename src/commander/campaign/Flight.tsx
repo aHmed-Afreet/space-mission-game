@@ -1,3 +1,6 @@
+import { sound } from "./audio";
+import StationControls from "./StationControls";
+import { doors, shipAlerts, type WorldAction } from "./ship";
 import LaunchView from "./LaunchView";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cabin from "../Cabin";
@@ -86,7 +89,9 @@ export default function Flight({
   onRate,
   onControls,
   onAbort,
+  onWorld = () => {},
 }: {
+  onWorld?: (a: WorldAction) => void;
   onOptional: (id: string) => void;
   onRate: (rate: number) => void;
   onControls: (throttle: number, pitch: number) => void;
@@ -115,6 +120,51 @@ export default function Flight({
   const m = missionById(s.missionId),
     o = currentObjective(s),
     area = nearby(s.position.x, s.position.z);
+  const audioPosition = useRef(s.position),
+    audioDoors = useRef(""),
+    audioRadio = useRef(0);
+  useEffect(() => {
+    const unlock = () => void sound.unlock();
+    document.addEventListener("pointerdown", unlock, { once: true });
+    return () => {
+      document.removeEventListener("pointerdown", unlock);
+      sound.environment(false, false);
+      sound.suspend();
+    };
+  }, []);
+  useEffect(() => {
+    sound.environment(s.flight.status === "ascent", outside(s));
+    const before = audioPosition.current;
+    if (
+      Math.hypot(s.position.x - before.x, s.position.z - before.z) > 0.9 &&
+      !s.state.paused
+    ) {
+      sound.play("step");
+      audioPosition.current = s.position;
+    }
+    const key = JSON.stringify([s.world.doors, s.world.lockers]);
+    if (audioDoors.current && audioDoors.current !== key) sound.play("hatch");
+    audioDoors.current = key;
+    if (
+      s.world.messages.length > audioRadio.current &&
+      s.world.messages.at(-1)?.source === "MISSION CONTROL"
+    )
+      sound.play("radio");
+    audioRadio.current = s.world.messages.length;
+  }, [s.position, s.world, s.flight.status]);
+  useEffect(() => {
+    if (document.hidden || s.state.paused) return;
+    const id = setInterval(() => {
+      if (outside(s)) sound.play("breath");
+      if (
+        shipAlerts(s).some(
+          (a) => a.level === "WARNING" || a.level === "EMERGENCY",
+        )
+      )
+        sound.play("warning");
+    }, 4000);
+    return () => clearInterval(id);
+  }, [s.state.paused, s.position.z, s.world.faults]);
   const closeTablet = useCallback(() => setTablet(false), []);
   const move = useCallback((p: Position) => onMove(p), [onMove]);
   useEffect(() => {
@@ -158,6 +208,8 @@ export default function Flight({
     }
   }, [s.state.log]);
   const run = (a: CampaignAction) => {
+    void sound.unlock();
+    sound.play(a === "comms" ? "radio" : a === "science" ? "science" : "click");
     onCommand(a);
     setActions(false);
     if (["eat", "drink", "fill", "takeMeal", "repair"].includes(a))
@@ -255,7 +307,9 @@ export default function Flight({
           onInteract={() => setActions((v) => !v)}
           onGraphicsError={() => onTickPause(true)}
           locked={s.state.paused || s.state.sleeping || tablet || !!tutorial}
-          alarm={alerts(s.state).length > 0 || s.camp.broken}
+          alarm={shipAlerts(s).some(
+            (a) => a.level === "WARNING" || a.level === "EMERGENCY",
+          )}
           effect={effect}
           telemetry={{
             ...s.state,
@@ -411,6 +465,7 @@ export default function Flight({
               role="region"
               aria-label="Station operations"
             >
+              <StationControls s={s} onWorld={onWorld} onCommand={run} />
               {actionable &&
                 o?.choices &&
                 o.choices.map((c) => (
@@ -447,7 +502,10 @@ export default function Flight({
               ))}
             </div>
           )}
-          {(actionable ||
+          {(Object.values(doors).some(
+            (d) => Math.abs(s.position.z - d.z) < 1.6,
+          ) ||
+            actionable ||
             area ||
             outside(s) ||
             (m.eva && (atSite(s, "airlock") || atSite(s, "innerHatch")))) &&
@@ -465,11 +523,14 @@ export default function Flight({
                 <span>
                   INTERACT
                   <strong>
-                    {area
-                      ? deck[area].name
-                      : atSite(s, "airlock") || atSite(s, "innerHatch")
-                        ? "Airlock controls"
-                        : "Field equipment"}
+                    {Object.values(doors).find(
+                      (d) => Math.abs(s.position.z - d.z) < 1.2,
+                    )?.name ||
+                      (area
+                        ? deck[area].name
+                        : atSite(s, "airlock") || atSite(s, "innerHatch")
+                          ? "Airlock controls"
+                          : "Field equipment")}
                   </strong>
                 </span>
                 <Icon name="chevron" size={15} />
@@ -497,6 +558,14 @@ export default function Flight({
           <Icon name="check" size={14} />
           <span>{s.notice}</span>
         </div>
+      )}
+      {shipAlerts(s).length > 0 && (
+        <button
+          className="ship-alert-indicator"
+          onClick={() => openTab("STATUS")}
+        >
+          {shipAlerts(s)[0].level} · {shipAlerts(s)[0].text}
+        </button>
       )}
       <div className="campaign-footer-vitals">
         <span>
