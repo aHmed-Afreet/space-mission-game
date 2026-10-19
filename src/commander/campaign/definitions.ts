@@ -874,7 +874,7 @@ const added: {
     source:"https://www.nasa.gov/the-apollo-program/",
     description:"Land near a planned survey location, verify science observations and return samples with safe suit margins.",
     major:"Demonstrate controlled lunar descent and scientific work near a selected field site.",
-    landing:true,eva:true,gear:["suit","scanner","containers","camera"],funding:150,reward:160,
+    landing:true,eva:true,gear:["suit","scanner","containers","camera","sensor"],funding:150,reward:160,
     activities:[
       ...phase("SURFACE GEOLOGY",[
         use("survey","Document the landing-site surface geology.","scan","SCAN"),
@@ -904,7 +904,7 @@ const added: {
     source:"https://www.nasa.gov/the-apollo-program/",
     description:"Explore highland geology, measure surface radiation and collect contextual samples without exceeding EVA resources.",
     major:"Return temperature, radiation and geology measurements from a lunar highland survey.",
-    landing:true,eva:true,gear:["suit","scanner","containers","sensor","camera","drill"],funding:164,reward:181,
+    landing:true,eva:true,gear:["suit","scanner","containers","sensor","camera","drill","radiation"],funding:164,reward:181,
     activities:[...phase("HIGHLAND GEOLOGY",[
       use("survey","Survey highland outcrops and determine geology targets.","scan","SCAN"),
       use("survey","Record radiation readings at the survey site.","measureRadiation"),
@@ -932,7 +932,7 @@ const added: {
     source:"https://www.nasa.gov/the-apollo-program/",
     description:"Practice a longer lunar field visit with geology, remote surveying, surface observations and samples.",
     major:"Return a documented traverse with multiple measurements and a core sample.",
-    landing:true,eva:true,gear:["suit","scanner","containers","camera","drill","sensor"],funding:168,reward:185,
+    landing:true,eva:true,gear:["suit","scanner","containers","camera","drill","sensor","radiation"],funding:168,reward:185,
     activities:[...phase("LUNAR TRAVERSE",[
       use("survey","Observe rock units around the landing zone.","scan","SCAN"),
       use("crater","Collect a rock sample at the crater margin.","sample","SAMPLE"),
