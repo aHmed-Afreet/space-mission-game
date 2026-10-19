@@ -859,6 +859,15 @@ export const missions: MissionDefinition[] = [
   ),
 ];
 
+const orbitalDutyShift=()=>phase("ON-ORBIT DUTY SHIFT",[
+  use("science","Acquire an Earth-observation or orbital instrument reading.","science"),
+  use("communications","Check scheduled telemetry and Earth radio contact.","comms"),
+  use("power","Inspect current electrical and environmental systems.","inspectPower"),
+  ...meals(),
+  use("sleep","Complete a planned crew rest period.","sleep","REST"),
+  wait("Finish the duty-rest interval.",12,"sleep"),
+  task("REST","Wake and take the next crew duty shift.",undefined,"wake"),
+]);
 /** Additional complete campaign flights. Each has launch, flight operations,
  * a mission-specific training activity, simulated fault handling and recovery.
  * Historical references indicate inspiration, not exact reenactments. */
@@ -997,7 +1006,7 @@ for(const [index,entry] of added.entries()){
   const level=index+5;
   const tasks:Objective[]=[
     ...launch(),
-    ...travel(),
+    ...(entry.destination==="earth"?orbitalDutyShift():travel()),
     ...(entry.landing ? phase("LANDING OPERATIONS",[
       use("communications","Confirm lunar approach communications.","comms"),
       use("cockpit","Initiate lunar descent and verify approach corridor.","approach"),
