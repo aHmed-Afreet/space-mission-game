@@ -445,7 +445,7 @@ export default function Flight({
             {m.objectives.length}
           </b>
         </span>
-        {m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}}
+        {m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
         <h2>{o?.title}</h2>
         {o?.site && (
           <p>
