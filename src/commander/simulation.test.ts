@@ -135,3 +135,39 @@ test("oxygen exhaustion safely aborts mission and cannot be undone by actions", 
   assert.equal(s.ended, true);
   assert.equal(act(s, "takeMeal", "galley", d, l), s);
 });
+
+import { deck, nearby, spawn, walkable } from "./layout";
+test("redesigned cabin has a continuous path to every functional station", () => {
+  const queue = [{ x: 0, z: 6.4 }],
+    visited = new Set(["0,32"]);
+  for (let i = 0; i < queue.length; i++) {
+    const p = queue[i];
+    for (const [dx, dz] of [
+      [0.2, 0],
+      [-0.2, 0],
+      [0, 0.2],
+      [0, -0.2],
+    ]) {
+      const x = Math.round((p.x + dx) * 5) / 5,
+        z = Math.round((p.z + dz) * 5) / 5,
+        key = `${Math.round(x * 5)},${Math.round(z * 5)}`;
+      if (!visited.has(key) && walkable(x, z)) {
+        visited.add(key);
+        queue.push({ x, z });
+      }
+    }
+  }
+  for (const id of Object.keys(deck))
+    assert.ok(
+      queue.some((p) => nearby(p.x, p.z) === id),
+      `${id} must be reachable`,
+    );
+});
+test("cabin hull and furniture constrain movement without changing gameplay state", () => {
+  assert.equal(walkable(spawn.x, spawn.z), true);
+  assert.equal(walkable(5, 0), false);
+  assert.equal(walkable(2.3, 6.2), false);
+  assert.equal(walkable(0, -8), false);
+  assert.equal(walkable(deck.galley.x, deck.galley.z), false);
+  assert.equal(nearby(0.7, deck.galley.z), "galley");
+});

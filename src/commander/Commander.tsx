@@ -4,7 +4,6 @@ import Cabin from "./Cabin";
 import {
   act,
   alerts,
-  areas,
   defaultDesign,
   defaultLife,
   engineering,
@@ -17,6 +16,14 @@ import {
   type State,
 } from "./simulation";
 import "./commander.css";
+import Icon from "./Icons";
+import MissionTablet, {
+  objectives,
+  missionTime,
+  type TabletTab,
+} from "./MissionTablet";
+import { deck, spawn, type Position } from "./layout";
+import type { VisualAction } from "./interior";
 type Save = {
   version: 1;
   design: Design;
@@ -71,8 +78,6 @@ function readSave(): Save | null {
     return null;
   }
 }
-const time = (minutes: number) =>
-  `${Math.floor(minutes / 1440)}d ${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(Math.floor(minutes % 60)).padStart(2, "0")}`;
 const stationActions: Record<Area, { action: Action; name: string }[]> = {
   cockpit: [
     { action: "course", name: "Verify course · 2 fuel" },
@@ -95,11 +100,25 @@ export default function Commander() {
     [life, setLife] = useState<LifeSupport>(saved?.life || defaultLife),
     [mission, setMission] = useState<State | null>(saved?.mission || null),
     [area, setArea] = useState<Area>(),
-    [tablet, setTablet] = useState(true),
-    [tab, setTab] = useState("Systems"),
+    [tablet, setTablet] = useState(false),
+    [tab, setTab] = useState<TabletTab>("STATUS"),
     [speed, setSpeed] = useState(1),
     [storageError, setStorageError] = useState(""),
     [confirmReset, setConfirmReset] = useState(false);
+  const [position, setPosition] = useState<Position>(spawn);
+  const [interacting, setInteracting] = useState(false);
+  const [effect, setEffect] = useState<VisualAction>();
+  const [toast, setToast] = useState(true);
+  const closeTablet = useCallback(() => setTablet(false), []);
+  const onPosition = useCallback((p: Position) => setPosition(p), []);
+  useEffect(() => {
+    setInteracting(false);
+  }, [area]);
+  useEffect(() => {
+    setToast(true);
+    const id = setTimeout(() => setToast(false), 4500);
+    return () => clearTimeout(id);
+  }, [mission?.notice, effect?.id]);
   const e = engineering(design, life);
   const onArea = useCallback((a: Area | undefined) => setArea(a), []);
   useEffect(() => {
@@ -132,8 +151,14 @@ export default function Commander() {
     document.addEventListener("visibilitychange", hide);
     return () => document.removeEventListener("visibilitychange", hide);
   }, [!!mission]);
-  const send = (a: Action) =>
-    setMission((s) => (s ? act(s, a, area, design, life) : s));
+  const send = (a: Action) => {
+    if (!mission) return;
+    const next = act(mission, a, area, design, life);
+    setMission(next);
+    if (next.log[next.log.length - 1] !== mission.log[mission.log.length - 1])
+      setEffect((v) => ({ id: (v?.id || 0) + 1, action: a }));
+    setInteracting(false);
+  };
   const blockers = [
     e.cost > 300 ? "Over the Commander budget of $300M." : "",
     e.mass > rockets[design.rocket].payload
@@ -275,352 +300,301 @@ export default function Commander() {
         <button
           className="primary"
           disabled={!!blockers.length}
-          onClick={() => setMission(newMission(design, life))}
+          onClick={() => {
+            setArea(undefined);
+            setEffect(undefined);
+            setPosition(spawn);
+            setMission(newMission(design, life));
+          }}
         >
           Launch Commander sortie →
         </button>
       </div>
     );
-  const warnings = alerts(mission);
-  const objectives = [
-    { name: "Verify course in cockpit", done: mission.course },
-    { name: "Collect 30 science points", done: mission.science >= 30 },
-    { name: "Transmit science to Earth", done: mission.sent },
-    { name: "Rest in the sleeping berth", done: mission.rested },
-    { name: "Operate for six mission hours", done: mission.minutes >= 360 },
-    {
-      name: "Restore power and communications",
-      done: !mission.malfunction && mission.communications,
-    },
-  ];
+  const warnings = alerts(mission),
+    tasks = objectives(mission),
+    nextTask = tasks.find((t) => !t.done);
+  const reset = () => {
+    setMission(null);
+    setEffect(undefined);
+    setArea(undefined);
+    setPosition(spawn);
+    setConfirmReset(false);
+    setTablet(false);
+    localStorage.removeItem(key);
+  };
   return (
     <div
-      className={"cmd-session " + (tablet ? "tablet-open" : "tablet-closed")}
+      className={`cmd-session ${mission.sleeping ? "is-sleeping" : ""} ${mission.paused ? "is-paused" : ""}`}
     >
-      <div className="cmd-flight-bar">
-        <div>
-          <span className="eyebrow">COMMANDER / LIVE CABIN</span>
-          <strong>T+ {time(mission.minutes)}</strong>
-        </div>
-        <button
-          className="secondary"
-          onClick={() =>
-            setMission((s) => (s ? { ...s, paused: !s.paused } : s))
-          }
-          disabled={mission.ended}
-        >
-          {mission.paused ? "Resume mission" : "Pause"}
-        </button>
-        <label>
-          Clock
-          <select
-            value={speed}
-            onChange={(ev) => setSpeed(Number(ev.target.value))}
-          >
-            <option value={1}>1 s = 1 min</option>
-            <option value={5}>1 s = 5 min</option>
-          </select>
-        </label>
-        <button
-          className="secondary"
-          aria-expanded={tablet}
-          onClick={() => setTablet((t) => !t)}
-        >
-          {tablet ? "Close tablet" : "Mission tablet"}
-          {warnings.length ? ` · ${warnings.length} alerts` : ""}
-        </button>
-      </div>
       <div className="cmd-play">
         <div className="cmd-viewport">
           <Cabin
             onArea={onArea}
-            locked={mission.paused || mission.sleeping || mission.ended}
+            onPosition={onPosition}
+            onGraphicsError={() =>
+              setMission((s) => (s ? { ...s, paused: true } : s))
+            }
+            onInteract={() => setInteracting((v) => !v)}
+            locked={
+              mission.paused || mission.sleeping || mission.ended || tablet
+            }
+            alarm={warnings.length > 0}
+            effect={effect}
+            telemetry={{
+              ...mission,
+              oxygenCapacity: life.oxygen,
+              batteryCapacity: life.batteries,
+            }}
           />
-          <div className="cmd-location">
-            {area ? areas.find((a) => a.id === area)?.name : "Central passage"}
-            <small>
-              {mission.sleeping
-                ? "Resting · wake to move"
-                : mission.paused
-                  ? "PAUSED · resume to continue"
-                  : "Walk close to a station to access its controls"}
-            </small>
-          </div>
-          <div className="cmd-interact">
-            <p role="status">{mission.notice}</p>
-            {mission.sleeping ? (
+          <div className="cmd-cinema-shade" aria-hidden="true" />
+          <div className="cmd-hud-header">
+            <div className="cmd-flight-identity">
+              <span className="cmd-orbital-emblem">✦</span>
+              <div>
+                <strong>
+                  ORBITAL<span>MISSION LAB</span>
+                </strong>
+                <small>EXPLORER / COMMANDER</small>
+              </div>
+            </div>
+            <div className="cmd-flight-time">
+              <small>MISSION ELAPSED</small>
+              <strong>T+ {missionTime(mission.minutes)}</strong>
+              <span className={mission.paused ? "paused" : ""}>
+                <i />
+                {mission.paused ? "PAUSED" : "LIVE"}
+              </span>
+            </div>
+            <div className="cmd-hud-actions">
               <button
-                className="primary"
-                disabled={mission.paused}
-                onClick={() => send("wake")}
+                className="cmd-icon-button"
+                aria-label={mission.paused ? "Resume mission" : "Pause mission"}
+                disabled={mission.ended}
+                onClick={() =>
+                  setMission((s) => (s ? { ...s, paused: !s.paused } : s))
+                }
               >
-                Wake up
+                <Icon name={mission.paused ? "play" : "pause"} />
               </button>
-            ) : (
-              !mission.ended &&
-              area &&
-              stationActions[area].map((a) => (
-                <button
-                  key={a.action}
-                  disabled={mission.paused}
-                  className="secondary"
-                  onClick={() => send(a.action)}
-                >
-                  {a.name}
-                </button>
-              ))
-            )}
-          </div>
-          {mission.ended && (
-            <div className="cmd-complete">
-              <h2>{mission.notice}</h2>
-              <p>
-                Elapsed {time(mission.minutes)} · science {mission.science} ·
-                energy {mission.energy.toFixed(0)}%
-              </p>
               <button
-                className="primary"
+                className="cmd-tablet-trigger"
+                aria-label={
+                  tablet ? "Close mission tablet" : "Open mission tablet"
+                }
+                aria-expanded={tablet}
                 onClick={() => {
-                  setMission(null);
-                  localStorage.removeItem(key);
+                  setTablet((v) => !v);
+                  setInteracting(false);
                 }}
               >
-                Return to spacecraft design
+                <Icon name="tablet" />
+                <span>MISSION TABLET</span>
+                {warnings.length > 0 && <b>{warnings.length}</b>}
+              </button>
+            </div>
+          </div>
+          <div className="cmd-hud-location">
+            <span>
+              DECK 01 <i />{" "}
+              {area ? deck[area].name.toUpperCase() : "CENTRAL PASSAGE"}
+            </span>
+            <small>
+              {nextTask
+                ? `NEXT / ${nextTask.name}`
+                : "ALL OBJECTIVES COMPLETE / RETURN TO FLIGHT DECK"}
+            </small>
+          </div>
+          {warnings.length > 0 && (
+            <button
+              className="cmd-warning-chip"
+              onClick={() => {
+                setTab("STATUS");
+                setTablet(true);
+              }}
+            >
+              <Icon name="shield" size={15} />
+              {warnings.length} ACTIVE{" "}
+              {warnings.length === 1 ? "ADVISORY" : "ADVISORIES"}
+              <Icon name="chevron" size={12} />
+            </button>
+          )}
+          <div className="cmd-hud-bottom">
+            <div className="cmd-coordinates">
+              <small>VEHICLE POSITION</small>
+              <span>
+                {position.x.toFixed(1)} / {position.z.toFixed(1)} m
+              </span>
+            </div>
+            <label className="cmd-clock-speed">
+              SIM RATE
+              <select
+                aria-label="Simulation clock rate"
+                value={speed}
+                onChange={(ev) => setSpeed(Number(ev.target.value))}
+              >
+                <option value={1}>1×</option>
+                <option value={5}>5×</option>
+              </select>
+            </label>
+            <div className="cmd-mini-vitals">
+              {[
+                {
+                  label: "O₂",
+                  value: mission.oxygen.toFixed(2),
+                  unit: "kg",
+                  ratio: mission.oxygen / life.oxygen,
+                },
+                {
+                  label: "PWR",
+                  value: mission.battery.toFixed(2),
+                  unit: "kWh",
+                  ratio: mission.battery / life.batteries,
+                },
+                {
+                  label: "CREW",
+                  value: mission.energy.toFixed(0),
+                  unit: "%",
+                  ratio: mission.energy / 100,
+                },
+              ].map((v) => (
+                <div key={v.label} className={v.ratio < 0.2 ? "caution" : ""}>
+                  <span>{v.label}</span>
+                  <strong>
+                    {v.value}
+                    <small>{v.unit}</small>
+                  </strong>
+                  <i>
+                    <b style={{ width: `${Math.min(100, v.ratio * 100)}%` }} />
+                  </i>
+                </div>
+              ))}
+            </div>
+          </div>
+          {!mission.ended && !mission.sleeping && area && !tablet && (
+            <div className="cmd-interaction-dock">
+              {interacting && (
+                <div className="cmd-action-menu">
+                  <span>{deck[area].name}</span>
+                  {stationActions[area].map((a) => (
+                    <button
+                      disabled={mission.paused}
+                      key={a.action}
+                      onClick={() => send(a.action)}
+                    >
+                      {a.name}
+                      <Icon name="chevron" size={14} />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                className="cmd-interaction-prompt"
+                disabled={mission.paused}
+                onClick={() => setInteracting((v) => !v)}
+                aria-expanded={interacting}
+              >
+                <kbd>E</kbd>
+                <span>
+                  INTERACT{" "}
+                  <strong>
+                    {area === "galley"
+                      ? "Food storage / water dispenser"
+                      : area === "equipment"
+                        ? "Repair equipment"
+                        : deck[area].name}
+                  </strong>
+                </span>
+                <Icon name="chevron" size={15} />
+              </button>
+            </div>
+          )}
+          {toast && !tablet && (
+            <div className="cmd-toast" role="status" key={effect?.id}>
+              <i />
+              {mission.notice}
+            </div>
+          )}
+          <div className="cmd-rest-transition" aria-hidden="true" />
+          {mission.sleeping && (
+            <div className="cmd-rest-card">
+              <Icon name="sleep" size={30} />
+              <small>CREW QUARTERS / REST CYCLE</small>
+              <h2>Rest & recover.</h2>
+              <p>
+                Energy {mission.energy.toFixed(0)}% · life support remains
+                active
+              </p>
+              <button onClick={() => send("wake")} disabled={mission.paused}>
+                End rest cycle <Icon name="chevron" size={16} />
+              </button>
+            </div>
+          )}
+          {mission.paused && !mission.ended && !tablet && (
+            <div className="cmd-paused-indicator">
+              <Icon name="pause" size={14} /> MISSION PAUSED{" "}
+              <button
+                onClick={() =>
+                  setMission((s) => (s ? { ...s, paused: false } : s))
+                }
+              >
+                Resume
+              </button>
+            </div>
+          )}
+          {mission.ended && (
+            <div className="cmd-complete">
+              <span
+                className={`cmd-state ${mission.notice.includes("Safety abort") ? "critical" : "normal"}`}
+              >
+                SORTIE DEBRIEF
+              </span>
+              <h2>{mission.notice}</h2>
+              <div className="cmd-debrief-numbers">
+                <span>
+                  {missionTime(mission.minutes)}
+                  <small>ELAPSED</small>
+                </span>
+                <span>
+                  {mission.science}
+                  <small>SCIENCE</small>
+                </span>
+                <span>
+                  {mission.energy.toFixed(0)}%<small>CREW ENERGY</small>
+                </span>
+              </div>
+              <button onClick={reset}>
+                Return to spacecraft design <Icon name="chevron" />
+              </button>
+              <button
+                onClick={() => {
+                  setTab("LOG");
+                  setTablet(true);
+                }}
+              >
+                Review mission record
               </button>
             </div>
           )}
         </div>
-        {tablet && (
-          <aside className="cmd-tablet" aria-label="Commander mission tablet">
-            <div className="cmd-tablet-head">
-              <strong>MISSION TABLET</strong>
-              <span>MX / 01</span>
-            </div>
-            <div className="cmd-tabs">
-              {["Systems", "Inventory", "Objectives", "Map", "Log"].map((t) => (
-                <button
-                  aria-pressed={tab === t}
-                  className={tab === t ? "chosen" : ""}
-                  onClick={() => setTab(t)}
-                  key={t}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            {storageError && (
-              <p className="cmd-alert" role="alert">
-                {storageError}
-              </p>
-            )}
-            {tab === "Systems" && (
-              <>
-                <div className="cmd-readouts">
-                  {[
-                    [
-                      "Food supply",
-                      `${mission.food} stored + ${mission.meals} carried meals`,
-                    ],
-                    [
-                      "Water supply",
-                      `${mission.water.toFixed(2)} L tank · ${mission.bottle.toFixed(2)} L bottle`,
-                    ],
-                    ["Oxygen", `${mission.oxygen.toFixed(3)} kg`],
-                    [
-                      "Spacecraft power",
-                      `${mission.battery.toFixed(2)} / ${life.batteries} kWh · ${e.power - (mission.malfunction ? 90 : 0)} W net`,
-                    ],
-                    ["Fuel", `${mission.fuel} units`],
-                    ["Crew energy", `${mission.energy.toFixed(0)}%`],
-                    [
-                      "Nutrition / hydration",
-                      `${mission.nutrition.toFixed(0)}% / ${mission.hydration.toFixed(0)}%`,
-                    ],
-                    [
-                      "Rest / sleep",
-                      `${mission.sleeping ? "Sleeping" : "Awake"} · ${Math.floor(mission.sleepDebt / 60)} h duty load`,
-                    ],
-                    ["Cabin pressure", `${mission.pressure.toFixed(1)} kPa`],
-                    [
-                      "Cabin temperature",
-                      `${mission.temperature.toFixed(1)} °C`,
-                    ],
-                    [
-                      "Radiation / environment",
-                      `${mission.radiation} exposure index · ECS level ${life.environment}`,
-                    ],
-                    [
-                      "Communications",
-                      mission.communications ? "LINK ONLINE" : "LINK LOST",
-                    ],
-                    [
-                      "Science progress",
-                      `${mission.science} points · ${mission.sent ? "data transmitted" : "awaiting downlink"}`,
-                    ],
-                    ["Mission time", time(mission.minutes)],
-                  ].map(([label, value]) => (
-                    <div key={label}>
-                      <span>{label}</span>
-                      <strong>{value}</strong>
-                    </div>
-                  ))}
-                </div>
-                <h3>Warnings / alerts</h3>
-                <div aria-live="polite">
-                  {warnings.length ? (
-                    warnings.map((w) => (
-                      <p className="cmd-alert" key={w}>
-                        {w}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="cmd-ok">All monitored systems nominal.</p>
-                  )}
-                </div>
-              </>
-            )}
-            {tab === "Inventory" && (
-              <>
-                <h3>Personal inventory</h3>
-                <p>
-                  Meals: {mission.meals} · Bottle: {mission.bottle.toFixed(2)} /
-                  1 L
-                </p>
-                <button
-                  disabled={
-                    mission.paused ||
-                    mission.sleeping ||
-                    !mission.meals ||
-                    mission.ended
-                  }
-                  onClick={() => send("eat")}
-                >
-                  Eat carried meal
-                </button>
-                <button
-                  disabled={
-                    mission.paused ||
-                    mission.sleeping ||
-                    mission.bottle <= 0 ||
-                    mission.ended
-                  }
-                  onClick={() => send("drink")}
-                >
-                  Drink 250 mL from bottle
-                </button>
-                <h3>Tools & repair parts</h3>
-                <p>
-                  Toolkit: {mission.tools ? "carried" : "in equipment storage"}
-                  <br />
-                  Spare parts: {mission.parts}
-                </p>
-                <h3>Installed life support</h3>
-                {lifeOptions.map((o) => (
-                  <p key={o.key}>
-                    {o.name}: {life[o.key]} {o.unit}
-                  </p>
-                ))}
-              </>
-            )}
-            {tab === "Objectives" && (
-              <>
-                <h3>Mission readiness</h3>
-                {objectives.map((o) => (
-                  <p className={o.done ? "cmd-ok" : ""} key={o.name}>
-                    {o.done ? "✓" : "○"} {o.name}
-                  </p>
-                ))}
-                <p>
-                  Finish the sortie at the cockpit when all objectives are
-                  complete. Eat and drink from carried supplies in the Inventory
-                  tab.
-                </p>
-                <h3>Future operations</h3>
-                <p>
-                  EVA, Mars exploration, sample collection, docking and extended
-                  emergencies are reserved for later mission modules.
-                </p>
-              </>
-            )}
-            {tab === "Map" && (
-              <>
-                <h3>Spacecraft deck map</h3>
-                <div className="cmd-map">
-                  <div className={area === "cockpit" ? "here" : ""}>
-                    Cockpit
-                  </div>
-                  <div className="cmd-map-row">
-                    <span className={area === "science" ? "here" : ""}>
-                      Science
-                    </span>
-                    <span className={area === "communications" ? "here" : ""}>
-                      Comms
-                    </span>
-                  </div>
-                  <p>│ Central passage │</p>
-                  <div className="cmd-map-row">
-                    <span className={area === "power" ? "here" : ""}>
-                      Power
-                    </span>
-                    <span className={area === "galley" ? "here" : ""}>
-                      Food & water
-                    </span>
-                  </div>
-                  <p>│ Central passage │</p>
-                  <div className="cmd-map-row">
-                    <span className={area === "sleep" ? "here" : ""}>
-                      Sleep
-                    </span>
-                    <span className={area === "equipment" ? "here" : ""}>
-                      Equipment
-                    </span>
-                  </div>
-                  <p>Entry / aft</p>
-                </div>
-                <p>
-                  Walk along the central aisle and approach a console. Highlight
-                  shows your current interaction zone. Map entries do not
-                  teleport you.
-                </p>
-              </>
-            )}
-            {tab === "Log" && (
-              <>
-                <h3>Mission record</h3>
-                {[...mission.log].reverse().map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </>
-            )}
-            <div className="cmd-tablet-bottom">
-              <small>
-                Saved on this device. Hidden tabs pause the mission; resume on
-                return.
-              </small>
-              <button onClick={() => setConfirmReset(true)}>
-                End sortie / return to design
-              </button>
-              {confirmReset && (
-                <div>
-                  <p>Discard this sortie and return to design?</p>
-                  <button
-                    onClick={() => {
-                      setMission(null);
-                      setConfirmReset(false);
-                      localStorage.removeItem(key);
-                    }}
-                  >
-                    Discard sortie
-                  </button>
-                  <button onClick={() => setConfirmReset(false)}>
-                    Keep playing
-                  </button>
-                </div>
-              )}
-            </div>
-          </aside>
-        )}
       </div>
+      {tablet && (
+        <MissionTablet
+          s={mission}
+          life={life}
+          design={design}
+          area={area}
+          position={position}
+          tab={tab}
+          onTab={setTab}
+          onClose={closeTablet}
+          send={send}
+          storageError={storageError}
+          confirmReset={confirmReset}
+          onConfirm={setConfirmReset}
+          onReset={reset}
+        />
+      )}
     </div>
   );
 }

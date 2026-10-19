@@ -77,14 +77,28 @@ Use WASD/arrows or hold the onscreen touch controls to walk. Drag the view to lo
 - Communications: calibrate a failed link and transmit at least 30 science points.
 - Cockpit: verify course using fuel, then complete the sortie once objectives are ready.
 
-The collapsible Mission Tablet occupies its own layout column instead of covering the first-person viewport. Systems, Inventory, Objectives, Map and Log tabs provide mission information. Low food/water/oxygen/power, crew readiness, cabin environment, solar activity, communications and equipment faults produce alerts. A link failure occurs at 90 mission minutes, solar activity at 120–180 and a repairable equipment fault at 210. These scheduled training incidents make emergency practice repeatable.
+The Mission Tablet starts closed and opens from a compact HUD button as a temporary slide-out overlay. STATUS, INVENTORY, OBJECTIVES, MAP, SYSTEMS and LOG sections provide gauges, item cards, a live deck schematic and mission information. Low food/water/oxygen/power, crew readiness, cabin environment, solar activity, communications and equipment faults produce alerts. A link failure occurs at 90 mission minutes, solar activity at 120–180 and a repairable equipment fault at 210. These scheduled training incidents make emergency practice repeatable.
 
 Default time is 1 real second per mission minute; a 5× setting is available. Pause freezes consumption. Food, hydration, duty time and sleep affect energy and mission readiness. Oxygen, reserve power and cabin environment update with mission time. Critical oxygen, pressure or energy loss triggers a safety abort. Body weight and appearance are not simulated.
 
 ### Persistence and scope
 
-Mission configuration, supplies, crew state, objectives and recent action log auto-save to this browser's localStorage. A restored mission starts paused. Hidden tabs automatically pause; missions do not consume supplies while the app is closed. Camera position is not persisted and resumes at the aft entry. Storage failures are reported in the tablet. Refresh or switch back to Commander to resume. Strategy retains its original in-memory behavior.
+Mission configuration, supplies, crew state, objectives and recent action log auto-save to this browser's localStorage. A restored mission starts paused. Hidden tabs automatically pause; missions do not consume supplies while the app is closed. Camera position is not persisted and resumes on the flight deck. Storage failures are reported in the tablet. Refresh or switch back to Commander to resume. Strategy retains its original in-memory behavior.
 
 `src/commander/simulation.ts` contains pure simulation and action functions, typed area/action interfaces and configuration models. `Cabin.tsx` owns rendering and movement, and `Commander.tsx` owns builder, tablet and persistence. This boundary supports future EVA, samples, docking, surface exploration and emergency modules; those future features are not implemented yet. A WebGL-capable browser is required for the 3D cabin. Models and textures are original procedural graphics; no external artwork is loaded.
 
-Validation includes the original five strategy tests and nine Commander simulation tests. The Three.js renderer is loaded separately when Commander Mode is selected, so Strategy does not download it on entry.
+Validation includes the original five strategy tests, nine Commander simulation tests and two cabin-navigation checks. The Three.js renderer is loaded separately when Commander Mode is selected, so Strategy does not download it on entry.
+
+
+### Commander visual redesign
+
+The cabin now uses compact flight, science/communications, service and habitation zones. The interior has beveled panels, structural pressure bulkheads, inset strip lights, small integrated equipment placards, upholstered seats, workstations, storage lockers, life-support plumbing, vents, a sleeping berth, galley dispenser and repair hardware. The forward flight deck has a viewport and procedural Mars backdrop. Stations are identified by their equipment, with a subtle edge light when in interaction range, not floating signs.
+
+Move with WASD/arrows or the analog virtual joystick. Drag the separate look surface to turn. Press E or tap the compact interaction prompt to access station actions. The personal terminal opens with the Mission Tablet control; Escape, the close button or the outside backdrop dismisses it. Modal keyboard focus stays within the tablet. The map shows continuous player position, heading, current zone and next objective. Inventory cards preserve the existing food/water actions and clearly distinguish remote science observations from physical samples, which are not part of the current mission.
+
+Automatic flight hatch motion, a hinged food cabinet, in-hand food/bottle/tool feedback, distinct navigation, science, communications and life-support displays, pulsing caution lamps and a rest transition provide lightweight visual feedback. The original simulation functions, saved-state key/schema, events, resource calculations and objective conditions remain unchanged. Presentation coordinates and collision checks are isolated in `layout.ts`; furniture, lighting and instancing are isolated in `interior.ts`. `MissionTablet.tsx` owns the six terminal sections and schematic.
+
+Performance choices: shared low-detail primitive geometry, instanced repeated fittings, small canvas textures, capped device pixel ratio (1.5), a 30 fps rendering target on coarse-pointer touch devices, bounded practical lighting, no real-time shadows and no 3D post-processing. Rendering stops in hidden tabs. These are performance budgets rather than a guarantee of frame rate on every iPad model; test target hardware before a presentation. Reduced-motion settings disable interface transitions. A graphics context failure pauses the mission to protect saved supplies.
+
+
+The final visual validation uses a WebGL-capable Chromium browser at desktop, iPad landscape/portrait and phone viewport sizes, checks modal bounds and horizontal overflow, and exercises walking, station actions, finite supplies, keyboard dismissal and saved mission restoration. Touch-pointer emulation is used for the joystick and separate look surface. This does not substitute for physical-device Safari performance testing.
