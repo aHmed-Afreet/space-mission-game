@@ -858,39 +858,202 @@ export const missions: MissionDefinition[] = [
     },
   ),
 ];
-const future: [string, string, Destination][] = [
-  ["Lunar Reconnaissance", "lunar", "moon"],
-  ["Lunar Emergency Rescue", "lunar", "moon"],
-  ["Mars Cargo Preparation", "mars", "mars"],
-  ["Mars Transfer Mission", "mars", "mars"],
-  ["Mars Surface Expedition", "mars", "mars"],
-  ["Search for Subsurface Water", "mars", "mars"],
-  ["Mars Research Camp", "mars", "mars"],
-  ["Mars Camp Emergency", "mars", "mars"],
-  ["Asteroid Rendezvous", "deep", "asteroid"],
-  ["Low-Gravity Sampling", "deep", "asteroid"],
-  ["Deep-Space Rescue", "deep", "deep-space"],
-  ["Outer-System Expedition", "deep", "europa"],
+
+/** Additional complete campaign flights. Each has launch, flight operations,
+ * a mission-specific training activity, simulated fault handling and recovery.
+ * Historical references indicate inspiration, not exact reenactments. */
+const added: {
+  title:string;chapter:string;destination:Destination;
+  description:string;major:string;year:number;inspiration:string;
+  source:string;landing?:boolean;eva?:boolean;activities:Objective[];
+  gear?:EquipmentId[];funding:number;reward:number;
+}[] = [
+  {
+    title:"Precision Lunar Landing",chapter:"lunar",destination:"moon",
+    year:1969,inspiration:"Apollo 12 · Precision Moon Landing",
+    source:"https://www.nasa.gov/the-apollo-program/",
+    description:"Land near a planned survey location, verify science observations and return samples with safe suit margins.",
+    major:"Demonstrate controlled lunar descent and scientific work near a selected field site.",
+    landing:true,eva:true,gear:["suit","scanner","containers","camera"],funding:150,reward:160,
+    activities:[
+      ...phase("SURFACE GEOLOGY",[
+        use("survey","Document the landing-site surface geology.","scan","SCAN"),
+        use("survey","Photograph the science marker and its surroundings.","photo"),
+        use("crater","Collect a labelled sample from a nearby rock outcrop.","sample","SAMPLE"),
+        use("survey","Measure surface conditions before departure.","measureTemperature"),
+      ])
+    ]
+  },
+  {
+    title:"Orbital Systems Qualification",chapter:"training",destination:"earth",
+    year:1981,inspiration:"STS-1 · Space Shuttle Flight Test",
+    source:"https://www.nasa.gov/history/explore-nasas-history/",
+    description:"Conduct an engineering flight check with guided observations, a power fault and safe vehicle recovery.",
+    major:"Validate orbital engineering systems through a full-day simulated test sequence.",
+    funding:115,reward:128,
+    activities:[...phase("ON-ORBIT CHECKOUT",[
+      use("cockpit","Check orbital attitude and navigation.","course"),
+      use("science","Record Earth-observation calibration data.","science"),
+      use("communications","Confirm flight-data link and telemetry.","verifyRadio"),
+      use("power","Inspect battery reserves for a safe return.","inspectPower")
+    ])]
+  },
+  {
+    title:"Lunar Radiation Expedition",chapter:"lunar",destination:"moon",
+    year:1972,inspiration:"Apollo 16 · Descartes Highlands Expedition",
+    source:"https://www.nasa.gov/the-apollo-program/",
+    description:"Explore highland geology, measure surface radiation and collect contextual samples without exceeding EVA resources.",
+    major:"Return temperature, radiation and geology measurements from a lunar highland survey.",
+    landing:true,eva:true,gear:["suit","scanner","containers","sensor","camera","drill"],funding:164,reward:181,
+    activities:[...phase("HIGHLAND GEOLOGY",[
+      use("survey","Survey highland outcrops and determine geology targets.","scan","SCAN"),
+      use("survey","Record radiation readings at the survey site.","measureRadiation"),
+      use("crater","Collect a documented rock sample.","sample","SAMPLE"),
+      use("crater","Collect a shallow subsurface core.","drill","SAMPLE"),
+      use("survey","Photograph sample context before returning.","photo"),
+    ])]
+  },
+  {
+    title:"Orbital Telescope Service",chapter:"training",destination:"earth",
+    year:1993,inspiration:"STS-61 · First Hubble Servicing Mission",
+    source:"https://www.nasa.gov/history/explore-nasas-history/",
+    description:"Service a fictional telescope using the same categories of EVA preparation, diagnostic work and repair verification that real crews practiced.",
+    major:"Restore telescope power hardware, test the data link and recover the service crew.",
+    eva:true,gear:["suit","repair"],funding:138,reward:152,
+    activities:[...phase("TELESCOPE SERVICE",[
+      use("survey","Inspect the telescope service-panel wiring.","diagnoseSatellite"),
+      use("survey","Replace the diagnosed electrical connector.","repairSatellite","REPAIR"),
+      use("survey","Confirm repaired instrument communications.","testSatellite"),
+    ])]
+  },
+  {
+    title:"Extended Lunar Traverse",chapter:"lunar",destination:"moon",
+    year:1972,inspiration:"Apollo 17 · Taurus-Littrow Exploration",
+    source:"https://www.nasa.gov/the-apollo-program/",
+    description:"Practice a longer lunar field visit with geology, remote surveying, surface observations and samples.",
+    major:"Return a documented traverse with multiple measurements and a core sample.",
+    landing:true,eva:true,gear:["suit","scanner","containers","camera","drill","sensor"],funding:168,reward:185,
+    activities:[...phase("LUNAR TRAVERSE",[
+      use("survey","Observe rock units around the landing zone.","scan","SCAN"),
+      use("crater","Collect a rock sample at the crater margin.","sample","SAMPLE"),
+      use("crater","Drill and seal a shallow core sample.","drill","SAMPLE"),
+      use("survey","Measure radiation at the exposed field location.","measureRadiation"),
+      use("survey","Photograph the site and collected samples.","photo"),
+    ])]
+  },
+  {
+    title:"Orbital Station Recovery",chapter:"training",destination:"earth",
+    year:1973,inspiration:"Skylab 2 · Orbital Laboratory Repairs",
+    source:"https://www.nasa.gov/history/explore-nasas-history/",
+    description:"Inspect ship systems and restore a simulated power malfunction before carrying out station-style science.",
+    major:"Verify life support, isolate the electrical fault and complete orbiting-laboratory checks.",
+    funding:122,reward:141,
+    activities:[...phase("STATION COMMISSIONING",[
+      use("galley","Inspect consumables and cabin environmental readings.","verifyLife"),
+      use("science","Calibrate the research instrument package.","inspectScience"),
+      use("communications","Verify daily telemetry delivery.","verifyRadio"),
+      use("power","Inspect the affected station power bus.","inspectPower"),
+    ])]
+  },
+  {
+    title:"Lunar Experiment Deployment",chapter:"lunar",destination:"moon",
+    year:1971,inspiration:"Apollo 14 · Lunar Surface Experiments",
+    source:"https://www.nasa.gov/the-apollo-program/",
+    description:"Deploy surface power and scientific sensors, restore a simulated instrument fault and transmit observations.",
+    major:"Commission a temporary lunar science site and transmit instrument results.",
+    landing:true,eva:true,
+    gear:["suit","shelter","solar","battery","antenna","sensor","experiment","repair"],
+    funding:172,reward:192,
+    activities:[...phase("EXPERIMENT SETUP",[
+      use("camp","Deploy the surface instrument shelter.","deployShelter","DEPLOY"),
+      use("camp","Deploy the solar power array.","deploySolar","DEPLOY"),
+      use("camp","Connect reserve battery modules.","deployBattery","DEPLOY"),
+      use("camp","Raise the science communications antenna.","deployAntenna","DEPLOY"),
+      use("camp","Install the environmental research sensor.","deploySensor","DEPLOY"),
+      use("camp","Record the first field experiment.","experiment"),
+      decision("Restore instrument power after a connector warning.","camp","campPower",[
+        {action:"eventReset",title:"Repair the connector",detail:"Use one spare part to recover power."},
+        {action:"eventReroute",title:"Use the reserve battery bypass",detail:"Continue with reduced power reserve."},
+      ]),
+      use("camp","Repeat the experiment after restoring power.","experiment"),
+      use("camp","Transmit lunar sensor readings to mission control.","campTransmit","TRANSMIT"),
+    ])]
+  },
+  {
+    title:"Satellite Relay Upgrade",chapter:"training",destination:"earth",
+    year:2009,inspiration:"STS-125 · Hubble Repair Operations",
+    source:"https://www.nasa.gov/history/explore-nasas-history/",
+    description:"Prepare a repair EVA, diagnose a fictional communications relay, replace failed components and verify the recovered downlink.",
+    major:"Complete a complex satellite servicing sequence and return safely to Earth.",
+    eva:true,gear:["suit","repair"],funding:146,reward:162,
+    activities:[...phase("RELAY UPGRADE",[
+      use("survey","Read the relay satellite electrical fault indication.","diagnoseSatellite"),
+      use("survey","Replace the relay power connector.","repairSatellite","REPAIR"),
+      use("survey","Verify restored satellite radio and telemetry.","testSatellite"),
+    ])]
+  },
 ];
-future.forEach(([title, chapter, destination], i) =>
-  missions.push(
-    full(
-      i + 5,
-      chapter,
-      title,
-      destination,
-      [task("INTERACT", "Mission operations under development.")],
-      {
-        implemented: false,
-        description:
-          "Planned mission — gameplay and destination assets are not implemented.",
-        majorObjective: title,
-        phases: ["PLANNED"],
-        expectedMinutes: "Not playable",
-      },
-    ),
-  ),
-);
+for(const [index,entry] of added.entries()){
+  const level=index+5;
+  const tasks:Objective[]=[
+    ...launch(),
+    ...travel(),
+    ...(entry.landing ? phase("LANDING OPERATIONS",[
+      use("communications","Confirm lunar approach communications.","comms"),
+      use("cockpit","Initiate lunar descent and verify approach corridor.","approach"),
+      wait("Observe the final approach corridor.",16,"cockpit"),
+      use("cockpit","Complete a controlled landing at the science site.","land"),
+    ]) : entry.eva ? phase("RENDEZVOUS OPERATIONS",[
+      use("communications","Confirm target satellite acquisition.","comms"),
+      use("cockpit","Match the target satellite approach corridor.","course"),
+      use("science","Inspect the target system telemetry.","diagnoseSatellite"),
+    ]) : []),
+    ...(entry.eva?phase("EVA PREPARATION",evaOut()):[]),
+    ...entry.activities,
+    ...(entry.eva?phase("EVA RETURN",evaReturn()):[]),
+    ...phase("POWER & CREW CHECK",[powerDecision(),...meals()]),
+    ...returnHome(),
+  ];
+  missions.push(full(level,entry.chapter,entry.title,entry.destination,tasks,{
+    description:entry.description,majorObjective:entry.major,implemented:true,
+    eva:!!entry.eva,surface:!!entry.landing,
+    requiredEquipment:entry.gear||[],allowedEquipment:entry.eva?allGear:[],
+    funding:entry.funding,reward:entry.reward,
+    expectedMinutes:"15–30 min · training sortie",
+    experiments:[entry.title],
+    optional:[{
+      id:"reserves",title:"Conserve propellant",
+      description:"Complete the flight with at least 10 fuel units in reserve.",
+      condition:"fuel",value:10,reward:3,
+    },{
+      id:"energy",title:"Power discipline",
+      description:"Complete operations with at least 40% battery reserve.",
+      condition:"battery",value:.4,reward:2,
+    }],
+    historical:{
+      inspiration:entry.inspiration,year:entry.year,
+      story:entry.description,
+      realHistory:"This training sortie is inspired by "+entry.inspiration+
+        ", which developed real spaceflight skills and procedures described in NASA historical sources.",
+      learning:["Mission preparation and checks","Flight operations and communications",
+        entry.eva?"Suit preparation and external work":"Cabin equipment verification",
+        "Scientific recordkeeping and return"],
+      source:entry.source,
+      disclaimer:"Fictional spacecraft, events and work sites; this training sortie is not an exact recreation of the historical flight.",
+    },
+  }));
+}
+const future: [string,string,Destination][]=[
+ ["Mars Cargo Preparation","mars","mars"],
+ ["Mars Transfer Mission","mars","mars"],
+ ["Mars Surface Expedition","mars","mars"],
+ ["Asteroid Survey","deep","asteroid"],
+];
+future.forEach(([title,chapter,destination],i)=> missions.push(full(i+13,chapter,title,destination,
+ [task("INTERACT","Mission operations under development.")],{
+ implemented:false,description:"Planned mission — full gameplay and destination assets not implemented.",
+ majorObjective:title,phases:["PLANNED"],expectedMinutes:"Not playable",
+})));
 export const missionById = (id: string): MissionDefinition => {
   const m =
     missions.find((m) => m.id === id) || oldMissions.find((m) => m.id === id);
