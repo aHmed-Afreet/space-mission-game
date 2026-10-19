@@ -88,7 +88,7 @@ export default function Preparation({
             <ul>{mission.historical.learning.map(skill=><li key={skill}>{skill}</li>)}</ul>
             <p className="campaign-history-note">{mission.historical.disclaimer}</p>
             <a href={mission.historical.source} target="_blank" rel="noopener noreferrer">Read NASA's mission history ↗</a>
-          </div>}}
+          </div>}
           <p>
             Destination: {mission.destination.toUpperCase()} ·{" "}
             {mission.expectedMinutes}

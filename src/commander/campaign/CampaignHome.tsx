@@ -265,7 +265,7 @@ export default function CampaignHome({
                       </span>
                     </div>
                     <h3>{m.title}</h3>
-                    {m.historical && <div className="campaign-story-tag">HISTORICAL INSPIRATION · {m.historical.inspiration} ({m.historical.year})</div>}}
+                    {m.historical && <div className="campaign-story-tag">HISTORICAL INSPIRATION · {m.historical.inspiration} ({m.historical.year})</div>}
                     <span className="campaign-destination">
                       <Icon name="target" size={13} />
                       {environments[m.destination].name}
