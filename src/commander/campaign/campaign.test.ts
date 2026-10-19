@@ -209,7 +209,7 @@ function memoryStorage() {
 
 test("complete missions have explicit phases, choices, meaningful challenges, optional rewards and unique task IDs", () => {
   assert.equal(missions.length, 16);
-  assert.equal(missions.filter((m) => m.implemented).length, 4);
+  assert.equal(missions.filter((m) => m.implemented).length, 12);
   assert.equal(new Set(missions.map((m) => m.id)).size, 16);
   for (const m of missions) {
     assert.ok(environments[m.destination]);
@@ -250,7 +250,7 @@ test("mission unlocks, planned restrictions and sequential tasks cannot be bypas
   assert.equal(late.objective, 0);
   assert.equal(late.flight.status, "pad");
 });
-test("all four complete flights finish launch, operations and recovery, award reports and unlock in order", () => {
+test("all twelve complete flights finish launch, operations and recovery, award reports and unlock in order", () => {
   let p = emptyProgress();
   for (const m of missions.filter((m) => m.implemented)) {
     const s = completeMission(m, p, true);
@@ -1283,7 +1283,7 @@ test("navigation map uses real mission location names and includes airlock locat
 
 test("playable missions cite real NASA histories without misrepresenting the game", () => {
   const stories = missions.filter(m=>m.implemented);
-  assert.deepEqual(stories.map(m=>m.historical?.year),[1981,2009,1971,1972]);
+  assert.deepEqual(stories.slice(0,4).map(m=>m.historical?.year),[1981,2009,1971,1972]);
   for (const m of stories) {
     assert.ok(m.historical);
     assert.match(m.historical!.source, /^https:\/\/www\.nasa\.gov\//);
