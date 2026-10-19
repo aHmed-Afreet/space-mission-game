@@ -27,7 +27,7 @@ export default function Report({
           <p>{missionById(result.missionId).title}</p>
           {missionById(result.missionId).historical && <p className="campaign-real-mission">
             Inspired by {missionById(result.missionId).historical!.inspiration} · historically informed, fictional simulation.
-          </p>
+          </p>}
         </div>
         <div className="score">
           <strong>
