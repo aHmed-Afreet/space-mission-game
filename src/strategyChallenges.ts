@@ -277,15 +277,14 @@ export const strategyChallenges:StrategyChallenge[] = [
     "title": "Mission Architect",
     "brief": "Prove a balanced high-performance spacecraft.",
     "minScience": 80,
-    "minReliability": 78,
-    "minFuel": 22,
+    "minReliability": 62,
+    "minFuel": 16,
     "minCommunication": 86,
     "budgetCap": 220,
     "required": {
-      "radar": 1,
       "camera": 1,
-      "antenna": 2,
-      "shield": 1
+      "radar": 1,
+      "antenna": 2
     }
   }
 ];
