@@ -445,14 +445,14 @@ export default function Cabin(props: Props) {
             onPointerUp={() => { sprint.current = false; }}
             onPointerCancel={() => { sprint.current = false; }}
             onLostPointerCapture={() => { sprint.current = false; }}>SPRINT</button>
-          <button type="button" className="cmd-work" aria-label="Work with aimed target"
-            disabled={props.locked} onClick={() => props.onInteract(aim.current)}>WORK</button>
+          <button type="button" className="cmd-work" aria-label="Interact with aimed target"
+            disabled={props.locked} onClick={() => props.onInteract(aim.current)}>INTERACT</button>
         </div>
       </>}
       <div className="cmd-control-hint">
         {props.device === "laptop"
-          ? "WASD / ARROWS MOVE · SHIFT SPRINT · DRAG MOUSE LOOK · AIM + E WORK"
-          : "LEFT TOUCH MOVE · RIGHT DRAG LOOK · AIM + WORK"}
+          ? "WASD / ARROWS MOVE · SHIFT SPRINT · DRAG MOUSE LOOK · AIM + E INTERACT"
+          : "LEFT TOUCH MOVE · RIGHT DRAG LOOK · AIM + INTERACT"}
       </div>
       {aimLabel && !props.locked && <div className="cmd-aim-target"><i />{aimLabel}</div>}
       {props.world &&

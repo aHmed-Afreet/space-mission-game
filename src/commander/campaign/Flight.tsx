@@ -20,6 +20,7 @@ import {
 import { missionById, type CampaignAction, type Site } from "./definitions";
 import { environments } from "./environments";
 import CampaignTablet, { type CampaignTab } from "./CampaignTablet";
+import NavigationMap from "./NavigationMap";
 import Tutorial from "./Tutorial";
 import Report from "./Report";
 import type { VisualAction } from "../interior";
@@ -112,6 +113,7 @@ export default function Flight({
   const [tablet, setTablet] = useState(false),
     [tab, setTab] = useState<CampaignTab>("MISSION"),
     [actions, setActions] = useState(false),
+    [navOpen, setNavOpen] = useState(false),
     [showOther, setShowOther] = useState(false),
     [tutorial, setTutorial] = useState<string | null>(null),
     [effect, setEffect] = useState<VisualAction>(),
@@ -291,7 +293,7 @@ export default function Flight({
       ] as { action: CampaignAction; label: string }[]),
     );
   const handleWork = (target: AimTarget | null) => {
-    if (s.state.paused || s.state.sleeping || tablet || tutorial) return;
+    if (s.state.paused || s.state.sleeping || tablet || navOpen || tutorial) return;
     if (target?.kind === "door") {
       onWorld({ kind: "door", id: target.id as keyof typeof doors });
       setActions(false);
@@ -305,6 +307,7 @@ export default function Flight({
     if (target?.kind === "station" || outside(s)) setActions(v => !v);
   };
   const openTab = (value: CampaignTab) => {
+    setNavOpen(false);
     setTab(value);
     setTablet(true);
     setActions(false);
@@ -323,7 +326,7 @@ export default function Flight({
           device={device}
           onInteract={handleWork}
           onGraphicsError={() => onTickPause(true)}
-          locked={s.state.paused || s.state.sleeping || tablet || !!tutorial}
+          locked={s.state.paused || s.state.sleeping || tablet || navOpen || !!tutorial}
           alarm={shipAlerts(s).some(
             (a) => a.level === "WARNING" || a.level === "EMERGENCY",
           )}
@@ -398,6 +401,10 @@ export default function Flight({
           </button>
         </div>
       </div>
+      <button className="campaign-map-button" type="button" aria-label="Open navigation map"
+        aria-expanded={navOpen} onClick={()=>{setActions(false);setNavOpen(true)}}>
+        <Icon name="map" size={18}/> MAP
+      </button>
       <div className="campaign-sim-rate">
         <label>
           SIM RATE{" "}
@@ -433,7 +440,7 @@ export default function Flight({
         {o?.site && (
           <p>
             Location: {sitePosition(o.site, m.destination).name}. Refer to the
-            ship or surface map.
+            MAP above.
           </p>
         )}
         {o?.instruction !== o?.title && <p>{o?.instruction}</p>}
@@ -567,6 +574,7 @@ export default function Flight({
           <Icon name="crew" size={16} /> {Math.round(s.state.energy)}%
         </span>
       </div>
+      {navOpen && <NavigationMap s={s} onClose={()=>setNavOpen(false)} />}
       {tablet && (
         <CampaignTablet
           s={s}

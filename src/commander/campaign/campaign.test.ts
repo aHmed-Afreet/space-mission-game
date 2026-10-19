@@ -33,6 +33,7 @@ import { defaultDesign as design, defaultLife as life } from "../simulation";
 import { bookLaunch, technologies } from "./economy";
 import { decodeStore, newStore, persist, loadStore, SAVE_KEY } from "./save";
 import { joystickVector } from "../controls";
+import { NavigationContent } from "./NavigationMap";
 
 function stand(
   s: Session,
@@ -1266,4 +1267,15 @@ test("Mission Control messages arrive on mission time and controls stay free-roa
   s = worldAction(s, { kind: "switch", id: "emergency" });
   assert.equal(s.world.switches.emergency, true);
   assert.equal(s.objective, objective);
+});
+
+
+test("navigation map uses real mission location names and includes airlock locations", () => {
+  const s = createSession(missions.find((m) => m.implemented)!, design, life, [], emptyProgress());
+  const map = renderToStaticMarkup(createElement(NavigationContent, { s }));
+  assert.match(map, /Power &amp; life support/);
+  assert.match(map, /Inner airlock hatch/);
+  assert.match(map, /Outer airlock hatch/);
+  assert.match(map, /CURRENT OBJECTIVE LOCATION/);
+  assert.doesNotMatch(map, /stroke-dasharray|CURRENT TARGET/);
 });

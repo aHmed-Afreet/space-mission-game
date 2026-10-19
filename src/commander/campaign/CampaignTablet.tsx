@@ -3,15 +3,15 @@ import { shipAlerts } from "./ship";
 import { money } from "./economy";
 import { useEffect, useRef, useState } from "react";
 import Icon, { type IconName } from "../Icons";
-import { DeckMap, missionTime } from "../MissionTablet";
-import { deck, nearby } from "../layout";
+import { missionTime } from "../MissionTablet";
+import { NavigationContent } from "./NavigationMap";
+
 import { lifeOptions, alerts } from "../simulation";
 import { components } from "../../game";
 import {
   atSite,
   currentObjective,
   currentPhase,
-  fieldSites,
   sitePosition,
   outside,
   engineeringCampaign,
@@ -70,67 +70,6 @@ function Gauge({
     </article>
   );
 }
-function FieldMap({ s }: { s: Session }) {
-  const x = (v: number) => 160 + v * 6,
-    z = (v: number) => 55 + v * 8;
-  return (
-    <svg
-      className="cmd-deck"
-      viewBox="0 0 320 430"
-      role="img"
-      aria-label="Surface map with named sites and player location"
-    >
-      <rect
-        x="20"
-        y="12"
-        width="280"
-        height="400"
-        rx="20"
-        fill="#7183780a"
-        stroke="#6c83872a"
-      />
-      <rect
-        x="140"
-        y="15"
-        width="40"
-        height="105"
-        rx="10"
-        fill="#82949b20"
-        stroke="#8ba4aa66"
-      />
-      <text x="160" y="52" textAnchor="middle">
-        SPACECRAFT
-      </text>
-      <path d="M160 115v35" stroke="#8ba4aa" />
-      {Object.entries(fieldSites)
-        .filter(([id]) => !["innerHatch", "airlock", "outerHatch"].includes(id))
-        .map(([id, p]) => (
-          <g key={id}>
-            <circle
-              cx={x(p.x)}
-              cy={z(p.z)}
-              r="10"
-              fill="#7d96951a"
-              stroke="#6d8a9233"
-            />
-            <text x={x(p.x)} y={z(p.z) + 22} textAnchor="middle">
-              {p.name.toUpperCase()}
-            </text>
-          </g>
-        ))}
-
-      <g
-        transform={`translate(${x(s.position.x)} ${z(s.position.z)}) rotate(${(-s.position.heading * 180) / Math.PI})`}
-      >
-        <path d="M0-8L5 6 0 3-5 6z" fill="#b9f2e6" />
-      </g>
-      <text x="160" y="420" textAnchor="middle">
-        {environments[missionById(s.missionId).destination].name.toUpperCase()}{" "}
-        / LOCAL SURVEY
-      </text>
-    </svg>
-  );
-}
 export default function CampaignTablet({
   s,
   progress,
@@ -160,8 +99,7 @@ export default function CampaignTablet({
     o = currentObjective(s),
     env = environments[m.destination],
     state = s.state,
-    [details, setDetails] = useState(false),
-    [map, setMap] = useState(outside(s) ? "field" : "deck");
+    [details, setDetails] = useState(false);
   const close = useRef<HTMLButtonElement>(null),
     dialog = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -825,46 +763,7 @@ export default function CampaignTablet({
               )}
             </>
           )}
-          {tab === "MAP" && (
-            <>
-              <div className="cmd-section-heading">
-                <div>
-                  <small>NAMED COMPARTMENTS & YOUR LOCATION</small>
-                  <h2>
-                    {map === "deck" ? "Spacecraft deck" : "Local field map"}
-                  </h2>
-                </div>
-              </div>
-              {m.eva && (
-                <div className="campaign-map-toggle">
-                  <button
-                    aria-pressed={map === "deck"}
-                    onClick={() => setMap("deck")}
-                  >
-                    Spacecraft
-                  </button>
-                  <button
-                    aria-pressed={map === "field"}
-                    onClick={() => setMap("field")}
-                  >
-                    Outside area
-                  </button>
-                </div>
-              )}
-              {map === "field" && m.eva ? (
-                <FieldMap s={s} />
-              ) : (
-                <DeckMap
-                  position={s.position}
-                  area={nearby(s.position.x, s.position.z)}
-                />
-              )}
-              <p className="cmd-footnote">
-                The position symbol shows you. Locate named compartments or
-                field sites yourself; no route or destination marker is drawn.
-              </p>
-            </>
-          )}
+          {tab === "MAP" && <NavigationContent s={s} />}
           {tab === "LOG" && (
             <>
               <div className="cmd-section-heading">

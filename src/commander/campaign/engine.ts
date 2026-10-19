@@ -212,9 +212,9 @@ export const fieldSites: Record<
   string,
   { x: number; z: number; name: string }
 > = {
-  innerHatch: { x: 0, z: 7.05, name: "Inside hatch" },
+  innerHatch: { x: 0, z: 7.05, name: "Inner airlock hatch" },
   airlock: { x: 0, z: 9, name: "Airlock chamber" },
-  outerHatch: { x: 0, z: 10, name: "Outside hatch" },
+  outerHatch: { x: 0, z: 10, name: "Outer airlock hatch" },
   survey: { x: 3, z: 16, name: "Survey marker" },
   crater: { x: -6, z: 23, name: "Shallow crater" },
   camp: { x: 6, z: 26, name: "Research camp" },
