@@ -292,7 +292,7 @@ export const STRATEGY_SAVE_KEY="orbital-strategy-levels-v1";
 export function readStrategyProgress(storage?:Pick<Storage,"getItem">):Record<string,number>{
  try{
   const x=JSON.parse(storage?.getItem(STRATEGY_SAVE_KEY)||"{}");
-  return x&&typeof x==="object"&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).filter(([k,v])=>/^strategy-\\d+$/.test(k)&&typeof v==="number"&&v>=0&&v<=100)):{};
+  return x&&typeof x==="object"&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).filter(([k,v])=>/^strategy-\d+$/.test(k)&&typeof v==="number"&&v>=0&&v<=100)):{};
  }catch{return {};}
 }
 export function strategyUnlocked(index:number,progress:Record<string,number>){
