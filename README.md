@@ -63,7 +63,7 @@ ORBITAL is an independent **educational simulation**, not an official NASA produ
 
 **Web publication:** deploy from `main` using `npm run build` and publish directory `dist`. CI runs `npm test` and `npm run build`. The legal information page at `public/privacy.html` documents browser-local progress and preferences. The game requires neither account creation nor an API key. A current browser with WebGL is recommended.
 
-**Remaining release checks:** verify all four missions on real touch devices and with keyboard/mouse; airplane/offline PWA install; save/restore and reset behavior; financial progression and legacy-save migration; viewport and fullscreen; controls, accessibility and performance on physical iPad/Safari and iPhone; host deployment and privacy link. A successful build does not by itself guarantee app-store acceptance.
+**Remaining release checks:** verify all twelve Commander missions and twenty Strategy challenges on real touch devices and with keyboard/mouse; airplane/offline PWA install; save/restore and reset behavior; financial progression and legacy-save migration; viewport and fullscreen; controls, accessibility and performance on physical iPad/Safari and iPhone; host deployment and privacy link. A successful build does not by itself guarantee app-store acceptance.
 
 ## Main menu, History and How to Play
 
@@ -91,7 +91,7 @@ Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no lo
 
 Each flight has 4–9 phases, a short briefing, required equipment, multiple stations, resource decisions, a mandatory challenge, two optional objectives and a full report. Granular launch and airlock safety procedures produce 28–57 individual task steps. First-time play targets 15–30 minutes, but this is a design target rather than a measured promise; familiarity, exploration, optional detours and acceleration change duration. The current goal is prominent, but it observes completed conditions rather than locking unrelated systems. Early meals, water, equipment collection and suit checkout are recognized. Repeated measurements after a fault need fresh evidence.
 
-Four additional missions (Mars and asteroid operations, Mars, asteroid and deep-space expeditions) are **PLANNED and cannot be launched**. Only the four flights above are implemented. Adding another mission does not require changing a fixed mission-count limit.
+Four additional missions (future Mars and asteroid operations) are **PLANNED and cannot be launched**. Only the twelve flights above are implemented. Adding another mission does not require changing a fixed mission-count limit.
 
 ### Launch, travel and controls
 
