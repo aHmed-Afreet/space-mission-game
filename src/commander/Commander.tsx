@@ -1,5 +1,8 @@
 import { worldAction, service, serviceEquipment } from "./campaign/ship";
 import { useCallback, useEffect, useRef, useState } from "react";
+import GameSettings from "./campaign/GameSettings";
+import { readPreferences, writePreferences } from "./campaign/preferences";
+import { SAVE_KEY } from "./campaign/save";
 import type { Design } from "../game";
 import type { LifeSupport } from "./simulation";
 import type { Position } from "./layout";
@@ -64,7 +67,10 @@ export default function Commander({
     [upgrades, setUpgrades] = useState<Technology[]>([]),
     [saveError, setSaveError] = useState(""),
     [device, setDevice] = useState<"ipad" | "iphone" | "laptop" | null>(null),
-    [laptopIntro, setLaptopIntro] = useState(false);
+    [laptopIntro, setLaptopIntro] = useState(false),
+    [settingsOpen, setSettingsOpen] = useState(false),
+    [preferences, setPreferences] = useState(() => readPreferences(typeof localStorage !== "undefined" ? localStorage : undefined));
+  useEffect(() => { try { writePreferences(localStorage, preferences); } catch { /* Storage may be blocked. */ } }, [preferences]);
   const latest = useRef(store);
   latest.current = store;
   const save = useCallback(() => {
@@ -174,20 +180,44 @@ export default function Commander({
     setUpgrades([]);
     setMode("prepare");
   };
+  const deviceValue = device || "ipad";
+  const openSettings = () => { if (mode === "flight") pause(true); setSettingsOpen(true); };
+  const resetProgress = () => {
+    if (loaded.readOnly) return;
+    try {
+      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(SAVE_KEY + ".backup");
+      const next = newStore();
+      latest.current = next;
+      persist(localStorage, next);
+      setStore(next);
+      setSelected(missions[0]);
+      setGear([]);
+      setUpgrades([]);
+      setSaveError("");
+      setSettingsOpen(false);
+      setMode("home");
+    } catch { setSaveError("Reset failed because browser storage is unavailable. No changes were made."); }
+  };
+  const settingsView = settingsOpen ? (
+    <GameSettings value={preferences} onChange={setPreferences} device={deviceValue}
+      onDevice={setDevice} onClose={() => setSettingsOpen(false)}
+      onReset={resetProgress} readonly={loaded.readOnly}/>
+  ) : null;
   if (!device || laptopIntro) return (
     <div className="cmd-device-setup" role="dialog" aria-modal="true" aria-label="Commander control setup">
       <section className="cmd-device-panel">
         <small>ORBITAL / COMMANDER MODE</small>
         {laptopIntro ? <>
           <h1>Laptop controls</h1>
-          <p><strong>WASD / Arrow Keys</strong> to move · <strong>Shift</strong> to sprint · <strong>Drag mouse</strong> to look · Aim and press <strong>E</strong> to work, use equipment or open a hatch.</p>
+          <p><strong>WASD / Arrow Keys</strong> to move · <strong>Shift</strong> to sprint · <strong>Drag mouse</strong> to look · Aim and press <strong>E</strong> to interact with equipment or open a hatch.</p>
           <p>Touch joystick and on-screen buttons will be hidden.</p>
           <button className="cmd-device-next" onClick={() => setLaptopIntro(false)}>Continue →</button>
         </> : <>
           <h1>What device are you using?</h1>
           <p>Choose your device to load the best game controls.</p>
           <div className="cmd-device-options">
-            <button onClick={() => setDevice("ipad")}>iPad <span>Move by touching the left side. Sprint and Work on the right.</span></button>
+            <button onClick={() => setDevice("ipad")}>iPad <span>Move by touching the left side. Sprint and Interact on the right.</span></button>
             <button onClick={() => setDevice("iphone")}>iPhone <span>Compact touch controls.</span></button>
             <button onClick={() => { setDevice("laptop"); setLaptopIntro(true); }}>Laptop <span>Keyboard and mouse controls, without touch buttons.</span></button>
           </div>
@@ -288,8 +318,11 @@ export default function Commander({
       (m) => !store.progress.completed[m.id] && canStart(m, store.progress),
     );
     return (
+      <>
       <Flight
         device={device}
+        preferences={preferences}
+        onSettings={openSettings}
         onWorld={(action) => updateSession((s) => worldAction(s, action))}
         onOptional={(id) => updateSession((s) => optionalCommand(s, id))}
         onRate={(rate) => updateSession((s) => setSimRate(s, rate))}
@@ -332,9 +365,12 @@ export default function Commander({
         }
         saveError={saveError}
       />
+      {settingsView}
+      </>
     );
   }
   return (
+    <>
     <CampaignHome
       onServiceEquipment={(id) =>
         setStore((v) => ({ ...v, progress: serviceEquipment(v.progress, id) }))
@@ -351,6 +387,9 @@ export default function Commander({
       onResume={() => setMode("flight")}
       onLegacy={() => setMode("legacy")}
       onExit={onExit}
+      onSettings={openSettings}
     />
+    {settingsView}
+    </>
   );
 }

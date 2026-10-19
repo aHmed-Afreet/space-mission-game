@@ -20,6 +20,7 @@ export default function CampaignHome({
   onResume,
   onLegacy,
   onExit,
+  onSettings = () => {},
   onService = () => {},
   onServiceEquipment = () => {},
 }: {
@@ -34,6 +35,7 @@ export default function CampaignHome({
   onResume: () => void;
   onLegacy: () => void;
   onExit: () => void;
+  onSettings?: () => void;
 }) {
   const next = missions.find(
     (m) => !progress.completed[m.id] && canStart(m, progress),
@@ -43,7 +45,7 @@ export default function CampaignHome({
       <div className="campaign-nav">
         <button onClick={onExit}>← Choose mode</button>
         <span>ORBITAL / MISSION LAB</span>
-        <small>LOCAL CAMPAIGN SAVE</small>
+        <button type="button" className="campaign-open-settings" onClick={onSettings}><Icon name="settings" size={16}/> Settings</button>
       </div>
       <section className="campaign-hero">
         <span className="eyebrow">COMMANDER CAMPAIGN</span>

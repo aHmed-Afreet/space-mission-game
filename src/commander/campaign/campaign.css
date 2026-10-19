@@ -1798,3 +1798,26 @@
  .campaign-flight .campaign-sim-rate {top:calc(max(14px,env(safe-area-inset-top)) + 117px);}
  .campaign-flight .campaign-guidance {top:calc(max(14px,env(safe-area-inset-top)) + 166px);max-height:40dvh;overflow:auto;}
 }
+
+/* Settings are available before flight and at any point in a mission. */
+.campaign-open-settings {display:inline-flex;align-items:center;gap:8px;border:1px solid #8dcdb96b!important;padding:10px 14px!important;border-radius:8px;background:#15343c!important;font-size:12px!important;color:#e5f7ee!important;}
+.game-settings-overlay {position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));}
+.game-settings-shade {position:absolute;inset:0;width:100%;height:100%;background:#02090ee0;border:0;backdrop-filter:blur(9px);}
+.game-settings-dialog {position:relative;width:min(600px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;border-radius:16px;border:1px solid #9bcbbb59;background:#122732;color:#e6f5ef;box-shadow:0 25px 90px #000b;}
+.game-settings-dialog header {position:sticky;top:0;background:#122732;z-index:2;padding:16px 23px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #8abeb439;gap:15px;}
+.game-settings-dialog header small {letter-spacing:2px;font-size:9px;color:#a1d4c2;}
+.game-settings-dialog h2 {font-size:24px;margin:5px 0;font-weight:600;}
+.game-settings-dialog header button {display:flex;gap:7px;align-items:center;padding:10px;border:1px solid #779da55b;border-radius:8px;background:#25414b;color:#e4f4ec;}
+.game-settings-body {padding:22px;display:flex;flex-direction:column;align-items:stretch;gap:12px;}
+.game-settings-body>label {font-size:13px;font-weight:600;margin-top:5px;}
+.game-settings-body p {font-size:12px;color:#a6c6c6;line-height:1.7;margin:0 0 9px;}
+.game-settings-body select,.game-settings-body input[type=range] {width:100%;min-height:40px;accent-color:#8bddc4;}
+.game-settings-body select {padding:10px;color:#e6f5ef;border:1px solid #93bfb160;border-radius:8px;background:#1a3b46;}
+.game-settings-body .game-settings-toggle {display:flex;align-items:center;gap:12px;font-weight:400;}
+.game-settings-body .game-settings-toggle input {width:20px;height:20px;accent-color:#79c5ad;}
+.game-settings-body button.game-settings-fullscreen {align-self:start;padding:12px;border-radius:7px;border:1px solid #a5ccb173;background:#1c4b49;color:#effbf2;}
+.game-settings-body hr {width:100%;border:0;border-top:1px solid #96b3ba3e;margin:10px 0;}
+.game-settings-body h3 {font-size:17px;font-weight:550;margin:4px 0;}
+.game-settings-body .game-settings-reset {padding:12px 14px;border-radius:8px;border:1px solid #dd989d83;color:#ffdee0;background:#5f272c77;align-self:start;}
+.game-settings-body .game-settings-reset:disabled {opacity:.45;}
+.game-settings-body a {color:#a6e6d2;text-decoration:underline;}

@@ -24,6 +24,7 @@ import NavigationMap from "./NavigationMap";
 import Tutorial from "./Tutorial";
 import Report from "./Report";
 import type { VisualAction } from "../interior";
+import type { PlayerPreferences } from "./preferences";
 const baseStationActions: Partial<
   Record<keyof typeof deck, { action: CampaignAction; label: string }[]>
 > = {
@@ -78,6 +79,8 @@ const baseStationActions: Partial<
 export default function Flight({
   session: s,
   device = "ipad",
+  preferences,
+  onSettings = () => {},
   progress,
   onMove,
   onTickPause,
@@ -100,6 +103,8 @@ export default function Flight({
   onAbort: () => void;
   session: Session;
   device?: "ipad" | "iphone" | "laptop";
+  preferences?: PlayerPreferences;
+  onSettings?: () => void;
   progress: Progress;
   onMove: (p: Position) => void;
   onTickPause: (paused: boolean) => void;
@@ -324,6 +329,7 @@ export default function Flight({
           onArea={() => {}}
           onPosition={move}
           device={device}
+          settings={preferences}
           onInteract={handleWork}
           onGraphicsError={() => onTickPause(true)}
           locked={s.state.paused || s.state.sleeping || tablet || navOpen || !!tutorial}
@@ -387,6 +393,9 @@ export default function Flight({
             onClick={() => onTickPause(!s.state.paused)}
           >
             <Icon name={s.state.paused ? "play" : "pause"} />
+          </button>
+          <button className="cmd-icon-button" aria-label="Open settings" title="Settings" onClick={onSettings}>
+            <Icon name="settings" />
           </button>
           <button
             className="cmd-tablet-trigger"

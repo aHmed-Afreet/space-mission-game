@@ -16,6 +16,7 @@ import { campaignWalkable } from "./campaign/engine";
 import { doors, lockers } from "./campaign/ship";
 import { environments } from "./campaign/environments";
 import { missionById } from "./campaign/definitions";
+import type { PlayerPreferences } from "./campaign/preferences";
 
 export type AimTarget = { kind: "door" | "locker" | "station"; id: string };
 const lockerPositions: Record<string, [number, number, number]> = {
@@ -26,6 +27,7 @@ const lockerPositions: Record<string, [number, number, number]> = {
 };
 type Props = {
   device?: "ipad" | "iphone" | "laptop";
+  settings?: PlayerPreferences;
   onArea: (area: Area | undefined) => void;
   onPosition: (p: Position) => void;
   onInteract: (target: AimTarget | null) => void;
@@ -50,6 +52,7 @@ export default function Cabin(props: Props) {
     origin = useRef({ x: 0, y: 0 }),
     pointer = useRef<number | undefined>(undefined),
     sprint = useRef(false),
+    sprintTouch = useRef<{id:number;x:number;y:number}|null>(null),
     aim = useRef<AimTarget | null>(null),
     [aimLabel, setAimLabel] = useState(""),
     lookPointer = useRef<{ id: number; x: number; y: number } | undefined>(
@@ -73,7 +76,7 @@ export default function Cabin(props: Props) {
       );
       return;
     }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, props.settings?.graphics === "quality" ? 1.8 : props.settings?.graphics === "battery" ? 1 : 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
@@ -179,6 +182,7 @@ export default function Cabin(props: Props) {
       stick.current = { x: 0, y: 0 };
       pointer.current = undefined;
       sprint.current = false;
+      sprintTouch.current = null;
       lookPointer.current = undefined;
       if (thumb.current) thumb.current.style.transform = "translate(0px,0px)";
       joystick.current?.classList.remove("using");
@@ -193,9 +197,7 @@ export default function Cabin(props: Props) {
       lastArea: Area | undefined,
       lastAim = 0,
       elapsed = 0;
-    const frameDuration = matchMedia("(pointer: coarse)").matches
-      ? 1000 / 30
-      : 1000 / 60;
+    const frameDuration = current.current.settings?.graphics === "battery" ? 1000 / 25 : current.current.settings?.graphics === "quality" ? 1000 / 60 : matchMedia("(pointer: coarse)").matches ? 1000 / 30 : 1000 / 60;
     const clock = performance.now();
     const allowed = (x: number, z: number) =>
       current.current.world
@@ -352,6 +354,7 @@ export default function Cabin(props: Props) {
       keys.current.clear();
       pointer.current = undefined;
       sprint.current = false;
+      sprintTouch.current = null;
       stick.current = { x: 0, y: 0 };
       if (thumb.current) thumb.current.style.transform = "translate(0px,0px)";
     }
@@ -398,10 +401,10 @@ export default function Cabin(props: Props) {
     if (!p || p.id !== e.pointerId || props.locked) return;
     look.current.yaw -=
       (e.clientX - p.x) *
-      (current.current.world?.session.position.z! > 10.4 ? 0.0028 : 0.0035);
+      (current.current.world?.session.position.z! > 10.4 ? 0.0028 : 0.0035) * (current.current.settings?.lookSensitivity ?? 1);
     look.current.pitch = Math.max(
       -1.15,
-      Math.min(1.15, look.current.pitch - (e.clientY - p.y) * 0.0035),
+      Math.min(1.15, look.current.pitch - (e.clientY - p.y) * 0.0035 * (current.current.settings?.lookSensitivity ?? 1)),
     );
     p.x = e.clientX;
     p.y = e.clientY;
@@ -411,6 +414,27 @@ export default function Cabin(props: Props) {
       lookPointer.current = undefined;
       e.currentTarget.classList.remove("using");
     }
+  };
+  const startSprint = (e: ReactPointer<HTMLButtonElement>) => {
+    if(props.locked) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    sprint.current = true;
+    sprintTouch.current = {id:e.pointerId,x:e.clientX,y:e.clientY};
+  };
+  const dragSprint = (e: ReactPointer<HTMLButtonElement>) => {
+    const last=sprintTouch.current;
+    if(!last || last.id!==e.pointerId || props.locked) return;
+    const factor=0.0035 * (current.current.settings?.lookSensitivity ?? 1);
+    look.current.yaw -= (e.clientX-last.x)*factor;
+    look.current.pitch = Math.max(-1.15,Math.min(1.15,look.current.pitch-(e.clientY-last.y)*factor));
+    last.x=e.clientX;
+    last.y=e.clientY;
+  };
+  const stopSprint = (e: ReactPointer<HTMLButtonElement>) => {
+    if(sprintTouch.current?.id!==e.pointerId) return;
+    sprintTouch.current=null;
+    sprint.current=false;
   };
   return (
     <div className="cmd-world">
@@ -441,20 +465,21 @@ export default function Cabin(props: Props) {
         </div>
         <div className="cmd-touch-actions">
           <button type="button" className="cmd-sprint" aria-label="Hold to sprint"
-            onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); sprint.current = true; }}
-            onPointerUp={() => { sprint.current = false; }}
-            onPointerCancel={() => { sprint.current = false; }}
-            onLostPointerCapture={() => { sprint.current = false; }}>SPRINT</button>
+            onPointerDown={startSprint}
+            onPointerMove={dragSprint}
+            onPointerUp={stopSprint}
+            onPointerCancel={stopSprint}
+            onLostPointerCapture={stopSprint}>SPRINT</button>
           <button type="button" className="cmd-work" aria-label="Interact with aimed target"
             disabled={props.locked} onClick={() => props.onInteract(aim.current)}>INTERACT</button>
         </div>
       </>}
-      <div className="cmd-control-hint">
+      {props.settings?.showHints !== false && <div className="cmd-control-hint">
         {props.device === "laptop"
           ? "WASD / ARROWS MOVE · SHIFT SPRINT · DRAG MOUSE LOOK · AIM + E INTERACT"
-          : "LEFT TOUCH MOVE · RIGHT DRAG LOOK · AIM + INTERACT"}
-      </div>
-      {aimLabel && !props.locked && <div className="cmd-aim-target"><i />{aimLabel}</div>}
+          : "LEFT TOUCH MOVE · HOLD & DRAG SPRINT TO TURN · AIM + INTERACT"}
+      </div>}
+      {props.settings?.showHints !== false && aimLabel && !props.locked && <div className="cmd-aim-target"><i />{aimLabel}</div>}
       {props.world &&
         props.world.session.position.z > 10.4 &&
         missionById(props.world.session.missionId).destination !== "earth" && (
