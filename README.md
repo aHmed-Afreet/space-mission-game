@@ -65,6 +65,17 @@ ORBITAL is an independent **educational simulation**, not an official NASA produ
 
 **Remaining release checks:** verify all four missions on real touch devices and with keyboard/mouse; airplane/offline PWA install; save/restore and reset behavior; financial progression and legacy-save migration; viewport and fullscreen; controls, accessibility and performance on physical iPad/Safari and iPhone; host deployment and privacy link. A successful build does not by itself guarantee app-store acceptance.
 
+## Main menu, History and How to Play
+
+The main menu now offers **five experiences**:
+- **Strategy Mode:** 20 escalating, playable mission-design challenges. Each has specific science, reliability, budget and instrument requirements. Clearing one unlocks the next. Scores are stored in browser local storage.
+- **Commander Mode:** 12 implemented first-person, multi-phase spacecraft sorties, including EVA, orbital maintenance, lunar landing and geology work. Four more Mars/asteroid missions are listed as planned but cannot be launched.
+- **Real Space History:** An archive of 55 carefully selected spaceflight milestones across multiple agencies and decades, with historical background, outcomes and links to authoritative archives.
+- **Live the Story:** An interactive four-step educational story for each archival mission. The training decision is fictional and never changes the actual historical outcome; this is not a 3D replay.
+- **How to Play:** Controls and instructions for Strategy, Commander and historical stories.
+
+The history archive is a curated selection of major missions rather than a comprehensive listing of every flight. Some links open broad official chronology pages instead of a single mission's detailed record. Historical descriptions summarize real events, while simulations, decisions and game spacecraft are fictionalized for learning.
+
 ## Commander complete-mission campaign
 
 Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no longer count as campaign levels. The original professional cabin, life support, touch controls, temporary tablet, EVA/airlock, Moon environment, inventory, science, camp, PWA and Strategy Mode are preserved.
@@ -80,7 +91,7 @@ Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no lo
 
 Each flight has 4–9 phases, a short briefing, required equipment, multiple stations, resource decisions, a mandatory challenge, two optional objectives and a full report. Granular launch and airlock safety procedures produce 28–57 individual task steps. First-time play targets 15–30 minutes, but this is a design target rather than a measured promise; familiarity, exploration, optional detours and acceleration change duration. The current goal is prominent, but it observes completed conditions rather than locking unrelated systems. Early meals, water, equipment collection and suit checkout are recognized. Repeated measurements after a fault need fresh evidence.
 
-Twelve further missions (additional lunar operations, Mars, asteroid and deep-space expeditions) are **PLANNED and cannot be launched**. Only the four flights above are implemented. Adding another mission does not require changing a fixed mission-count limit.
+Four additional missions (Mars and asteroid operations, Mars, asteroid and deep-space expeditions) are **PLANNED and cannot be launched**. Only the four flights above are implemented. Adding another mission does not require changing a fixed mission-count limit.
 
 ### Launch, travel and controls
 
