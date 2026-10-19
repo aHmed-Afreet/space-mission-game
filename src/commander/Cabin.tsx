@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointer,
 } from "react";
 import * as THREE from "three";
-import { nearby, spawn, walkable, type Position } from "./layout";
+import { nearby, spawn, walkable, deck, type Position } from "./layout";
 import { createInterior, type VisualAction } from "./interior";
 import type { Area } from "./simulation";
 import type { Telemetry } from "./displays";
@@ -25,7 +25,7 @@ const lockerPositions: Record<string, [number, number, number]> = {
   maintenance: [-2.4,1.8,.75]
 };
 type Props = {
-  device: "ipad" | "iphone" | "laptop";
+  device?: "ipad" | "iphone" | "laptop";
   onArea: (area: Area | undefined) => void;
   onPosition: (p: Position) => void;
   onInteract: (target: AimTarget | null) => void;

@@ -76,7 +76,7 @@ const baseStationActions: Partial<
 };
 export default function Flight({
   session: s,
-  device,
+  device = "ipad",
   progress,
   onMove,
   onTickPause,
@@ -98,7 +98,7 @@ export default function Flight({
   onControls: (throttle: number, pitch: number) => void;
   onAbort: () => void;
   session: Session;
-  device: "ipad" | "iphone" | "laptop";
+  device?: "ipad" | "iphone" | "laptop";
   progress: Progress;
   onMove: (p: Position) => void;
   onTickPause: (paused: boolean) => void;
