@@ -3,7 +3,7 @@ import StationControls from "./StationControls";
 import { doors, shipAlerts, type WorldAction } from "./ship";
 import LaunchView from "./LaunchView";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Cabin from "../Cabin";
+import Cabin, { type AimTarget } from "../Cabin";
 import Icon from "../Icons";
 import { nearby, deck, type Position } from "../layout";
 import { missionTime } from "../MissionTablet";
@@ -76,6 +76,7 @@ const baseStationActions: Partial<
 };
 export default function Flight({
   session: s,
+  device,
   progress,
   onMove,
   onTickPause,
@@ -97,6 +98,7 @@ export default function Flight({
   onControls: (throttle: number, pitch: number) => void;
   onAbort: () => void;
   session: Session;
+  device: "ipad" | "iphone" | "laptop";
   progress: Progress;
   onMove: (p: Position) => void;
   onTickPause: (paused: boolean) => void;
@@ -288,6 +290,20 @@ export default function Flight({
         { action: "pressurize", label: "Repressurize airlock" },
       ] as { action: CampaignAction; label: string }[]),
     );
+  const handleWork = (target: AimTarget | null) => {
+    if (s.state.paused || s.state.sleeping || tablet || tutorial) return;
+    if (target?.kind === "door") {
+      onWorld({ kind: "door", id: target.id as keyof typeof doors });
+      setActions(false);
+      return;
+    }
+    if (target?.kind === "locker") {
+      onWorld({ kind: "locker", id: target.id as keyof Session["world"]["lockers"] });
+      setActions(true);
+      return;
+    }
+    if (target?.kind === "station" || outside(s)) setActions(v => !v);
+  };
   const openTab = (value: CampaignTab) => {
     setTab(value);
     setTablet(true);
@@ -304,7 +320,8 @@ export default function Flight({
           key={s.id}
           onArea={() => {}}
           onPosition={move}
-          onInteract={() => setActions((v) => !v)}
+          device={device}
+          onInteract={handleWork}
           onGraphicsError={() => onTickPause(true)}
           locked={s.state.paused || s.state.sleeping || tablet || !!tutorial}
           alarm={shipAlerts(s).some(
@@ -502,40 +519,6 @@ export default function Flight({
               ))}
             </div>
           )}
-          {(Object.values(doors).some(
-            (d) => Math.abs(s.position.z - d.z) < 1.6,
-          ) ||
-            actionable ||
-            area ||
-            outside(s) ||
-            (m.eva && (atSite(s, "airlock") || atSite(s, "innerHatch")))) &&
-            !tablet &&
-            !s.state.sleeping && (
-              <button
-                className="cmd-interaction-prompt"
-                disabled={s.state.paused}
-                aria-expanded={actions}
-                onClick={() => {
-                  setActions((v) => !v);
-                }}
-              >
-                <kbd>E</kbd>
-                <span>
-                  INTERACT
-                  <strong>
-                    {Object.values(doors).find(
-                      (d) => Math.abs(s.position.z - d.z) < 1.2,
-                    )?.name ||
-                      (area
-                        ? deck[area].name
-                        : atSite(s, "airlock") || atSite(s, "innerHatch")
-                          ? "Airlock controls"
-                          : "Field equipment")}
-                  </strong>
-                </span>
-                <Icon name="chevron" size={15} />
-              </button>
-            )}
         </div>
       )}
       {s.state.sleeping && (

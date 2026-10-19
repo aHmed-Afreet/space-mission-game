@@ -62,7 +62,9 @@ export default function Commander({
     [selected, setSelected] = useState<MissionDefinition>(missions[0]),
     [gear, setGear] = useState<EquipmentId[]>([]),
     [upgrades, setUpgrades] = useState<Technology[]>([]),
-    [saveError, setSaveError] = useState("");
+    [saveError, setSaveError] = useState(""),
+    [device, setDevice] = useState<"ipad" | "iphone" | "laptop" | null>(null),
+    [laptopIntro, setLaptopIntro] = useState(false);
   const latest = useRef(store);
   latest.current = store;
   const save = useCallback(() => {
@@ -172,6 +174,28 @@ export default function Commander({
     setUpgrades([]);
     setMode("prepare");
   };
+  if (!device || laptopIntro) return (
+    <div className="cmd-device-setup" role="dialog" aria-modal="true" aria-label="Commander control setup">
+      <section className="cmd-device-panel">
+        <small>ORBITAL / COMMANDER MODE</small>
+        {laptopIntro ? <>
+          <h1>Laptop controls</h1>
+          <p><strong>WASD / Arrow Keys</strong> to move · <strong>Shift</strong> to sprint · <strong>Drag mouse</strong> to look · Aim and press <strong>E</strong> to work, use equipment or open a hatch.</p>
+          <p>Touch joystick and on-screen buttons will be hidden.</p>
+          <button className="cmd-device-next" onClick={() => setLaptopIntro(false)}>Continue →</button>
+        </> : <>
+          <h1>What device are you using?</h1>
+          <p>Choose your device to load the best game controls.</p>
+          <div className="cmd-device-options">
+            <button onClick={() => setDevice("ipad")}>iPad <span>Move by touching the left side. Sprint and Work on the right.</span></button>
+            <button onClick={() => setDevice("iphone")}>iPhone <span>Compact touch controls.</span></button>
+            <button onClick={() => { setDevice("laptop"); setLaptopIntro(true); }}>Laptop <span>Keyboard and mouse controls, without touch buttons.</span></button>
+          </div>
+          <button className="cmd-device-back" onClick={onExit}>← Choose game mode</button>
+        </>}
+      </section>
+    </div>
+  );
   if (mode === "legacy")
     return (
       <div className="campaign-legacy-host">
@@ -265,6 +289,7 @@ export default function Commander({
     );
     return (
       <Flight
+        device={device}
         onWorld={(action) => updateSession((s) => worldAction(s, action))}
         onOptional={(id) => updateSession((s) => optionalCommand(s, id))}
         onRate={(rate) => updateSession((s) => setSimRate(s, rate))}

@@ -21,6 +21,18 @@ export function createFixtures(scene: T.Scene) {
     dark = mat("#18242e"),
     silver = mat("#91a1a8"),
     itemMat = mat("#b6aa8e");
+  // Round illuminated WORK targets on actual hatch control panels.
+  const buttonMaterial = new T.MeshBasicMaterial({color:"#83d6c5"});
+  materials.push(buttonMaterial);
+  const buttonGeometry = new T.CylinderGeometry(.065,.065,.018,20);
+  extraGeometry.push(buttonGeometry);
+  for (const d of Object.values(doors)) for (const x of [-.98,.98]) {
+    box(root,x,1.35,d.z+.13,.2,.28,.055,dark);
+    const button = new T.Mesh(buttonGeometry,buttonMaterial);
+    button.rotation.x=Math.PI/2;
+    button.position.set(x,1.35,d.z+.175);
+    root.add(button);
+  }
   const box = (
     parent: T.Object3D,
     x: number,
