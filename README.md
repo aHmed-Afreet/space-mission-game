@@ -57,48 +57,62 @@ The success percentage is a game performance score, not a physical probability o
 
 Large touch controls support iPad and desktop. Choices use native buttons with keyboard focus and selection state. The game is held in memory; refreshing resets the mission. No copyrighted artwork, NASA branding or agency affiliation is used.
 
-## Commander Mode — crew readiness sortie
+## Commander campaign
 
-The mode picker preserves the original Strategy game unchanged. Commander is an independent, single-crew living simulation with a six-hour readiness objective; it does not claim to provision a full Mars transit.
+Commander Mode keeps the existing procedural cabin, life-support simulation and Strategy Mode, and adds a sequential training campaign. **Levels 1–12 are playable.** All 24 mission definitions are included, but levels 13–24 (Mars and deep space) are explicitly marked planned and cannot be launched. They are not completed destinations.
 
-### Design and engineering
+### Playable missions
 
-Configure the original hardware, rocket and transfer profile plus a dedicated Life Support section: food, water, water/oxygen recycling, oxygen tanks, environmental control and reserve batteries. The builder displays total cost, mass, net power and endurance estimates, then enforces its $300M budget, rocket payload, nonnegative power margin, essential instruments and 10 fuel reserve. Water has a greater mass cost than a meal. Recycling trades mass, money and power for endurance. Batteries add kWh capacity and mass. Every selected value initializes the actual mission.
+| Levels | Missions |
+| --- | --- |
+| 1–6 · Command Training | Navigation, meals and hydration, science and rest, communications, repair training, orbital EVA |
+| 7–12 · Lunar Operations | Lunar approach, guided landing, first surface EVA, geological survey and samples, research camp deployment, camp repair and transmission |
 
-### Walk, interact and live aboard
+Complete a mission to unlock the next. Replay any completed mission; best scores are retained and recent attempts appear in the log. Each mission displays one current task, a plain-language instruction and a single waypoint. Ordered objectives prevent skipping safety checks or completing later tasks early. Short, dismissible tutorials introduce systems once and can be reset from the tablet.
 
-Use WASD/arrows or hold the onscreen touch controls to walk. Drag the view to look around. Approach a station to unlock its actions; map entries never teleport the player. The Three.js cabin includes a cockpit, science console, communications, power, galley, sleeping berth and equipment storage. The central aisle and collision boundaries keep stations reachable.
+### Design and equipment
 
-- Galley: take a meal, fill the 1 L bottle, or drink at the dispenser.
-- Inventory tablet: eat a carried meal or drink 250 mL from the bottle. Stored meals decrease when taken; carried meals decrease when eaten. Water transfers from tank to bottle, then is consumed. Working powered recyclers return the configured fraction to the tank.
-- Sleeping berth: rest to recover energy. Sleeping locks movement and station actions until waking.
-- Equipment: collect toolkit. Power station: repair a fault using one spare part.
-- Science: gather water-search data, spending crew energy and battery reserve.
-- Communications: calibrate a failed link and transmit at least 30 science points.
-- Cockpit: verify course using fuel, then complete the sortie once objectives are ready.
+The spacecraft builder preserves hardware, rocket, trajectory and Life Support controls. Food, water, recycling, oxygen, environmental control and batteries change real mission mass, cost, consumption and endurance. Required and optional field equipment adds mass and cost; EVA adds an airlock and its operating power. Payload, budget, power, fuel and carried-load constraints are checked before starting. Engineering details collapse by default for beginners.
 
-The Mission Tablet starts closed and opens from a compact HUD button as a temporary slide-out overlay. STATUS, INVENTORY, OBJECTIVES, MAP, SYSTEMS and LOG sections provide gauges, item cards, a live deck schematic and mission information. Low food/water/oxygen/power, crew readiness, cabin environment, solar activity, communications and equipment faults produce alerts. A link failure occurs at 90 mission minutes, solar activity at 120–180 and a repairable equipment fault at 210. These scheduled training incidents make emergency practice repeatable.
+Every mission is a separately provisioned sortie using the selected design, rather than a continuous multi-month transit. Destination parameters are simplified educational scenarios, not flight-planning or life-support certification data. Landing and approach use guided system procedures and countdowns, not an orbital flight-physics model.
 
-Default time is 1 real second per mission minute; a 5× setting is available. Pause freezes consumption. Food, hydration, duty time and sleep affect energy and mission readiness. Oxygen, reserve power and cabin environment update with mission time. Critical oxygen, pressure or energy loss triggers a safety abort. Body weight and appearance are not simulated.
+### Walk, eat, repair and explore
 
-### Persistence and scope
+- Desktop: WASD/arrows to walk, drag the view to look, E to interact. Space hops on the Moon.
+- Touch: a large analog joystick moves; drag the separate look area to turn simultaneously. Release stops movement. A surface hop control appears where applicable.
+- Galley: take a meal, fill a 1 L bottle, or use the dispenser. Eat or drink carried supplies from inventory. Actual stored and carried quantities decrease; hydration, nutrition, rest and duty time affect crew readiness. Meal and drink cooldowns discourage repeated consumption.
+- Cabin: sleep, collect tools, repair faults with spare parts, gather science, manage communications and verify trajectory. The original station systems remain available.
+- EVA: collect the selected suit and equipment, check oxygen and power, enter the airlock, close the inner hatch, depressurize, open the outer hatch and physically walk outside. Hatches are interlocked. Return, close the outer hatch, repressurize and open the inner hatch before re-entering. Suit oxygen, power and condition decrease outside. Meals and drinks are unavailable in vacuum.
+- Moon: scan geology, collect physical samples, drill and photograph sites. A research camp consumes carried deployment equipment and includes solar generation, battery storage, antenna, environmental sensor, sample storage and an **unpressurized instrument shelter**. Powered experiments and transmissions consume energy. A successful camp persists into the repair mission; a repair consumes a spare part.
 
-Mission configuration, supplies, crew state, objectives and recent action log auto-save to this browser's localStorage. A restored mission starts paused. Hidden tabs automatically pause; missions do not consume supplies while the app is closed. Camera position is not persisted and resumes on the flight deck. Storage failures are reported in the tablet. Refresh or switch back to Commander to resume. Strategy retains its original in-memory behavior.
+The temporary Mission Tablet has **MISSION, STATUS, INVENTORY, MAP and LOG** sections. Simple status cards use GOOD, WARNING and CRITICAL; optional engineering details expose cabin pressure, temperature, generation, net power, radiation and configuration. The deck/surface schematic shows actual position and current objective. The view fills the available viewport, with safe-area spacing and a tablet that starts closed.
 
-`src/commander/simulation.ts` contains pure simulation and action functions, typed area/action interfaces and configuration models. `Cabin.tsx` owns rendering and movement, and `Commander.tsx` owns builder, tablet and persistence. This boundary supports future EVA, samples, docking, surface exploration and emergency modules; those future features are not implemented yet. A WebGL-capable browser is required for the 3D cabin. Models and textures are original procedural graphics; no external artwork is loaded.
+Mission reports include overall score, science, resources, spacecraft condition, crew readiness, power, fuel, communications, samples and experiments, with practical feedback. Scores are educational performance measures, not real probabilities. Resource exhaustion or unsafe crew conditions can abort a sortie.
 
-Validation includes the original five strategy tests, nine Commander simulation tests and two cabin-navigation checks. The Three.js renderer is loaded separately when Commander Mode is selected, so Strategy does not download it on entry.
+### Saving and offline use
 
+The versioned campaign save (`orbital-campaign-v2`) includes configuration, progress, position/heading, current ordered objective, resources, suit, airlock, inventory, samples, camp, tutorials and reports. Restored checkpoints start paused. Hidden tabs pause automatically; no supplies are consumed while closed. A previous valid save is retained as a backup, invalid saves are handled visibly, and newer save versions are protected from overwrite.
 
-### Commander visual redesign
+The old `orbital-commander-v1` readiness sortie is preserved separately and remains playable through “Resume previous sortie.” Its design can be imported without granting campaign unlocks. Legacy sorties retain their original six-hour objectives, tablet and clock speed. New campaign time advances by 0.5 mission minutes per real second. Strategy remains in memory and is unchanged.
 
-The cabin now uses compact flight, science/communications, service and habitation zones. The interior has beveled panels, structural pressure bulkheads, inset strip lights, small integrated equipment placards, upholstered seats, workstations, storage lockers, life-support plumbing, vents, a sleeping berth, galley dispenser and repair hardware. The forward flight deck has a viewport and procedural Mars backdrop. Stations are identified by their equipment, with a subtle edge light when in interaction range, not floating signs.
+A web manifest, original icons and production service worker support standalone installation and offline reload after a successful online load. Serve `dist/` over HTTPS (or localhost). Browser installation UI varies; the app does not force browser fullscreen or hide browser controls through unsupported APIs. LocalStorage and service-worker availability depend on browser settings. There is no server synchronization.
 
-Move with WASD/arrows or the analog virtual joystick. Drag the separate look surface to turn. Press E or tap the compact interaction prompt to access station actions. The personal terminal opens with the Mission Tablet control; Escape, the close button or the outside backdrop dismisses it. Modal keyboard focus stays within the tablet. The map shows continuous player position, heading, current zone and next objective. Inventory cards preserve the existing food/water actions and clearly distinguish remote science observations from physical samples, which are not part of the current mission.
+### Architecture and performance
 
-Automatic flight hatch motion, a hinged food cabinet, in-hand food/bottle/tool feedback, distinct navigation, science, communications and life-support displays, pulsing caution lamps and a rest transition provide lightweight visual feedback. The original simulation functions, saved-state key/schema, events, resource calculations and objective conditions remain unchanged. Presentation coordinates and collision checks are isolated in `layout.ts`; furniture, lighting and instancing are isolated in `interior.ts`. `MissionTablet.tsx` owns the six terminal sections and schematic.
+- `src/commander/campaign/definitions.ts`: typed mission/objective definitions, phases, prerequisites and availability.
+- `environments.ts` / `equipment.ts`: destination scenarios and equipment trade-offs.
+- `engine.ts`: pure ordered progression, actions, EVA, resources, camp, scoring and unlocks.
+- `save.ts`: versioned checkpoint validation, backup and legacy migration.
+- `CampaignHome.tsx`, `Preparation.tsx`, `Flight.tsx`, `CampaignTablet.tsx`, `Report.tsx`: campaign presentation.
+- `world.ts`: lazily loaded orbital platform, Moon surface, airlock and deployed camp.
+- `src/commander/simulation.ts`: original crew/life-support model; campaign opts out of legacy timed communications/equipment incidents and uses mission-defined incidents.
+- `Cabin.tsx`, `interior.ts`, `layout.ts`: retained cabin rendering, physical layout and movement.
+- `LegacyCommander.tsx`: previous readiness sortie UI and save compatibility.
 
-Performance choices: shared low-detail primitive geometry, instanced repeated fittings, small canvas textures, capped device pixel ratio (1.5), a 30 fps rendering target on coarse-pointer touch devices, bounded practical lighting, no real-time shadows and no 3D post-processing. Rendering stops in hidden tabs. These are performance budgets rather than a guarantee of frame rate on every iPad model; test target hardware before a presentation. Reduced-motion settings disable interface transitions. A graphics context failure pauses the mission to protect saved supplies.
+Rendering uses shared primitive geometry, instanced fittings/rocks, small procedural textures, capped pixel ratio (1.5), a 30 fps touch rendering target, no real-time shadows or post-processing, and bounded terrain. The field module loads only for EVA missions. Rendering stops in hidden tabs. A graphics failure pauses play. These are performance budgets, not a guarantee for every iPad; validate physical Safari hardware before a presentation.
 
+### Validation
 
-The final visual validation uses a WebGL-capable Chromium browser at desktop, iPad landscape/portrait and phone viewport sizes, checks modal bounds and horizontal overflow, and exercises walking, station actions, finite supplies, keyboard dismissal and saved mission restoration. Touch-pointer emulation is used for the joystick and separate look surface. This does not substitute for physical-device Safari performance testing.
+`npm test` covers Strategy calculations, legacy Commander simulation/navigation and campaign definitions, ordered progression, all 12 complete mission flows, unlocks, supplies, suit/airlock safety, equipment trade-offs, environment differences, saving, joystick response and PWA metadata. `npm run build` checks TypeScript and produces the static application.
+
+Browser validation uses WebGL Chromium with desktop, iPad landscape/portrait and phone viewport sizes, touch/look input, modal bounds, saved restoration and offline reload. Emulation does not replace physical iPad/Safari performance testing. All artwork and cabin graphics are original procedural assets; no agency branding or external artwork is used.

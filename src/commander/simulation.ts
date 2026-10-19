@@ -270,7 +270,13 @@ export function newMission(d: Design, l: LifeSupport): State {
   };
 }
 const limit = (n: number) => Math.max(0, Math.min(100, n));
-export function tick(s: State, d: Design, l: LifeSupport, minutes = 1): State {
+export function tick(
+  s: State,
+  d: Design,
+  l: LifeSupport,
+  minutes = 1,
+  options: { scriptedEvents?: boolean } = {},
+): State {
   if (s.paused || s.ended) return s;
   let n = { ...s, minutes: s.minutes + minutes };
   const e = engineering(d, l);
@@ -315,8 +321,10 @@ export function tick(s: State, d: Design, l: LifeSupport, minutes = 1): State {
     n.minutes >= 120 && n.minutes < 180
       ? Math.max(1, 8 - (d.counts.shield || 0) * 3)
       : 0;
-  if (s.minutes < 90 && n.minutes >= 90) n.communications = false;
-  if (s.minutes < 210 && n.minutes >= 210) n.malfunction = true;
+  if (options.scriptedEvents !== false && s.minutes < 90 && n.minutes >= 90)
+    n.communications = false;
+  if (options.scriptedEvents !== false && s.minutes < 210 && n.minutes >= 210)
+    n.malfunction = true;
   if (n.sleeping && n.energy >= 99) {
     n.sleeping = false;
     n.rested = true;

@@ -5,7 +5,9 @@ import { deck, type Position } from "./layout";
 import type { Action, Area } from "./simulation";
 export type VisualAction = { id: number; action: Action };
 /** Shared primitive geometry and instanced static fittings keep the cabin inexpensive. */
-export function createInterior() {
+export function createInterior(
+  options: { eva?: boolean; destination?: string } = {},
+) {
   const scene = new T.Scene();
   scene.background = new T.Color("#070c15");
   scene.fog = new T.Fog("#101922", 13, 38);
@@ -248,11 +250,18 @@ export function createInterior() {
   label("SERVICE / 02", 0, 2.57, -1.18, 0.83, 0.105);
   label("HABITATION / 03", 0, 2.57, 2.52, 0.98, 0.105);
   // Aft pressure hatch, integrated hardware and emergency lamps.
-  part(0, 1.4, 7.85, 6.6, 2.9, 0.15, shell);
-  part(0, 1.25, 7.72, 1.5, 2.3, 0.12, dark);
-  part(0, 1.25, 7.63, 1.22, 2.05, 0.08, panel);
-  dynamic(0, 1.35, 7.55, 0.24, 0.035, 0.24, silver, cylinder).rotation.x =
-    Math.PI / 2;
+  if (options.eva) {
+    part(-2.07, 1.4, 7.85, 2.46, 2.9, 0.15, shell);
+    part(2.07, 1.4, 7.85, 2.46, 2.9, 0.15, shell);
+    part(0, 2.73, 7.85, 1.7, 0.25, 0.15, shell);
+    label("AIRLOCK / EVA", 0, 2.6, 7.72, 0.55, 0.08);
+  } else {
+    part(0, 1.4, 7.85, 6.6, 2.9, 0.15, shell);
+    part(0, 1.25, 7.72, 1.5, 2.3, 0.12, dark);
+    part(0, 1.25, 7.63, 1.22, 2.05, 0.08, panel);
+    dynamic(0, 1.35, 7.55, 0.24, 0.035, 0.24, silver, cylinder).rotation.x =
+      Math.PI / 2;
+  }
   for (const side of [-1, 1])
     part(side * 0.9, 2.5, 7.65, 0.15, 0.07, 0.04, amber);
   // Flight deck: layered console, two upholstered seats and an actual forward viewport.
@@ -328,9 +337,24 @@ export function createInterior() {
         noise(x, y, 5) * 0.15 -
         0.5;
       const k = (y * 512 + x) * 4;
-      image.data[k] = 177 + n * 80;
-      image.data[k + 1] = 104 + n * 64;
-      image.data[k + 2] = 69 + n * 48;
+      image.data[k] =
+        options.destination === "moon"
+          ? 148 + n * 70
+          : options.destination === "earth"
+            ? 45 + n * 40
+            : 177 + n * 80;
+      image.data[k + 1] =
+        options.destination === "moon"
+          ? 145 + n * 65
+          : options.destination === "earth"
+            ? 105 + n * 70
+            : 104 + n * 64;
+      image.data[k + 2] =
+        options.destination === "moon"
+          ? 138 + n * 60
+          : options.destination === "earth"
+            ? 153 + n * 60
+            : 69 + n * 48;
       image.data[k + 3] = 255;
       if (y < 7 + noise(x, 0, 20) * 5) {
         image.data[k] = 199;
@@ -588,14 +612,18 @@ export function createInterior() {
       fx: VisualAction | undefined,
       pos: Position,
       telemetry: Telemetry,
+      target?: Area | null,
+      landed = false,
     ) {
+      planet.visible = !landed;
       if (fx && fx.id !== lastFx) {
         lastFx = fx.id;
         fxStart = t;
         action = fx.action;
       }
       for (const [id, m] of highlights)
-        m.emissiveIntensity = id === near ? 0.65 : 0.08;
+        m.emissiveIntensity =
+          id === near && (target === undefined || target === id) ? 0.65 : 0.08;
       alarmMat.emissiveIntensity = alarm ? 0.3 + Math.sin(t * 3) * 0.2 : 0.06;
       const open = Math.abs(pos.z + 4.35) < 2.5 ? 1 : 0;
       hatchLeaves.forEach((m, i) => {

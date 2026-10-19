@@ -17,8 +17,8 @@ export default function ModeSelect() {
           <button onClick={() => setMode("commander")}>
             <strong>Commander Mode</strong>
             <span>
-              Design life support. Walk the cabin. Manage supplies and crew
-              readiness.
+              Play a guided campaign. Prepare your spacecraft, explore the Moon
+              and bring science home.
             </span>
           </button>
         </div>
@@ -26,23 +26,27 @@ export default function ModeSelect() {
     );
   return (
     <>
-      <div className="cmd-mode-bar">
-        <button
-          onClick={() => {
-            setMode(null);
-          }}
-        >
-          ← Choose mode
-        </button>
-        <span>{mode === "strategy" ? "STRATEGY MODE" : "COMMANDER MODE"}</span>
-      </div>
+      {mode === "strategy" && (
+        <div className="cmd-mode-bar">
+          <button
+            onClick={() => {
+              setMode(null);
+            }}
+          >
+            ← Choose mode
+          </button>
+          <span>
+            {mode === "strategy" ? "STRATEGY MODE" : "COMMANDER MODE"}
+          </span>
+        </div>
+      )}
       {mode === "strategy" ? (
         <App />
       ) : (
         <Suspense
           fallback={<p className="cmd-builder">Loading spacecraft systems…</p>}
         >
-          <Commander />
+          <Commander onExit={() => setMode(null)} />
         </Suspense>
       )}
     </>
