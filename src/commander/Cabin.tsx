@@ -26,7 +26,6 @@ type Props = {
   telemetry: Telemetry;
   world?: {
     session: Session;
-    waypoint?: { x: number; z: number; name: string };
     target?: Area | null;
   };
 };
@@ -43,8 +42,6 @@ export default function Cabin(props: Props) {
     lookPointer = useRef<{ id: number; x: number; y: number } | undefined>(
       undefined,
     ),
-    waypoint = useRef<HTMLDivElement>(null),
-    waypointDistance = useRef<HTMLSpanElement>(null),
     jump = useRef({ height: 0, velocity: 0 }),
     [error, setError] = useState("");
   current.current = props;
@@ -263,29 +260,6 @@ export default function Cabin(props: Props) {
           current.current.world?.session.flight.status === "pad",
       );
       if (current.current.world) field?.update(current.current.world.session);
-      const wp = current.current.world?.waypoint;
-      if (wp && waypoint.current) {
-        const vector = new THREE.Vector3(wp.x, 1.1, wp.z);
-        const front =
-          vector
-            .clone()
-            .sub(camera.position)
-            .dot(camera.getWorldDirection(new THREE.Vector3())) > 0;
-        vector.project(camera);
-        const w = el.clientWidth,
-          h = el.clientHeight;
-        const px = front
-          ? Math.max(55, Math.min(w - 90, (vector.x * 0.5 + 0.5) * w))
-          : w * 0.5;
-        const py = front
-          ? Math.max(170, Math.min(h - 180, (-vector.y * 0.5 + 0.5) * h))
-          : h * 0.33;
-        waypoint.current.style.left = px + "px";
-        waypoint.current.style.top = py + "px";
-        waypoint.current.dataset.behind = front ? "false" : "true";
-        if (waypointDistance.current)
-          waypointDistance.current.textContent = `${front ? "" : "Turn around · "}${Math.hypot(wp.x - camera.position.x, wp.z - camera.position.z).toFixed(1)} m`;
-      }
       if (!document.hidden && now - lastDraw >= frameDuration) {
         renderer.render(scene, camera);
         lastDraw = now;
@@ -418,13 +392,7 @@ export default function Cabin(props: Props) {
         WASD / ARROWS <span>MOVE</span> · DRAG <span>LOOK</span> · E{" "}
         <span>INTERACT</span>
       </div>
-      {props.world?.waypoint && (
-        <div ref={waypoint} className="campaign-waypoint">
-          <i />
-          <strong>{props.world.waypoint.name}</strong>
-          <span ref={waypointDistance} />
-        </div>
-      )}
+
       {props.world &&
         props.world.session.position.z > 10.4 &&
         missionById(props.world.session.missionId).destination !== "earth" && (

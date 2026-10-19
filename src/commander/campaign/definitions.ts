@@ -30,6 +30,14 @@ export type ObjectiveType =
   | "RETURN";
 export type CampaignAction =
   | Action
+  | "inspectPower"
+  | "inspectLife"
+  | "inspectComms"
+  | "inspectScience"
+  | "inspectStorage"
+  | "inspectEquipment"
+  | "inspectCamp"
+  | "packEquipment"
   | "verifyPower"
   | "verifyLife"
   | "verifyRadio"
@@ -319,8 +327,9 @@ const decision = (
   task("INTERACT", title, site, choices[0].action, {
     event,
     choices,
-    instruction:
-      "Choose a response. Each option changes your mission resources.",
+    instruction: event
+      ? "Inspect the affected power console first. Use a collected toolkit and spare part for repair, or choose the battery bypass."
+      : "Select an operating plan after reviewing system reserves.",
   });
 const launch = () => [
   ...phase("PRE-LAUNCH", [

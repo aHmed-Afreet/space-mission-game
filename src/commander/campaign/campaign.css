@@ -1473,3 +1473,84 @@
     animation: none;
   }
 }
+/* Persistent access, independent of mission goals. */
+.commander-hud-tool {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 12px;
+  background: #152630d9;
+  border: 1px solid #b8d1c12e;
+  border-radius: 8px;
+  color: #c4d9d1;
+  font-size: 9px;
+  letter-spacing: 1px;
+  min-height: 44px;
+}
+.cmd-action-menu {
+  max-height: 52dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.campaign-guidance {
+  width: 310px;
+  padding: 13px 16px;
+}
+.campaign-guidance h2 {
+  font-size: 17px;
+  line-height: 1.5;
+}
+.campaign-guidance > p {
+  font-size: 10px;
+}
+.campaign-flight .cmd-hud-header {
+  gap: 12px;
+}
+.campaign-flight .cmd-hud-actions {
+  gap: 7px;
+}
+@media (max-width: 1000px) {
+  .campaign-flight .cmd-flight-time {
+    display: none;
+  }
+  .commander-hud-tool {
+    padding: 10px;
+    font-size: 8px;
+  }
+  .campaign-flight .cmd-tablet-trigger {
+    padding: 10px;
+  }
+}
+@media (max-width: 650px) {
+  .commander-hud-tool span,
+  .campaign-flight .cmd-tablet-trigger span {
+    display: none;
+  }
+  .campaign-flight .cmd-hud-header {
+    left: 12px;
+    right: 12px;
+  }
+  .commander-hud-tool {
+    width: 42px;
+    justify-content: center;
+    padding: 9px;
+  }
+  .campaign-flight .cmd-hud-actions {
+    gap: 5px;
+  }
+  .campaign-flight .cmd-flight-identity strong {
+    font-size: 12px;
+  }
+  .campaign-flight .cmd-flight-identity small {
+    max-width: 110px;
+    font-size: 7px;
+  }
+  .campaign-guidance {
+    max-width: calc(100% - 26px);
+    width: 280px;
+    left: 13px;
+  }
+  .cmd-action-menu {
+    max-width: calc(100vw - 28px);
+  }
+}

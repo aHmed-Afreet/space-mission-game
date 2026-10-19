@@ -92,6 +92,19 @@ export function completeMission(
         }
     }
     if (currentObjective(s)?.id !== o.id) continue;
+    if (
+      s.state.malfunction &&
+      ["science", "approach", "land", "powerScience"].includes(o.action || "")
+    ) {
+      const pos = s.position;
+      s = stand(s, "power");
+      s = command(s, "inspectPower");
+      s = stand(s, "equipment");
+      s = command(s, "tools");
+      s = stand(s, "power");
+      s = command(s, "repair");
+      s = moveSession(s, pos);
+    }
     if (o.type === "WAIT") {
       for (
         let n = 0;
@@ -112,6 +125,18 @@ export function completeMission(
         `Wait stuck: ${m.title} / ${o.title}`,
       );
     } else if (o.action) {
+      if (o.event) {
+        s = command(
+          s,
+          o.event === "campPower" ? "inspectCamp" : "inspectPower",
+        );
+        if (!s.state.tools && !s.pack.includes("repair")) {
+          const pos = s.position;
+          s = stand(s, "equipment");
+          s = command(s, "tools");
+          s = moveSession(s, pos);
+        }
+      }
       const before = s.objective;
       const action =
         bypass && o.choices && o.event
@@ -626,6 +651,7 @@ test("radio, solar and suit upgrades change real acknowledgements, energy and EV
       (o) => o.type === "TRANSMIT",
     );
     s = stand(s, "communications");
+    s.state.science = 30;
     return command(s, "comms");
   };
   assert.ok(radio(["highGain"]).pendingTransmit < radio([]).pendingTransmit);
@@ -691,4 +717,274 @@ test("other field science remains usable without skipping the current required t
   assert.ok(s.state.science > science);
   assert.equal(s.objective, before);
   assert.ok(s.suit.power < 1);
+});
+test("food, water and unrelated stations work before the mission asks and count as early preparation", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  const current = s.objective;
+  s = stand(s, "galley");
+  s = command(s, "takeMeal");
+  s = command(s, "fill");
+  s = command(s, "eat");
+  s = command(s, "drink");
+  assert.equal(s.objective, current);
+  assert.ok(s.lastEat >= 0 && s.lastDrink >= 0);
+  assert.equal(s.state.meals, 0);
+  assert.equal(s.state.bottle, 0.75);
+  s = stand(s, "science");
+  const battery = s.state.battery;
+  s = command(s, "inspectScience");
+  s = command(s, "science");
+  assert.ok(s.state.science > 0 && s.state.battery < battery);
+  s = stand(s, "communications");
+  const power = s.state.battery;
+  s = command(s, "comms");
+  assert.ok(s.state.battery < power);
+  assert.ok(s.pendingTransmit > 0);
+  s.objective = missions[0].objectives.findIndex(
+    (o) => o.action === "takeMeal",
+  );
+  s = command(s, "inspectComms");
+  assert.ok(
+    s.objective > missions[0].objectives.findIndex((o) => o.action === "drink"),
+  );
+});
+test("tools, field equipment and suit checkout can be prepared early and recognized later", () => {
+  let s = createSession(
+    missions[1],
+    design,
+    life,
+    missions[1].requiredEquipment,
+    qualified(),
+  );
+  s = stand(s, "equipment");
+  s = command(s, "tools");
+  s = command(s, "packEquipment");
+  s = command(s, "equipSuit");
+  s = command(s, "checkOxygen");
+  s = command(s, "checkPower");
+  assert.ok(
+    s.state.tools &&
+      s.pack.includes("repair") &&
+      s.suit.oxygenChecked &&
+      s.suit.powerChecked,
+  );
+  s.objective = missions[1].objectives.findIndex(
+    (o) => o.action === "equipSuit",
+  );
+  const oxygen = s.state.oxygen;
+  s = command(s, "inspectEquipment");
+  assert.ok(
+    s.objective >
+      missions[1].objectives.findIndex((o) => o.action === "checkPower"),
+  );
+  assert.equal(s.state.oxygen, oxygen);
+});
+test("real prerequisites remain enforced without using the current goal as a lock", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  s = stand(s, "cockpit");
+  assert.equal(command(s, "ignite").flight.status, "pad");
+  assert.equal(command(s, "armLaunch").flight.countdown, -1);
+  assert.equal(command(s, "land").landed, false);
+  s = stand(s, "power");
+  s.state.malfunction = true;
+  const parts = s.state.parts;
+  assert.equal(command(s, "repair").state.parts, parts);
+  s = command(s, "inspectPower");
+  assert.equal(command(s, "repair").state.parts, parts);
+  s = stand(s, "equipment");
+  s = command(s, "tools");
+  s = stand(s, "power");
+  s = command(s, "repair");
+  assert.equal(s.state.parts, parts - 1);
+  assert.equal(s.state.malfunction, false);
+  s = stand(s, "galley");
+  s.state.bottle = 0;
+  assert.equal(command(s, "drink").state.bottle, 0);
+});
+test("normal repairs satisfy fault goals and earlier science cannot satisfy post-fault validation", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  s.flight.status = "orbit";
+  s = stand(s, "science");
+  s = command(s, "science");
+  s = command(s, "science");
+  const post = missions[0].objectives
+    .filter((o) => o.action === "science")
+    .at(-1)!;
+  assert.equal(s.observations.achieved.includes(post.id), false);
+  s.objective = missions[0].objectives.findIndex((o) => o.event === "power");
+  s.state.malfunction = true;
+  s.eventIds.push(currentObjective(s)!.id);
+  s = stand(s, "equipment");
+  s = command(s, "tools");
+  s = stand(s, "power");
+  s = command(s, "inspectPower");
+  s = command(s, "repair");
+  assert.ok(
+    s.objective > missions[0].objectives.findIndex((o) => o.event === "power"),
+  );
+  s = stand(s, "science");
+  s = command(s, "science");
+  assert.ok(s.completed.includes(post.id));
+});
+test("saved observations persist and older v3 checkpoints gain observation defaults safely", () => {
+  const start = launchMission(missions[0], design, life, [], emptyProgress());
+  let s = stand(start.session, "galley");
+  s = command(s, "takeMeal");
+  s = command(s, "fill");
+  s = command(s, "eat");
+  s = command(s, "drink");
+  const store = { ...newStore(), session: s, progress: start.progress };
+  const restored = decodeStore(JSON.stringify(store));
+  assert.ok(restored.session!.lastEat >= 0);
+  assert.deepEqual(restored.session!.observations, s.observations);
+  const old = structuredClone(store);
+  delete (old.session as Partial<Session>).observations;
+  const migrated = decodeStore(JSON.stringify(old));
+  assert.ok(migrated.session!.observations);
+  assert.equal(migrated.session!.state.bottle, 0.75);
+});
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import Flight from "./Flight";
+import CampaignTablet from "./CampaignTablet";
+test("HUD inventory and mission controls are always rendered during pad, ascent, orbit, EVA and rest", () => {
+  const p = qualified();
+  const callbacks = {
+    onMove: () => {},
+    onTickPause: () => {},
+    onCommand: () => {},
+    onHome: () => {},
+    onDismissTutorial: () => {},
+    onResetTutorials: () => {},
+    onOptional: () => {},
+    onRate: () => {},
+    onControls: () => {},
+    onAbort: () => {},
+    saveError: "",
+  };
+  for (const context of ["pad", "ascent", "orbit", "eva", "rest"]) {
+    const s = createSession(
+      missions[1],
+      design,
+      life,
+      missions[1].requiredEquipment,
+      p,
+    );
+    s.flight.status =
+      context === "pad" ? "pad" : context === "ascent" ? "ascent" : "orbit";
+    if (context === "eva") {
+      s.position.z = 14;
+      s.suit.equipped = true;
+    }
+    if (context === "rest") s.state.sleeping = true;
+    const html = renderToStaticMarkup(
+      createElement(Flight, { ...callbacks, session: s, progress: p }),
+    );
+    assert.match(html, /aria-label="Open inventory"/);
+    assert.match(html, /aria-label="Open mission objectives"/);
+    assert.doesNotMatch(
+      html,
+      /campaign-waypoint|Turn around ·|optional-detour/,
+    );
+  }
+});
+test("inventory uses physical limits rather than future-task locks and maps draw no objective route", () => {
+  const p = qualified(),
+    s = createSession(
+      missions[1],
+      design,
+      life,
+      missions[1].requiredEquipment,
+      p,
+    );
+  s.state.meals = 1;
+  s.state.bottle = 1;
+  const props = {
+    s,
+    progress: p,
+    onOptional: () => {},
+    onAbort: () => {},
+    onTab: () => {},
+    onClose: () => {},
+    onCommand: () => {},
+    onHome: () => {},
+    onResetTutorials: () => {},
+    saveError: "",
+  };
+  const inventory = renderToStaticMarkup(
+    createElement(CampaignTablet, { ...props, tab: "INVENTORY" }),
+  );
+  assert.doesNotMatch(inventory, /<button[^>]*disabled[^>]*>Eat meal/);
+  assert.doesNotMatch(inventory, /<button[^>]*disabled[^>]*>Drink water/);
+  assert.match(inventory, /Repair toolkit/);
+  s.position.z = 14;
+  s.suit.equipped = true;
+  const map = renderToStaticMarkup(
+    createElement(CampaignTablet, { ...props, tab: "MAP" }),
+  );
+  assert.doesNotMatch(map, /stroke-dasharray|CURRENT TARGET/);
+  assert.match(map, /Surface map with named sites/);
+});
+test("sealed EVA helmet prevents meals and drinks in a vacuum airlock", () => {
+  let s = createSession(
+    missions[1],
+    design,
+    life,
+    missions[1].requiredEquipment,
+    qualified(),
+  );
+  s.flight.status = "orbit";
+  s.position = { x: 0, z: 9, heading: 0 };
+  s.airlock.pressure = 0;
+  s.suit.equipped = true;
+  s.state.bottle = 1;
+  s.state.meals = 1;
+  const before = s.state.bottle;
+  s = command(s, "drink");
+  s = command(s, "eat");
+  assert.equal(s.state.bottle, before);
+  assert.equal(s.state.meals, 1);
+});
+test("orbital faults develop with mission time while another goal is active, and reduce acceleration", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  s.flight.status = "orbit";
+  s.observations.orbitMinute = 0;
+  s.simRate = 20;
+  const goal = s.objective;
+  s = tickSession(s, 9);
+  assert.equal(s.objective, goal);
+  assert.equal(s.state.malfunction, true);
+  assert.equal(s.simRate, 1);
+  assert.ok(
+    s.eventIds.includes(
+      missions[0].objectives.find((o) => o.event === "power")!.id,
+    ),
+  );
+});
+test("field instruments remain usable at another valid site while a specific survey is the current goal", () => {
+  let s = createSession(
+    missions[2],
+    design,
+    life,
+    missions[2].requiredEquipment,
+    qualified(2),
+  );
+  s.flight.status = "orbit";
+  s.landed = true;
+  s.suit = {
+    equipped: true,
+    oxygen: 0.3,
+    power: 1,
+    condition: 100,
+    oxygenChecked: true,
+    powerChecked: true,
+  };
+  s.pack = ["scanner"];
+  s.objective = missions[2].objectives.findIndex((o) => o.action === "scan");
+  s.position = { x: -6, z: 23, heading: 0 };
+  const goal = s.objective;
+  s = command(s, "scan");
+  assert.ok(s.state.science > 0 && s.suit.power < 1);
+  assert.equal(s.objective, goal);
+  assert.ok(s.experiments.some((e) => e.includes("crater")));
 });

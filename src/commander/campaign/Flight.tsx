@@ -23,17 +23,53 @@ import type { VisualAction } from "../interior";
 const baseStationActions: Partial<
   Record<keyof typeof deck, { action: CampaignAction; label: string }[]>
 > = {
-  cockpit: [{ action: "course", label: "Check trajectory" }],
-  science: [{ action: "science", label: "Collect observations" }],
-  communications: [{ action: "comms", label: "Restore radio / send data" }],
-  power: [{ action: "repair", label: "Repair power unit" }],
-  equipment: [{ action: "tools", label: "Collect toolkit" }],
-  galley: [
-    { action: "takeMeal", label: "Take meal pack" },
-    { action: "fill", label: "Fill water bottle" },
-    { action: "dispenser", label: "Use water dispenser" },
+  cockpit: [
+    { action: "course", label: "Verify navigation / apply course correction" },
+    { action: "verifyFuel", label: "Inspect fuel reserve" },
+    { action: "sealHatch", label: "Seal launch vehicle" },
+    { action: "armLaunch", label: "Arm launch countdown" },
+    { action: "approach", label: "Begin destination approach" },
+    { action: "land", label: "Execute lunar landing" },
+    { action: "returnBurn", label: "Commit return burn" },
+    { action: "recoverVehicle", label: "Confirm recovery" },
   ],
-  sleep: [{ action: "sleep", label: "Rest in berth" }],
+  science: [
+    { action: "inspectScience", label: "Inspect instruments and results" },
+    { action: "science", label: "Acquire science observation" },
+  ],
+  communications: [
+    { action: "inspectComms", label: "Inspect Earth link and antenna status" },
+    { action: "comms", label: "Check link / transmit available science" },
+    { action: "verifyRadio", label: "Record launch radio check" },
+  ],
+  power: [
+    { action: "inspectPower", label: "Inspect power and diagnose faults" },
+    {
+      action: "inspectLife",
+      label: "Inspect life support and cabin environment",
+    },
+    { action: "verifyPower", label: "Record electrical readiness" },
+    { action: "repair", label: "Repair diagnosed power fault" },
+    { action: "powerSafe", label: "Use power conservation plan" },
+    { action: "powerScience", label: "Run high-resolution observation" },
+    { action: "eventReroute", label: "Bypass diagnosed power fault" },
+  ],
+  equipment: [
+    { action: "inspectEquipment", label: "Inspect equipment storage" },
+    { action: "tools", label: "Collect repair toolkit" },
+    { action: "packEquipment", label: "Collect prepared field equipment" },
+    { action: "equipSuit", label: "Equip EVA suit" },
+    { action: "checkOxygen", label: "Check suit oxygen" },
+    { action: "checkPower", label: "Check suit battery" },
+  ],
+  galley: [
+    { action: "inspectStorage", label: "Inspect food and water stores" },
+    { action: "takeMeal", label: "Collect meal pack" },
+    { action: "fill", label: "Fill water bottle" },
+    { action: "dispenser", label: "Drink at water dispenser" },
+    { action: "verifyLife", label: "Record life-support readiness" },
+  ],
+  sleep: [{ action: "sleep", label: "Rest in crew berth" }],
 };
 export default function Flight({
   session: s,
@@ -66,7 +102,6 @@ export default function Flight({
   onResetTutorials: () => void;
   saveError: string;
 }) {
-  const [trackedOptional, setTrackedOptional] = useState<string | null>(null);
   const [tablet, setTablet] = useState(false),
     [tab, setTab] = useState<CampaignTab>("MISSION"),
     [actions, setActions] = useState(false),
@@ -139,24 +174,50 @@ export default function Flight({
         onNext={s.report.success ? onNext : undefined}
       />
     );
-  const detour = m.optional?.find(
-    (c) => c.id === trackedOptional && !s.optionalDone.includes(c.id),
-  );
-  const waypointSite = detour?.site || o?.site;
-  const target = waypointSite
-    ? {
-        ...sitePosition(waypointSite, m.destination),
-        ...(detour ? { name: "OPTIONAL / " + detour.title } : {}),
-      }
-    : undefined;
   const launching =
-    currentPhase(s) === "LAUNCH" || s.flight.status === "ascent";
+    s.flight.status === "ascent" ||
+    (s.flight.status === "pad" && s.flight.countdown >= 0) ||
+    (currentPhase(s) === "LAUNCH" && s.flight.status === "pad");
   const actionable = !!o?.action && (!o.site || atSite(s, o.site));
   const inventoryTask = o?.action === "eat" || o?.action === "drink";
   const extras = area
-    ? baseStationActions[area] || []
+    ? [...(baseStationActions[area] || [])]
     : outside(s)
       ? ([
+          ...(atSite(s, "camp")
+            ? [
+                { action: "inspectCamp", label: "Inspect camp systems" },
+                { action: "deployShelter", label: "Deploy instrument shelter" },
+                { action: "deploySolar", label: "Deploy solar array" },
+                { action: "deployBattery", label: "Connect camp battery" },
+                { action: "deployAntenna", label: "Deploy antenna" },
+                { action: "deploySensor", label: "Deploy sensor" },
+                { action: "deployStorage", label: "Deploy sample store" },
+                { action: "experiment", label: "Run powered experiment" },
+                { action: "storeSamples", label: "Store carried samples" },
+                {
+                  action: "repairCamp",
+                  label: "Repair diagnosed camp connector",
+                },
+                { action: "campTransmit", label: "Transmit camp science" },
+                { action: "selectCamp", label: "Choose sheltered camp site" },
+                { action: "alignSolar", label: "Choose sunlit camp site" },
+              ]
+            : []),
+          ...(m.id === "mission-2" && atSite(s, "survey")
+            ? [
+                {
+                  action: "diagnoseSatellite",
+                  label: "Inspect satellite service panel",
+                },
+                {
+                  action: "repairSatellite",
+                  label: "Replace satellite connector",
+                },
+                { action: "testSatellite", label: "Test satellite radio" },
+              ]
+            : []),
+          { action: "drill", label: "Drill subsurface sample" },
           { action: "scan", label: "Use geological scanner" },
           { action: "sample", label: "Collect sample" },
           { action: "photo", label: "Take field photograph" },
@@ -164,6 +225,22 @@ export default function Flight({
           { action: "measureRadiation", label: "Measure radiation" },
         ] as { action: CampaignAction; label: string }[])
       : [];
+  if (m.eva && (atSite(s, "airlock") || atSite(s, "innerHatch")))
+    extras.push(
+      ...([
+        { action: "openInner", label: "Open cabin hatch" },
+        { action: "closeInner", label: "Close cabin hatch" },
+        { action: "vent", label: "Depressurize airlock" },
+        { action: "openOuter", label: "Open exterior hatch" },
+        { action: "closeOuter", label: "Close exterior hatch" },
+        { action: "pressurize", label: "Repressurize airlock" },
+      ] as { action: CampaignAction; label: string }[]),
+    );
+  const openTab = (value: CampaignTab) => {
+    setTab(value);
+    setTablet(true);
+    setActions(false);
+  };
   return (
     <div
       className={`cmd-session campaign-flight ${launching ? "launch-active" : ""}`}
@@ -175,12 +252,7 @@ export default function Flight({
           key={s.id}
           onArea={() => {}}
           onPosition={move}
-          onInteract={() => {
-            if (inventoryTask) {
-              setTab("INVENTORY");
-              setTablet(true);
-            } else setActions((v) => !v);
-          }}
+          onInteract={() => setActions((v) => !v)}
           onGraphicsError={() => onTickPause(true)}
           locked={s.state.paused || s.state.sleeping || tablet || !!tutorial}
           alarm={alerts(s.state).length > 0 || s.camp.broken}
@@ -192,11 +264,7 @@ export default function Flight({
           }}
           world={{
             session: s,
-            waypoint: target ? { ...target, name: target.name } : undefined,
-            target:
-              waypointSite && waypointSite in deck
-                ? (waypointSite as keyof typeof deck)
-                : null,
+            target: undefined,
           }}
         />
       )}
@@ -224,6 +292,22 @@ export default function Flight({
         </div>
         <div className="cmd-hud-actions">
           <button
+            className="commander-hud-tool"
+            aria-label="Open mission objectives"
+            onClick={() => openTab("MISSION")}
+          >
+            <Icon name="target" />
+            <span>MISSION</span>
+          </button>
+          <button
+            className="commander-hud-tool"
+            aria-label="Open inventory"
+            onClick={() => openTab("INVENTORY")}
+          >
+            <Icon name="box" />
+            <span>INVENTORY</span>
+          </button>
+          <button
             className="cmd-icon-button"
             aria-label={s.state.paused ? "Resume mission" : "Pause mission"}
             onClick={() => onTickPause(!s.state.paused)}
@@ -235,12 +319,11 @@ export default function Flight({
             aria-label="Open mission tablet"
             aria-expanded={tablet}
             onClick={() => {
-              setTablet(true);
-              setActions(false);
+              openTab("STATUS");
             }}
           >
             <Icon name="tablet" />
-            <span>MISSION TABLET</span>
+            <span>SYSTEMS</span>
           </button>
         </div>
       </div>
@@ -261,14 +344,6 @@ export default function Flight({
         </label>
       </div>
       <div className="campaign-guidance">
-        {detour && (
-          <button
-            className="optional-detour"
-            onClick={() => setTrackedOptional(null)}
-          >
-            OPTIONAL: {detour.title} · cancel guidance ×
-          </button>
-        )}
         <small>
           {m.title.toUpperCase()} / MISSION {m.level}
         </small>
@@ -277,13 +352,19 @@ export default function Flight({
           {currentPhase(s)}
         </p>
         <span>
-          CURRENT TASK{" "}
+          CURRENT OBJECTIVE{" "}
           <b>
             {Math.min(s.objective + 1, m.objectives.length)} /{" "}
             {m.objectives.length}
           </b>
         </span>
         <h2>{o?.title}</h2>
+        {o?.site && (
+          <p>
+            Location: {sitePosition(o.site, m.destination).name}. Refer to the
+            ship or surface map.
+          </p>
+        )}
         {o?.instruction !== o?.title && <p>{o?.instruction}</p>}
         <div className="cmd-objective-progress">
           <span
@@ -325,7 +406,11 @@ export default function Flight({
       {!launching && (
         <div className="campaign-interaction">
           {actions && (
-            <div className="cmd-action-menu">
+            <div
+              className="cmd-action-menu"
+              role="region"
+              aria-label="Station operations"
+            >
               {actionable &&
                 o?.choices &&
                 o.choices.map((c) => (
@@ -350,23 +435,22 @@ export default function Flight({
                   <Icon name="chevron" size={14} />
                 </button>
               )}
-              <button onClick={() => setShowOther((v) => !v)}>
-                {showOther ? "Hide" : "Other"} operations
-              </button>
-              {showOther &&
-                extras.map((a) => (
-                  <button
-                    disabled={s.state.paused}
-                    key={a.action}
-                    onClick={() => run(a.action)}
-                  >
-                    {a.label}
-                    <Icon name="chevron" size={13} />
-                  </button>
-                ))}
+              {extras.map((a) => (
+                <button
+                  disabled={s.state.paused}
+                  key={a.action}
+                  onClick={() => run(a.action)}
+                >
+                  {a.label}
+                  <Icon name="chevron" size={13} />
+                </button>
+              ))}
             </div>
           )}
-          {(actionable || area || outside(s)) &&
+          {(actionable ||
+            area ||
+            outside(s) ||
+            (m.eva && (atSite(s, "airlock") || atSite(s, "innerHatch")))) &&
             !tablet &&
             !s.state.sleeping && (
               <button
@@ -374,23 +458,18 @@ export default function Flight({
                 disabled={s.state.paused}
                 aria-expanded={actions}
                 onClick={() => {
-                  if (inventoryTask) {
-                    setTab("INVENTORY");
-                    setTablet(true);
-                  } else setActions((v) => !v);
+                  setActions((v) => !v);
                 }}
               >
                 <kbd>E</kbd>
                 <span>
-                  {inventoryTask ? "INVENTORY" : "INTERACT"}
+                  INTERACT
                   <strong>
-                    {inventoryTask
-                      ? "Use your carried supplies"
-                      : actionable && target
-                        ? target.name
-                        : area
-                          ? deck[area].name
-                          : "Field equipment"}
+                    {area
+                      ? deck[area].name
+                      : atSite(s, "airlock") || atSite(s, "innerHatch")
+                        ? "Airlock controls"
+                        : "Field equipment"}
                   </strong>
                 </span>
                 <Icon name="chevron" size={15} />
@@ -404,7 +483,7 @@ export default function Flight({
           <small>REST CYCLE</small>
           <h2>Rest & recover.</h2>
           <p>Energy {s.state.energy.toFixed(0)}% · time continues</p>
-          {o?.action === "wake" ? (
+          {true ? (
             <button disabled={s.state.paused} onClick={() => run("wake")}>
               Wake up →
             </button>
@@ -441,7 +520,6 @@ export default function Flight({
           s={s}
           progress={progress}
           onOptional={onOptional}
-          onGuideOptional={setTrackedOptional}
           onAbort={onAbort}
           tab={tab}
           onTab={setTab}

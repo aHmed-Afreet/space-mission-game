@@ -70,7 +70,7 @@ Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no lo
 | 3 · Lunar Science Landing | Launch, transfer duty/rest, approach and guided landing, geological scan, temperature, crater rock and subsurface sampling, context photographs, fault resolution and return.         |
 | 4 · Lunar Research Camp   | Launch and cargo landing, camp-site engineering choice, actual carried equipment deployment, powered experiments, connector-trip response, communications commissioning and recovery. |
 
-Each flight has 4–9 phases, a short briefing, required equipment, multiple stations, resource decisions, a mandatory challenge, two optional objectives and a full report. Granular launch and airlock safety procedures produce 28–57 individual task steps. First-time play targets 15–30 minutes, but this is a design target rather than a measured promise; familiarity, exploration, optional detours and acceleration change duration. Tasks are sequential and only the current one is prominent.
+Each flight has 4–9 phases, a short briefing, required equipment, multiple stations, resource decisions, a mandatory challenge, two optional objectives and a full report. Granular launch and airlock safety procedures produce 28–57 individual task steps. First-time play targets 15–30 minutes, but this is a design target rather than a measured promise; familiarity, exploration, optional detours and acceleration change duration. The current goal is prominent, but it observes completed conditions rather than locking unrelated systems. Early meals, water, equipment collection and suit checkout are recognized. Repeated measurements after a fault need fresh evidence.
 
 Twelve further missions (additional lunar operations, Mars, asteroid and deep-space expeditions) are **PLANNED and cannot be launched**. Only the four flights above are implemented. Adding another mission does not require changing a fixed mission-count limit.
 
@@ -87,7 +87,7 @@ These are simplified flight-training dynamics. Orbital rendezvous, lunar approac
 - SIM RATE: 1×, 5×, 20× and 100×. Acceleration is permitted during monitored travel/rest waits, not ascent, EVA, hatch cycling, choices or low reserves. Task/phase transitions and warnings return to 1×. Long waits clamp to their endpoint instead of overshooting the clock.
 - At 1×, one real second advances 0.5 mission minutes. Launch countdown and ascent use a separate compressed flight-dynamics clock. Pause freezes all consumption; hidden tabs pause; closed apps accrue no elapsed resource use.
 
-The five-section Mission Tablet starts on MISSION and remains closed by default. STATUS uses GOOD/WARNING/CRITICAL with optional engineering details. INVENTORY, MAP and LOG retain their visual cards, live position and saved records. Optional task guidance temporarily replaces the main waypoint with one clearly labelled detour; cancelling restores the required waypoint.
+The five-section Mission Tablet starts on MISSION and remains closed by default. STATUS uses GOOD/WARNING/CRITICAL with optional engineering details. INVENTORY, MAP and LOG retain their visual cards, live position and saved records. Permanent MISSION, INVENTORY and SYSTEMS controls remain available during active flight, EVA and rest. Instructions name the compartment or field site. Players navigate with integrated signage and maps; floating arrows, destination markers and objective routes are removed. Optional challenges list their location without drawing guidance.
 
 ### Agency Budget and rewards
 
@@ -113,7 +113,7 @@ Builder decisions still initialize actual resources. Water/food increase mass an
 
 ### Persistence and migration
 
-`orbital-campaign-v3` stores Agency Budget/ledger, unlocked technology, configuration, full mission/phase/task progress, flight controls, resources, suit/airlock, carried equipment, optional work, camp, reports and tutorial dismissals. Checkpoints resume paused at 1×. Previous valid data is backed up; invalid saves produce a visible warning; newer versions are protected from overwrite.
+`orbital-campaign-v3` stores Agency Budget/ledger, unlocked technology, configuration, full mission/phase/task progress, flight controls, operational observations, resources, suit/airlock, carried equipment, optional work, camp, reports and tutorial dismissals. Older v3 checkpoints receive compatible observation defaults without resetting money or mission progress. Checkpoints resume paused at 1×. Previous valid data is backed up; invalid saves produce a visible warning; newer versions are protected from overwrite.
 
 A v2 task-level campaign migrates spacecraft configuration, outposts and prior results into a visible programme archive. Completed old chapters are recorded; completed Command Training grants high-gain research access. Old task-level achievements do **not** skip the new complete-flight sequence. The old checkpoint, including supplies and position, remains archived; new funded flights provision a fresh spacecraft. The original v2 storage entry remains untouched. The older `orbital-commander-v1` readiness sortie also remains separately playable and uses its original systems and timing.
 
@@ -122,7 +122,7 @@ The original manifest/icons, standalone mode, safe-area layout and production se
 ### Architecture and validation
 
 - `definitions.ts`: complete-flight chapters, phases, tasks, event choices, optionals, rewards, technology unlocks and planned content.
-- `engine.ts`: ordered progression, guided flight, resources, actions, EVA, science, camp and reports.
+- `engine.ts`: goal progression, guided flight, resources, freely available station actions, EVA, science, camp and reports. `observations.ts` records operational evidence, earlier preparation, visits, rest and data acknowledgements.
 - `economy.ts`: funding, purchases, idempotent settlement, failure recovery and technology catalog.
 - `save.ts`: v3 validation, backup, archive migration and protected future versions; `legacyDefinitions.ts` / `legacySave.ts` preserve v2 interpretation.
 - `LaunchView.tsx`: lightweight original SVG/CSS flight display; `CampaignHome`, `Preparation`, `Flight`, `CampaignTablet`, `Report`: programme interface.
@@ -130,4 +130,12 @@ The original manifest/icons, standalone mode, safe-area layout and production se
 
 `npm test` covers the original Strategy/Commander simulations plus complete flights, phase/task order, money conservation, funding/spending/settlement idempotency, optional work, unlocks, failed retry, migration/checkpoint restore, flight and hatch safety, equipment effects, environments, touch-vector logic, PWA metadata and exact Strategy source fingerprints. `npm run build` checks TypeScript and bundles the application.
 
-Browser checks cover the launch interface/dynamics, Mission Control and purchase/restore flow, optional task guidance, camp failure choices, financial reports and desktop/iPad/phone layouts. They use WebGL Chromium emulation; physical iPad/Safari frame rate and first-time play duration have not been measured. Rendering retains instancing, low-poly geometry, small textures, capped pixel ratio, touch frame budget, no real-time shadows/post-processing, lazy field loading and reduced-motion support. All visual assets remain original; no agency branding or external artwork is used.
+Browser checks cover the launch interface/dynamics, Mission Control and purchase/restore flow, free station access, early eating/drinking, persistent inventory, route-free maps, camp failure choices, financial reports and desktop/iPad/phone layouts. They use WebGL Chromium emulation; physical iPad/Safari frame rate and first-time play duration have not been measured. Rendering retains instancing, low-poly geometry, small textures, capped pixel ratio, touch frame budget, no real-time shadows/post-processing, lazy field loading and reduced-motion support. All visual assets remain original; no agency branding or external artwork is used.
+
+### Free-roam operating rules
+
+Normal stations remain available independently of the current goal. The interaction menu exposes inspection and working functions directly: galley stores, crew rest, power/cabin status, science instruments, Earth link, equipment collection, suit checkout and field/camp equipment. Inspections report actual live values to the console notification and mission log; detailed telemetry also remains in SYSTEMS. Radio activity consumes battery energy, science uses power and crew energy, repairs consume parts, and EVA equipment uses carried tools and suit reserves.
+
+Real restrictions remain: launch checks and countdown, safe hatch pressure, a stable orbit/landing before EVA, tools and diagnosis before hardware repair, a completed approach before landing, valid instruments and access for field work, actual collected data plus acknowledgement for transmission, and mission-critical conditions before return. Eating and drinking are unavailable with a sealed helmet in vacuum or during ascent. Empty stores, short intake cooldowns and full hydration/nutrition still apply. These are physical/resource constraints, not current-task locks.
+
+Orbital electrical faults are triggered by operating time, even while an unrelated goal is current; camp connector faults follow actual experiment operation. Either may be inspected and resolved before its checklist goal is displayed. World state, actions and resulting observations persist. Station faults are still simplified repeatable training scenarios, not a full electrical or life-support model.

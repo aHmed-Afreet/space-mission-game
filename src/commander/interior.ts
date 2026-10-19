@@ -246,8 +246,8 @@ export function createInterior(
     hatchLeaves.push(m);
     part(side * 1.35, 2.4, -4.2, 0.12, 0.055, 0.025, amber);
   }
-  label("FLIGHT / 01", 0, 2.57, -4.18, 0.78, 0.105);
-  label("SERVICE / 02", 0, 2.57, -1.18, 0.83, 0.105);
+  label("FLIGHT DECK / 01", 0, 2.57, -4.18, 0.78, 0.105);
+  label("LIFE SUPPORT / 02", 0, 2.57, -1.18, 0.83, 0.105);
   label("HABITATION / 03", 0, 2.57, 2.52, 0.98, 0.105);
   // Aft pressure hatch, integrated hardware and emergency lamps.
   if (options.eva) {
@@ -396,7 +396,7 @@ export function createInterior(
   materials.push(starMat);
   scene.add(new T.Points(starGeo, starMat));
   // Science laboratory, microscope, sample carousel and restrained glass enclosure.
-  console(-2.2, -3.1, "SCI / WATER ANALYSIS");
+  console(-2.2, -3.1, "SCIENCE LAB");
   screen(-2.2, 1.85, -3.36, 1.16, 0.55, 1);
   part(-2.2, 1.82, -3.43, 1.25, 0.72, 0.11, dark);
   screen(-2.2, 1.85, -3.35, 1.16, 0.55, 1);
@@ -414,7 +414,7 @@ export function createInterior(
   }
   part(-1.66, 1.36, -2.97, 0.6, 0.08, 0.25, dark);
   // Communications rack, waveform display, receiver modules and headset on a hook.
-  console(2.2, -3.1, "COM / DEEP SPACE LINK");
+  console(2.2, -3.1, "COMMUNICATIONS");
   screen(2.2, 1.82, -3.35, 1.1, 0.5, 2);
   for (let i = 0; i < 4; i++) {
     part(2.2, 0.35 + i * 0.2, -2.71, 1.38, 0.14, 0.055, dark);
@@ -458,7 +458,7 @@ export function createInterior(
   }
   label("O₂ / RECOVERY", -2.45, 2.25, 0.17, 0.72, 0.09);
   // Galley: enclosed food bins, dispenser niche, metal tap and bottle.
-  console(2.2, 0.45, "HAB / FOOD & WATER");
+  console(2.2, 0.45, "GALLEY / FOOD & WATER");
   part(2.2, 1.94, 0.16, 1.58, 1.04, 0.34, panel);
   part(2.56, 1.88, 0.36, 0.49, 0.73, 0.04, dark);
   part(2.56, 1.49, 0.48, 0.56, 0.04, 0.35, silver);
@@ -486,10 +486,10 @@ export function createInterior(
   part(-3.03, 1.65, 4.4, 0.06, 1.35, 1.4, panel);
   part(-2.2, 1.85, 3.91, 1.65, 0.08, 0.13, dark);
   part(-2.2, 1.8, 3.98, 1.15, 0.025, 0.03, light);
-  label("CREW / 06", -2.2, 0.54, 5, 0.65, 0.11);
+  label("CREW BERTH / 06", -2.2, 0.54, 5, 0.65, 0.11);
   part(-1.27, 1.5, 4.38, 0.05, 0.45, 1.12, fabric);
   // Repair bay: tool board, machined parts and latched storage lockers.
-  console(2.2, 4.4, "MAINT / FIELD EQUIPMENT");
+  console(2.2, 4.4, "EQUIPMENT STORAGE");
   part(2.2, 1.95, 4.17, 1.55, 1.05, 0.12, dark);
   for (let i = 0; i < 5; i++) {
     pipe(

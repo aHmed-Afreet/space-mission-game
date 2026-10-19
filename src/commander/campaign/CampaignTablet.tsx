@@ -69,8 +69,6 @@ function Gauge({
   );
 }
 function FieldMap({ s }: { s: Session }) {
-  const o = currentObjective(s),
-    target = o?.site && !(o.site in deck) ? fieldSites[o.site] : null;
   const x = (v: number) => 160 + v * 6,
     z = (v: number) => 55 + v * 8;
   return (
@@ -78,7 +76,7 @@ function FieldMap({ s }: { s: Session }) {
       className="cmd-deck"
       viewBox="0 0 320 430"
       role="img"
-      aria-label="Field map with player and current destination"
+      aria-label="Surface map with named sites and player location"
     >
       <rect
         x="20"
@@ -110,21 +108,15 @@ function FieldMap({ s }: { s: Session }) {
               cx={x(p.x)}
               cy={z(p.z)}
               r="10"
-              fill={o?.site === id ? "#bc9e6d44" : "#7d96951a"}
-              stroke={o?.site === id ? "#e1ba7c" : "#6d8a9233"}
+              fill="#7d96951a"
+              stroke="#6d8a9233"
             />
             <text x={x(p.x)} y={z(p.z) + 22} textAnchor="middle">
               {p.name.toUpperCase()}
             </text>
           </g>
         ))}
-      {target && (
-        <path
-          d={`M${x(s.position.x)} ${z(s.position.z)}L${x(target.x)} ${z(target.z)}`}
-          stroke="#c6af8355"
-          strokeDasharray="3 4"
-        />
-      )}
+
       <g
         transform={`translate(${x(s.position.x)} ${z(s.position.z)}) rotate(${(-s.position.heading * 180) / Math.PI})`}
       >
@@ -148,11 +140,9 @@ export default function CampaignTablet({
   onResetTutorials,
   saveError,
   onOptional,
-  onGuideOptional,
   onAbort,
 }: {
   onOptional: (id: string) => void;
-  onGuideOptional: (id: string) => void;
   onAbort: () => void;
   s: Session;
   progress: Progress;
@@ -202,12 +192,8 @@ export default function CampaignTablet({
       previous?.focus();
     };
   }, [onClose]);
-  const locked = (a: CampaignAction) =>
-    state.paused ||
-    state.sleeping ||
-    state.ended ||
-    (m.objectives.slice(s.objective + 1).some((v) => v.action === a) &&
-      o?.action !== a);
+  const locked = (_a: CampaignAction) =>
+    state.paused || state.sleeping || state.ended;
   return (
     <div className="cmd-tablet-layer">
       <button
@@ -316,14 +302,14 @@ export default function CampaignTablet({
                         <strong>✓ COMPLETE</strong>
                       ) : (
                         <div>
-                          <button
-                            onClick={() => {
-                              onGuideOptional(c.id);
-                              onClose();
-                            }}
-                          >
-                            Guide me there
-                          </button>
+                          <p>
+                            Location:{" "}
+                            {c.site
+                              ? sitePosition(c.site, m.destination).name
+                              : "Mission operations"}
+                            . Consult MAP.
+                          </p>
+
                           <button
                             disabled={
                               state.paused || (!!c.site && !atSite(s, c.site))
@@ -358,7 +344,7 @@ export default function CampaignTablet({
                       ) : i === s.objective ? (
                         "○"
                       ) : (
-                        "🔒"
+                        "○"
                       )}
                     </span>
                     <div>
@@ -369,7 +355,7 @@ export default function CampaignTablet({
                           ? "Complete"
                           : i === s.objective
                             ? "Current task"
-                            : "Locked until the previous task is complete"}
+                            : "Upcoming goal · may be prepared in advance"}
                       </small>
                     </div>
                   </li>
@@ -393,7 +379,7 @@ export default function CampaignTablet({
                       {progress.completed[v.id]
                         ? "✓"
                         : v.id !== m.id
-                          ? "🔒"
+                          ? "○"
                           : "○"}{" "}
                       MISSION {v.level}
                     </span>
@@ -681,6 +667,8 @@ export default function CampaignTablet({
                       locked("eat") ||
                       state.meals < 1 ||
                       outside(s) ||
+                      (s.position.z > 7.7 && s.airlock.pressure < 80) ||
+                      s.flight.status === "ascent" ||
                       state.minutes - s.lastEat < 20 ||
                       state.nutrition >= 98
                     }
@@ -701,6 +689,8 @@ export default function CampaignTablet({
                       locked("drink") ||
                       state.bottle <= 0 ||
                       outside(s) ||
+                      (s.position.z > 7.7 && s.airlock.pressure < 80) ||
+                      s.flight.status === "ascent" ||
                       state.minutes - s.lastDrink < 2 ||
                       state.hydration >= 99
                     }
@@ -717,7 +707,8 @@ export default function CampaignTablet({
               )}
               <p className="cmd-footnote">
                 Meals and drinks have a short cooldown. If a button is locked,
-                finish the current task or wait until you need the supply.
+                check your supplies, cooldown, hydration and whether your helmet
+                is sealed.
               </p>
               <h3 className="cmd-subheading">
                 Tools · science equipment · EVA equipment
@@ -742,6 +733,7 @@ export default function CampaignTablet({
                       />
                     </div>
                     <h3>{equipment[id].name}</h3>
+                    <small>Quantity: 1 · {equipment[id].description}</small>
                     <strong>
                       {id === "suit"
                         ? s.suit.equipped
@@ -756,6 +748,31 @@ export default function CampaignTablet({
                     </small>
                   </article>
                 ))}
+              </div>
+              <div className="cmd-inventory-grid">
+                <article className="cmd-inventory-card">
+                  <div className="cmd-item-art">
+                    <Icon name="tool" size={38} />
+                  </div>
+                  <h3>Repair toolkit</h3>
+                  <strong>
+                    {state.tools || s.pack.includes("repair")
+                      ? "1 carried"
+                      : "Stored in Equipment Storage"}
+                  </strong>
+                  <small>
+                    Reusable tools · collect before servicing hardware.
+                  </small>
+                </article>
+                <article className="cmd-inventory-card">
+                  <div className="cmd-item-art">
+                    <Icon name="box" size={38} />
+                    <span>×{state.parts}</span>
+                  </div>
+                  <h3>Repair parts</h3>
+                  <strong>{state.parts} serviceable parts</strong>
+                  <small>Each hardware repair consumes a part.</small>
+                </article>
               </div>
               <h3 className="cmd-subheading">Repair parts</h3>
               <p>
@@ -789,7 +806,7 @@ export default function CampaignTablet({
             <>
               <div className="cmd-section-heading">
                 <div>
-                  <small>YOUR LOCATION & CURRENT TARGET</small>
+                  <small>NAMED COMPARTMENTS & YOUR LOCATION</small>
                   <h2>
                     {map === "deck" ? "Spacecraft deck" : "Local field map"}
                   </h2>
@@ -817,16 +834,11 @@ export default function CampaignTablet({
                 <DeckMap
                   position={s.position}
                   area={nearby(s.position.x, s.position.z)}
-                  target={
-                    o?.site && o.site in deck
-                      ? (o.site as keyof typeof deck)
-                      : undefined
-                  }
                 />
               )}
               <p className="cmd-footnote">
-                The light marker shows you. The amber marker is the current task
-                only. Walk there; map controls do not teleport you.
+                The position symbol shows you. Locate named compartments or
+                field sites yourself; no route or destination marker is drawn.
               </p>
             </>
           )}

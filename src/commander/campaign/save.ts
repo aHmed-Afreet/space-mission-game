@@ -1,3 +1,4 @@
+import { emptyObservations } from "./observations";
 import { decodeStore as decodeLegacy } from "./legacySave";
 import { technologies } from "./economy";
 import {
@@ -175,6 +176,27 @@ export function decodeStore(raw: string): Store {
   if (v.session) {
     const s = v.session as Session;
     const m = missionById(s.missionId);
+    if (s.observations)
+      s.observations = { ...emptyObservations(), ...s.observations };
+    if (!s.observations)
+      s.observations = { ...emptyObservations(), achieved: [...s.completed] };
+    if (
+      !Array.isArray(s.observations.achieved) ||
+      !Array.isArray(s.observations.visits) ||
+      !Array.isArray(s.observations.pending) ||
+      !finite(s.observations.rest) ||
+      s.observations.rest < 0 ||
+      !finite(s.observations.transmitted)
+    )
+      throw Error("Invalid operational observations");
+    for (const flag of [
+      "exterior",
+      "vacuum",
+      "powerDiagnosed",
+      "campDiagnosed",
+    ] as const)
+      if (typeof s.observations[flag] !== "boolean")
+        throw Error("Invalid observation state");
     configuration(s.design, s.life);
     if (
       !Array.isArray(s.upgrades) ||
