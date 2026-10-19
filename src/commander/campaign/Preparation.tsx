@@ -79,6 +79,16 @@ export default function Preparation({
           <small>FLIGHT BRIEF</small>
           <h2>{mission.majorObjective}</h2>
           <p>{mission.description}</p>
+          {mission.historical && <div className="campaign-historical">
+            <small>INSPIRED BY REAL ASTRONAUT MISSIONS · {mission.historical.year}</small>
+            <h3>{mission.historical.inspiration}</h3>
+            <p><strong>Your story:</strong> {mission.historical.story}</p>
+            <p><strong>What really happened:</strong> {mission.historical.realHistory}</p>
+            <p><small>ASTRONAUT SKILLS</small></p>
+            <ul>{mission.historical.learning.map(skill=><li key={skill}>{skill}</li>)}</ul>
+            <p className="campaign-history-note">{mission.historical.disclaimer}</p>
+            <a href={mission.historical.source} target="_blank" rel="noopener noreferrer">Read NASA's mission history ↗</a>
+          </div>}
           <p>
             Destination: {mission.destination.toUpperCase()} ·{" "}
             {mission.expectedMinutes}

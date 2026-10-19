@@ -143,6 +143,15 @@ export type MissionDefinition = {
   unlocks?: string[];
   optional?: OptionalChallenge[];
   expectedMinutes?: string;
+  historical?: {
+    inspiration: string;
+    year: number;
+    story: string;
+    realHistory: string;
+    learning: string[];
+    source: string;
+    disclaimer: string;
+  };
 };
 export type OptionalChallenge = {
   id: string;
@@ -333,16 +342,16 @@ const decision = (
   });
 const launch = () => [
   ...phase("PRE-LAUNCH", [
-    use("power", "Verify electrical power.", "verifyPower"),
-    use("galley", "Confirm life support and stored supplies.", "verifyLife"),
-    use("communications", "Run the launch radio check.", "verifyRadio"),
-    use("cockpit", "Verify the departure trajectory.", "course"),
-    use("cockpit", "Confirm propellant reserve.", "verifyFuel"),
+    use("power", "Inspect the spacecraft power buses and verify battery reserve.", "verifyPower"),
+    use("galley", "Check cabin atmosphere, food, water and oxygen reserves.", "verifyLife"),
+    use("communications", "Complete the mission-control communications check.", "verifyRadio"),
+    use("cockpit", "Cross-check guidance and planned departure trajectory.", "course"),
+    use("cockpit", "Confirm main and contingency propellant margins.", "verifyFuel"),
     use("cockpit", "Seal the vehicle and arm the countdown.", "sealHatch"),
   ]),
   ...phase("LAUNCH", [
     use("cockpit", "Start the launch countdown.", "armLaunch"),
-    task("WAIT", "Monitor the six-second countdown.", "cockpit", undefined, {
+    task("WAIT", "Monitor the compressed launch countdown.", "cockpit", undefined, {
       condition: "countdown",
     }),
     use("cockpit", "Ignite the launch vehicle.", "ignite"),
@@ -459,7 +468,7 @@ export const missions: MissionDefinition[] = [
     [
       ...launch(),
       ...phase("ORBITAL QUALIFICATION", [
-        use("science", "Map the ocean calibration target.", "science"),
+        use("science", "Record an Earth-observation calibration scan.", "science"),
         decision("Choose the orbital power plan.", "power", undefined, [
           {
             action: "powerSafe",
@@ -477,13 +486,27 @@ export const missions: MissionDefinition[] = [
         wait("Finish the recovery break.", 10, "sleep"),
         task("REST", "Wake for the final systems check.", undefined, "wake"),
         powerDecision(),
-        use("science", "Validate the recovered science channel.", "science"),
+        use("science", "Repeat the science scan to verify recovered power.", "science"),
       ]),
       ...returnHome(),
     ],
     {
       description:
         "Qualify the explorer for independent operations. Fly an ascent, operate the cabin, resolve a power warning and bring the vehicle home.",
+      historical: {
+        "inspiration": "STS-1 · First Space Shuttle Flight",
+        "year": 1981,
+        "story": "You are a test pilot assigned to a new orbital spacecraft. Launch, monitor power, calibrate Earth observations, resolve an equipment warning and return with a flight report.",
+        "realHistory": "In April 1981, John Young and Robert Crippen flew Columbia on STS-1, the first orbital Space Shuttle flight test.",
+        "learning": [
+          "Flight readiness and telemetry",
+          "Orbital insertion and attitude control",
+          "Power management and troubleshooting",
+          "Crew health, shift handover and recovery"
+        ],
+        "source": "https://www.nasa.gov/mission/sts-1/",
+        "disclaimer": "Fictional spacecraft and compressed flight model. This is inspired by a historical systems test, not a replay of STS-1."
+      },
       majorObjective: "Launch, qualify the spacecraft and recover safely.",
       funding: 80,
       reward: 110,
@@ -518,12 +541,12 @@ export const missions: MissionDefinition[] = [
     [
       ...launch(),
       ...phase("RENDEZVOUS", [
-        use("communications", "Locate the disabled relay satellite.", "comms"),
-        use("cockpit", "Match the satellite approach corridor.", "approach"),
+        use("communications", "Acquire the target satellite on the communications display.", "comms"),
+        use("cockpit", "Match orbital approach geometry with the target satellite.", "approach"),
         wait("Coast to the tethered work platform.", 18, "cockpit"),
         use(
           "power",
-          "Read the satellite fault telemetry.",
+          "Read the satellite power and radio fault telemetry.",
           "diagnoseSatellite",
         ),
       ]),
@@ -531,16 +554,16 @@ export const missions: MissionDefinition[] = [
       ...phase("SATELLITE SERVICE", [
         use(
           "survey",
-          "Inspect the relay power connector.",
+          "Inspect the satellite electrical connector before repair.",
           "diagnoseSatellite",
         ),
         use(
           "survey",
-          "Replace the damaged satellite connector.",
+          "Replace the diagnosed satellite connector with a spare.",
           "repairSatellite",
           "REPAIR",
         ),
-        use("survey", "Align and test the satellite radio.", "testSatellite"),
+        use("survey", "Perform the satellite radio functional test.", "testSatellite"),
       ]),
       ...phase("EVA RETURN", evaReturn()),
       ...phase("CABIN RECOVERY", [powerDecision(), ...meals()]),
@@ -549,6 +572,20 @@ export const missions: MissionDefinition[] = [
     {
       description:
         "A relay satellite has lost power and its downlink. Match its orbit and service it from a tethered EVA platform before returning to Earth.",
+      historical: {
+        "inspiration": "STS-125 · Final Hubble Servicing Mission",
+        "year": 2009,
+        "story": "Mission Control needs an orbiting observatory repaired. Perform rendezvous checks, plan an EVA, inspect electrical connectors, test communications and bring the crew home.",
+        "realHistory": "In May 2009, the Atlantis crew serviced the Hubble Space Telescope during five spacewalks, replacing and repairing instruments and hardware.",
+        "learning": [
+          "Rendezvous navigation",
+          "Suit resources and airlock checks",
+          "Diagnostics before component replacement",
+          "Post-repair functional testing"
+        ],
+        "source": "https://www.nasa.gov/mission/sts-125/",
+        "disclaimer": "The game's relay satellite is fictional. STS-125 repaired Hubble, not this satellite. Flight and repair procedures are simplified."
+      },
       majorObjective:
         "Restore an independent satellite and recover the service crew.",
       eva: true,
@@ -600,16 +637,16 @@ export const missions: MissionDefinition[] = [
       ]),
       ...phase("EVA PREPARATION", evaOut()),
       ...phase("GEOLOGICAL EXPEDITION", [
-        use("survey", "Scan the landing-site geology.", "scan", "SCAN"),
+        use("survey", "Document rock units at the landing-site survey marker.", "scan", "SCAN"),
         use("survey", "Measure the surface temperature.", "measureTemperature"),
-        use("crater", "Collect a crater-rim rock sample.", "sample", "SAMPLE"),
+        use("crater", "Collect and label a crater-rim rock sample.", "sample", "SAMPLE"),
         use(
           "crater",
-          "Drill a labelled shallow subsurface sample.",
+          "Collect a labelled shallow core sample.",
           "drill",
           "SAMPLE",
         ),
-        use("survey", "Photograph the sample context.", "photo"),
+        use("survey", "Photograph the collection site and sample context.", "photo"),
       ]),
       ...phase("EVA RETURN", evaReturn()),
       ...phase("ASCENT PREPARATION", [powerDecision()]),
@@ -618,6 +655,20 @@ export const missions: MissionDefinition[] = [
     {
       description:
         "Investigate a crater rim with independent surface measurements. Plan your reserves, land, sample two layers and return the samples for analysis.",
+      historical: {
+        "inspiration": "Apollo 15 · Lunar Geological Expedition",
+        "year": 1971,
+        "story": "Lead a lunar geology sortie. Land near a crater, document the rock units, photograph sample sites, collect labelled surface and core samples, and return the science.",
+        "realHistory": "Apollo 15 astronauts David Scott and James Irwin explored the Hadley-Apennine region, collected rock and core samples and deployed experiments.",
+        "learning": [
+          "Lunar landing and traverse planning",
+          "Sample context photography",
+          "Geology and subsurface sampling",
+          "EVA consumables and sample return"
+        ],
+        "source": "https://www.nasa.gov/history/50-years-ago-apollo-15-on-the-moon-at-hadley-apennine/",
+        "disclaimer": "The landing site and field route are fictional. This is an Apollo-inspired science exercise, not a reconstruction of Apollo 15."
+      },
       majorObjective:
         "Return lunar rock and subsurface samples with contextual measurements.",
       eva: true,
@@ -695,8 +746,8 @@ export const missions: MissionDefinition[] = [
           "deployShelter",
           "DEPLOY",
         ),
-        use("camp", "Deploy the camp solar array.", "deploySolar", "DEPLOY"),
-        use("camp", "Connect the camp battery.", "deployBattery", "DEPLOY"),
+        use("camp", "Deploy and align the field-station solar array.", "deploySolar", "DEPLOY"),
+        use("camp", "Connect backup battery storage and check power.", "deployBattery", "DEPLOY"),
         use(
           "camp",
           "Raise the communications antenna.",
@@ -705,7 +756,7 @@ export const missions: MissionDefinition[] = [
         ),
         use(
           "camp",
-          "Install the environmental sensor.",
+          "Install and verify the environmental sensor.",
           "deploySensor",
           "DEPLOY",
         ),
@@ -715,7 +766,7 @@ export const missions: MissionDefinition[] = [
           "deployStorage",
           "DEPLOY",
         ),
-        use("camp", "Run the first powered field experiment.", "experiment"),
+        use("camp", "Record the first field-station sensor readings.", "experiment"),
         decision(
           "Restore the camp after a connector trip.",
           "camp",
@@ -736,7 +787,7 @@ export const missions: MissionDefinition[] = [
         ),
         use(
           "camp",
-          "Confirm the recovered environmental experiment.",
+          "Repeat measurements after restoring camp power.",
           "experiment",
         ),
         use(
@@ -752,6 +803,20 @@ export const missions: MissionDefinition[] = [
     {
       description:
         "Deliver and commission a temporary lunar field base. Choose a site, deploy real equipment, solve a power interruption and return after the station reports its first results.",
+      historical: {
+        "inspiration": "Apollo 17 · Lunar Experiments Deployment",
+        "year": 1972,
+        "story": "Deliver a temporary lunar instrument station. Choose a site, connect power, deploy a sensor and antenna, troubleshoot a fault and transmit the commissioning report.",
+        "realHistory": "Apollo 17 astronauts deployed experiments on the lunar surface, including seismic, gravity and environmental instruments.",
+        "learning": [
+          "Instrument-site selection",
+          "Power and battery commissioning",
+          "Sensor and communications checks",
+          "Fault recovery and data downlink"
+        ],
+        "source": "https://www.nasa.gov/missions/apollo/apollo-17-mission-details/",
+        "disclaimer": "The modular field camp is imagined for gameplay. Apollo 17 did not build a habitable lunar research base."
+      },
       majorObjective:
         "Establish and certify a powered, communicating lunar research camp.",
       eva: true,
