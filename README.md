@@ -56,3 +56,35 @@ The success percentage is a game performance score, not a physical probability o
 - `src/main.tsx`: React entry point.
 
 Large touch controls support iPad and desktop. Choices use native buttons with keyboard focus and selection state. The game is held in memory; refreshing resets the mission. No copyrighted artwork, NASA branding or agency affiliation is used.
+
+## Commander Mode — crew readiness sortie
+
+The mode picker preserves the original Strategy game unchanged. Commander is an independent, single-crew living simulation with a six-hour readiness objective; it does not claim to provision a full Mars transit.
+
+### Design and engineering
+
+Configure the original hardware, rocket and transfer profile plus a dedicated Life Support section: food, water, water/oxygen recycling, oxygen tanks, environmental control and reserve batteries. The builder displays total cost, mass, net power and endurance estimates, then enforces its $300M budget, rocket payload, nonnegative power margin, essential instruments and 10 fuel reserve. Water has a greater mass cost than a meal. Recycling trades mass, money and power for endurance. Batteries add kWh capacity and mass. Every selected value initializes the actual mission.
+
+### Walk, interact and live aboard
+
+Use WASD/arrows or hold the onscreen touch controls to walk. Drag the view to look around. Approach a station to unlock its actions; map entries never teleport the player. The Three.js cabin includes a cockpit, science console, communications, power, galley, sleeping berth and equipment storage. The central aisle and collision boundaries keep stations reachable.
+
+- Galley: take a meal, fill the 1 L bottle, or drink at the dispenser.
+- Inventory tablet: eat a carried meal or drink 250 mL from the bottle. Stored meals decrease when taken; carried meals decrease when eaten. Water transfers from tank to bottle, then is consumed. Working powered recyclers return the configured fraction to the tank.
+- Sleeping berth: rest to recover energy. Sleeping locks movement and station actions until waking.
+- Equipment: collect toolkit. Power station: repair a fault using one spare part.
+- Science: gather water-search data, spending crew energy and battery reserve.
+- Communications: calibrate a failed link and transmit at least 30 science points.
+- Cockpit: verify course using fuel, then complete the sortie once objectives are ready.
+
+The collapsible Mission Tablet occupies its own layout column instead of covering the first-person viewport. Systems, Inventory, Objectives, Map and Log tabs provide mission information. Low food/water/oxygen/power, crew readiness, cabin environment, solar activity, communications and equipment faults produce alerts. A link failure occurs at 90 mission minutes, solar activity at 120–180 and a repairable equipment fault at 210. These scheduled training incidents make emergency practice repeatable.
+
+Default time is 1 real second per mission minute; a 5× setting is available. Pause freezes consumption. Food, hydration, duty time and sleep affect energy and mission readiness. Oxygen, reserve power and cabin environment update with mission time. Critical oxygen, pressure or energy loss triggers a safety abort. Body weight and appearance are not simulated.
+
+### Persistence and scope
+
+Mission configuration, supplies, crew state, objectives and recent action log auto-save to this browser's localStorage. A restored mission starts paused. Hidden tabs automatically pause; missions do not consume supplies while the app is closed. Camera position is not persisted and resumes at the aft entry. Storage failures are reported in the tablet. Refresh or switch back to Commander to resume. Strategy retains its original in-memory behavior.
+
+`src/commander/simulation.ts` contains pure simulation and action functions, typed area/action interfaces and configuration models. `Cabin.tsx` owns rendering and movement, and `Commander.tsx` owns builder, tablet and persistence. This boundary supports future EVA, samples, docking, surface exploration and emergency modules; those future features are not implemented yet. A WebGL-capable browser is required for the 3D cabin. Models and textures are original procedural graphics; no external artwork is loaded.
+
+Validation includes the original five strategy tests and nine Commander simulation tests. The Three.js renderer is loaded separately when Commander Mode is selected, so Strategy does not download it on entry.

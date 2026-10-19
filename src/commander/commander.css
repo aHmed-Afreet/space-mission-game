@@ -1,0 +1,490 @@
+.cmd-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: #0d1727;
+  border-bottom: 1px solid #344657;
+}
+.cmd-mode-bar button {
+  background: transparent;
+  border: 0;
+  color: #8debd5;
+}
+.cmd-mode-bar span {
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.cmd-mode-select {
+  max-width: 1000px;
+  margin: 10vh auto;
+  padding: 30px;
+}
+.cmd-mode-select > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 40px;
+}
+.cmd-mode-select button {
+  background: linear-gradient(145deg, #1d3443, #101a2b);
+  border: 1px solid #4f8d87;
+  border-radius: 18px;
+  padding: 45px 30px;
+  text-align: left;
+  min-height: 220px;
+}
+.cmd-mode-select strong {
+  display: block;
+  font-size: 30px;
+  color: #8aebd4;
+  margin-bottom: 22px;
+}
+.cmd-mode-select span {
+  line-height: 1.8;
+}
+.cmd-builder {
+  max-width: 1200px;
+  margin: auto;
+  padding: 40px 25px;
+}
+.cmd-builder h1 {
+  margin-top: 24px;
+}
+.cmd-builder > p {
+  color: #9eafc5;
+  line-height: 1.8;
+  max-width: 900px;
+}
+.cmd-builder > .primary {
+  margin: 28px 0;
+}
+.cmd-design-summary {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 24px 0;
+  position: sticky;
+  top: 0;
+  background: #0b1424ee;
+  z-index: 3;
+}
+.cmd-design-summary strong {
+  padding: 12px;
+  background: #1a2d3e;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #90ebd6;
+}
+.cmd-hardware,
+.cmd-life-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 24px 0;
+}
+.cmd-hardware label {
+  background: #142136;
+  border: 1px solid #2c415a;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+}
+.cmd-hardware small,
+.cmd-life-grid small {
+  color: #a0b4c9;
+  line-height: 1.7;
+  font-size: 11px;
+}
+select {
+  font: inherit;
+  min-height: 44px;
+  background: #0f1d30;
+  color: #d9e9f4;
+  border: 1px solid #486377;
+  border-radius: 6px;
+  padding: 8px;
+  max-width: 100%;
+}
+.cmd-life-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cmd-life-grid label > span {
+  color: #8be9d2;
+}
+.cmd-life-grid input {
+  min-height: 44px;
+  accent-color: #80e5ce;
+  width: 100%;
+}
+.cmd-session {
+  height: calc(100dvh - 65px);
+  min-height: 620px;
+  display: flex;
+  flex-direction: column;
+}
+.cmd-flight-bar {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 20px;
+  background: #111e30;
+  border-bottom: 1px solid #3a5265;
+  flex-wrap: wrap;
+}
+.cmd-flight-bar > div {
+  margin-right: auto;
+}
+.cmd-flight-bar strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+}
+.cmd-flight-bar label {
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cmd-play {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.cmd-viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: #08111f;
+}
+.cmd-world,
+.cmd-canvas {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+.cmd-canvas canvas {
+  display: block;
+  touch-action: none;
+}
+.cmd-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  color: #b7f9e4;
+  pointer-events: none;
+}
+.cmd-location {
+  position: absolute;
+  top: 15px;
+  left: 18px;
+  background: #0b1527d9;
+  border: 1px solid #3e5865;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  pointer-events: none;
+  max-width: 90%;
+}
+.cmd-location small {
+  display: block;
+  font-size: 10px;
+  color: #9eb4c8;
+  margin-top: 7px;
+}
+.cmd-move {
+  position: absolute;
+  left: 18px;
+  bottom: 24px;
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+}
+.cmd-move button {
+  background: #18304ee8;
+  border: 1px solid #5a8f9d;
+  border-radius: 10px;
+  width: 50px;
+  height: 50px;
+  font-size: 22px;
+  margin: 3px;
+  touch-action: none;
+}
+.cmd-look {
+  position: absolute;
+  bottom: 5px;
+  left: 18px;
+  font-size: 9px;
+  color: #b9ccda;
+  pointer-events: none;
+}
+.cmd-interact {
+  position: absolute;
+  bottom: 24px;
+  right: 18px;
+  width: min(340px, calc(100% - 210px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #0c182be8;
+  border-radius: 10px;
+  padding: 14px;
+  max-height: 52%;
+  overflow: auto;
+  border: 1px solid #426276;
+}
+.cmd-interact p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0 0 4px;
+  color: #b4eddf;
+}
+.cmd-interact button {
+  font-size: 11px;
+  min-height: 48px;
+  padding: 10px;
+}
+.cmd-tablet {
+  width: 330px;
+  flex: 0 0 330px;
+  overflow: auto;
+  padding: 18px;
+  background: #0e1a2b;
+  border: 0;
+  border-left: 1px solid #416471;
+  min-height: 0;
+}
+.cmd-tablet-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #92e9d5;
+}
+.cmd-tablet-head span {
+  color: #829eb6;
+}
+.cmd-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 18px 0;
+}
+.cmd-tabs button {
+  padding: 8px;
+  font-size: 10px;
+  min-height: 44px;
+  background: #172b40;
+  border: 1px solid #314e62;
+  border-radius: 5px;
+}
+.cmd-tabs .chosen {
+  color: #91efd8;
+  border-color: #91efd8;
+}
+.cmd-readouts > div {
+  padding: 13px 0;
+  border-bottom: 1px solid #263e54;
+}
+.cmd-readouts span {
+  display: block;
+  color: #92a9c1;
+  font-size: 10px;
+  margin-bottom: 7px;
+}
+.cmd-readouts strong {
+  font-size: 12px;
+  line-height: 1.7;
+  display: block;
+  font-weight: 550;
+}
+.cmd-tablet h3 {
+  font-size: 13px;
+  margin-top: 24px;
+}
+.cmd-tablet p {
+  font-size: 12px;
+  color: #afc4d5;
+  line-height: 1.8;
+}
+.cmd-alert {
+  color: #ffbd8f !important;
+  background: #f28e4410;
+  border-left: 2px solid #e4a06f;
+  padding: 10px;
+}
+.cmd-ok {
+  color: #8ce0c3 !important;
+}
+.cmd-tablet button:not(.cmd-tabs button) {
+  background: #21394c;
+  border: 1px solid #557785;
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 10px;
+  margin: 5px 5px 5px 0;
+  min-height: 44px;
+}
+.cmd-tablet-bottom {
+  border-top: 1px solid #324c60;
+  margin-top: 24px;
+  padding-top: 20px;
+}
+.cmd-tablet-bottom small {
+  font-size: 10px;
+  color: #8ba5bd;
+  line-height: 1.7;
+  display: block;
+}
+.cmd-map {
+  border: 1px solid #3a596a;
+  padding: 18px;
+  text-align: center;
+  border-radius: 8px;
+  font-size: 11px;
+}
+.cmd-map-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+.cmd-map span,
+.cmd-map > div:first-child {
+  background: #20394d;
+  padding: 14px 8px;
+  border-radius: 6px;
+  flex: 1;
+}
+.cmd-map .here {
+  background: #548e83;
+  color: #fff;
+  outline: 2px solid #a2f6d7;
+}
+.cmd-complete,
+.cmd-graphics-error {
+  position: absolute;
+  inset: 18%;
+  padding: 30px;
+  background: #0e1b2ff2;
+  border: 1px solid #84d8c6;
+  border-radius: 16px;
+  overflow: auto;
+  z-index: 5;
+}
+.cmd-complete h2 {
+  font-size: 24px;
+  line-height: 1.5;
+}
+.cmd-complete p {
+  font-size: 12px;
+  color: #a3b8cb;
+}
+.cmd-graphics-error {
+  color: #ffc49c;
+}
+.cmd-builder .alert li {
+  line-height: 1.9;
+}
+@media (max-width: 1000px) {
+  .cmd-hardware,
+  .cmd-life-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .cmd-tablet {
+    width: 285px;
+    flex-basis: 285px;
+    padding: 14px;
+  }
+  .cmd-interact {
+    width: calc(100% - 35px);
+    bottom: 155px;
+    max-height: 35%;
+  }
+  .cmd-flight-bar {
+    gap: 8px;
+    padding: 10px;
+  }
+  .cmd-flight-bar .secondary {
+    font-size: 10px;
+    padding: 10px;
+  }
+  .cmd-session {
+    min-height: 650px;
+  }
+  .cmd-look {
+    font-size: 8px;
+  }
+  .cmd-complete {
+    inset: 10%;
+  }
+}
+@media (max-width: 600px) {
+  .cmd-mode-select > div,
+  .cmd-hardware,
+  .cmd-life-grid {
+    grid-template-columns: 1fr;
+  }
+  .cmd-mode-select {
+    margin: 25px auto;
+  }
+  .cmd-tablet {
+    width: 48%;
+    flex-basis: 48%;
+    padding: 10px;
+  }
+  .cmd-tablet-head {
+    font-size: 9px;
+  }
+  .cmd-tabs button {
+    font-size: 9px;
+    padding: 5px;
+  }
+  .cmd-location {
+    left: 8px;
+    top: 8px;
+    padding: 10px;
+    font-size: 11px;
+  }
+  .cmd-location small {
+    font-size: 9px;
+  }
+  .cmd-move {
+    left: 8px;
+    bottom: 30px;
+  }
+  .cmd-move button {
+    width: 40px;
+    height: 44px;
+    margin: 1px;
+  }
+  .cmd-interact {
+    right: 8px;
+    width: calc(100% - 16px);
+    bottom: 150px;
+    padding: 8px;
+  }
+  .cmd-flight-bar strong {
+    font-size: 14px;
+  }
+  .cmd-flight-bar label {
+    font-size: 9px;
+  }
+  .cmd-flight-bar select {
+    font-size: 10px;
+  }
+  .cmd-complete {
+    inset: 3%;
+    padding: 16px;
+  }
+  .cmd-complete h2 {
+    font-size: 18px;
+  }
+}
