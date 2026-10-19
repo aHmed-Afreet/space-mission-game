@@ -34,6 +34,7 @@ import { bookLaunch, technologies } from "./economy";
 import { decodeStore, newStore, persist, loadStore, SAVE_KEY } from "./save";
 import { joystickVector } from "../controls";
 import { NavigationContent } from "./NavigationMap";
+import { readPreferences, writePreferences } from "./preferences";
 
 function stand(
   s: Session,
@@ -1278,4 +1279,38 @@ test("navigation map uses real mission location names and includes airlock locat
   assert.match(map, /Outer airlock hatch/);
   assert.match(map, /CURRENT OBJECTIVE LOCATION/);
   assert.doesNotMatch(map, /stroke-dasharray|CURRENT TARGET/);
+});
+
+test("playable missions cite real NASA histories without misrepresenting the game", () => {
+  const stories = missions.filter(m=>m.implemented);
+  assert.deepEqual(stories.map(m=>m.historical?.year),[1981,2009,1971,1972]);
+  for (const m of stories) {
+    assert.ok(m.historical);
+    assert.match(m.historical!.source, /^https:\/\/www\.nasa\.gov\//);
+    assert.match(m.historical!.disclaimer, /fictional|fiction|imagined/i);
+    assert.ok(m.historical!.learning.length>=4);
+    assert.ok(m.objectives.some(o=>/check|inspect|scan|record|collect|repair|test|verify/i.test(o.title)));
+  }
+});
+test("settings load safely and reject invalid saved preferences", () => {
+  const memory = new Map<string,string>();
+  const storage={getItem:(k:string)=>memory.get(k)||null,setItem:(k:string,v:string)=>{memory.set(k,v)}};
+  const defaults=readPreferences(storage);
+  assert.equal(defaults.graphics,"balanced");
+  writePreferences(storage,{graphics:"quality",lookSensitivity:1.4,showHints:false});
+  const prefs=readPreferences(storage);
+  assert.equal(prefs.graphics,"quality");
+  assert.equal(prefs.lookSensitivity,1.4);
+  assert.equal(prefs.showHints,false);
+  memory.set("orbital-player-settings-v1", JSON.stringify({graphics:"invalid",lookSensitivity:100,showHints:"no"}));
+  assert.deepEqual(readPreferences(storage),{graphics:"balanced",lookSensitivity:1.8,showHints:true});
+  memory.set("orbital-player-settings-v1","{invalid");
+  assert.deepEqual(readPreferences(storage),defaults);
+});
+test("published privacy page and release disclaimer exist", () => {
+  assert.ok(existsSync("public/privacy.html"));
+  const privacy=readFileSync("public/privacy.html","utf8");
+  assert.match(privacy,/local storage/i);
+  assert.match(privacy,/Reset campaign progress/i);
+  assert.match(privacy,/NASA does not operate or endorse/i);
 });

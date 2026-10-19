@@ -1821,3 +1821,16 @@
 .game-settings-body .game-settings-reset {padding:12px 14px;border-radius:8px;border:1px solid #dd989d83;color:#ffdee0;background:#5f272c77;align-self:start;}
 .game-settings-body .game-settings-reset:disabled {opacity:.45;}
 .game-settings-body a {color:#a6e6d2;text-decoration:underline;}
+
+/* Real spaceflight context is clearly distinct from fictional gameplay. */
+.campaign-story-tag {margin:8px 0;font-size:10px;color:#a1d5c3;line-height:1.5;letter-spacing:.2px;}
+.campaign-historical {margin:18px 0 12px;padding:20px;border:1px solid #92bdb455;background:#17343f77;border-radius:12px;}
+.campaign-historical>small {font-size:10px;color:#a9d7bd;letter-spacing:1.2px;}
+.campaign-historical h3 {font-size:18px;margin:10px 0;}
+.campaign-historical p {font-size:13px;line-height:1.7;}
+.campaign-historical ul {padding-left:21px;font-size:13px;line-height:1.75;}
+.campaign-historical a,.cmd-footnote a {color:#a5e7c7;text-decoration:underline;}
+.campaign-historical .campaign-history-note {font-size:11px;color:#a9c2c5;}
+.campaign-real-mission {font-size:10px!important;color:#95c7b5!important;letter-spacing:.25px;}
+.cmd-publish-footer {margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;font-size:11px;color:#91abb4;text-align:center;}
+.cmd-publish-footer a {color:#a9e0ce;text-decoration:underline;}

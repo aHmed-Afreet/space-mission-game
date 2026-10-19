@@ -57,6 +57,14 @@ The success percentage is a game performance score, not a physical probability o
 
 Large touch controls support iPad and desktop. Choices use native buttons with keyboard focus and selection state. The game is held in memory; refreshing resets the mission. No copyrighted artwork, NASA branding or agency affiliation is used.
 
+## Publication and privacy
+
+ORBITAL is an independent **educational simulation**, not an official NASA product or astronaut training system. Flight times, celestial mechanics, life-support rates, orbital navigation, and astronaut tasks are compressed and fictionalized to illustrate engineering decisions. Missions 1–4 include source-linked NASA history briefings inspired by STS-1, STS-125, Apollo 15, and Apollo 17. They do not literally recreate actual mission procedures.
+
+**Web publication:** deploy from `main` using `npm run build` and publish directory `dist`. CI runs `npm test` and `npm run build`. The legal information page at `public/privacy.html` documents browser-local progress and preferences. The game requires neither account creation nor an API key. A current browser with WebGL is recommended.
+
+**Remaining release checks:** verify all four missions on real touch devices and with keyboard/mouse; airplane/offline PWA install; save/restore and reset behavior; financial progression and legacy-save migration; viewport and fullscreen; controls, accessibility and performance on physical iPad/Safari and iPhone; host deployment and privacy link. A successful build does not by itself guarantee app-store acceptance.
+
 ## Commander complete-mission campaign
 
 Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no longer count as campaign levels. The original professional cabin, life support, touch controls, temporary tablet, EVA/airlock, Moon environment, inventory, science, camp, PWA and Strategy Mode are preserved.

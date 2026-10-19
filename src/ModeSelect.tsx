@@ -22,6 +22,10 @@ export default function ModeSelect() {
             </span>
           </button>
         </div>
+        <footer className="cmd-publish-footer">
+          <span>Independent educational simulation · not affiliated with or endorsed by NASA</span>
+          <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy & local saves</a>
+        </footer>
       </div>
     );
   return (
