@@ -2129,3 +2129,17 @@ select {
   background-color: #90aea526;
   transform: translateY(1px);
 }
+
+
+/* Five-mode mission launcher: compact cards remain usable before lazy game modes load. */
+.cmd-mode-select {max-width:1100px;margin:clamp(20px,5vh,65px) auto;padding:clamp(20px,4vw,42px)}
+.cmd-mode-select > div {grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:26px}
+.cmd-mode-select > div button {padding:23px 25px;min-height:140px;border-radius:13px;display:flex;flex-direction:column;justify-content:center}
+.cmd-mode-select > div button strong {font-size:clamp(19px,2vw,24px);margin-bottom:10px}
+.cmd-mode-select > div button span {font-size:12px;line-height:1.65;color:#b5c8cb}
+.cmd-mode-select > .cmd-publish-footer {margin-top:22px;display:flex;flex-wrap:wrap;justify-content:center}
+@media(max-width:700px) {
+ .cmd-mode-select>div {grid-template-columns:1fr;gap:10px}
+ .cmd-mode-select>div button {padding:17px 19px;min-height:98px}
+ .cmd-mode-select>div button strong {font-size:19px}
+}
