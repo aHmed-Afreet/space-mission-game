@@ -22,7 +22,8 @@ export type IconName =
   | "sleep"
   | "temperature"
   | "pressure"
-  | "sun";
+  | "sun"
+  | "settings";
 const paths: Record<IconName, string[]> = {
   oxygen: ["M9 4h6v3H9z", "M8 8h8l2 4v8H6v-8z", "M9 14h6"],
   food: ["M7 3h10l2 4-2 14H7L5 7z", "M6 7h12", "M9 12h6m-6 4h4"],
@@ -52,6 +53,7 @@ const paths: Record<IconName, string[]> = {
   sleep: ["M4 13h16v7M4 8v12m0-5h16", "M7 9h4v4H7zm6 0h6v4h-6z"],
   temperature: ["M10 14V5a2 2 0 014 0v9a4 4 0 11-4 0z", "M12 8v9"],
   pressure: ["M4 18a9 9 0 1116 0", "M12 13l5-6M6 17h12"],
+  settings: ["M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10l2 2M5 19l2-2M17 7l2-2", "M12 8a4 4 0 100 8 4 4 0 000-8z"],
   sun: [
     "M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10l2 2M5 19l2-2M17 7l2-2",
     "M8 8h8v8H8z",
