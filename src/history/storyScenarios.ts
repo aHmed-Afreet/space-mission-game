@@ -1,23 +1,26 @@
 import type { HistoryMission } from "./missionHistory";
-export type CraftFamily="sphere"|"capsule"|"gemini"|"apollo"|"lunar"|"shuttle"|"station"|"telescope"|"probe"|"lander"|"rover"|"observatory";
+import {missionProfile,type HistoricProfile} from "./missionProfiles";
+export type CraftFamily="sphere"|"capsule"|"gemini"|"apollo"|"lunar"|"shuttle"|"station"|"telescope"|"probe"|"lander"|"rover"|"helicopter"|"observatory";
 export type Station="brief"|"systems"|"operations"|"science";
 export type StoryTask={id:string;station:Station;heading:string;action:string;procedure:string;complete:string};
-export type StoryScenario={missionId:string;title:string;craft:string;family:CraftFamily;destination:string;setting:"moon"|"mars"|"orbit"|"deep";role:"astronaut"|"mission operator";tasks:StoryTask[];historicalNote:string};
+export type StoryScenario={missionId:string;title:string;craft:string;family:CraftFamily;destination:string;setting:"moon"|"mars"|"orbit"|"deep";role:"astronaut"|"mission operator";tasks:StoryTask[];historicalNote:string;profile:HistoricProfile;};
 const build=(id:string,station:Station,heading:string,action:string,procedure:string,complete:string):StoryTask=>({id,station,heading,action,procedure,complete});
 export function historicalCraft(m:HistoryMission):{craft:string;family:CraftFamily}{
  const t=m.title;
- if(/Sputnik/.test(t))return {craft:t+" spherical radio satellite",family:"sphere"};
+ if(/Sputnik/.test(t))return {craft:missionProfile(t).vehicle,family:"sphere"};
+ if(t==="Luna 2")return {craft:missionProfile(t).vehicle,family:"sphere"};
  if(/Explorer 1/.test(t))return {craft:"Explorer 1 cylindrical radiation satellite",family:"probe"};
  if(/Vostok|Voskhod/.test(t))return {craft:t+" spherical descent capsule",family:"sphere"};
  if(/Freedom 7|Friendship 7/.test(t))return {craft:"Mercury single-crew capsule",family:"capsule"};
  if(/Gemini/.test(t))return {craft:"Gemini two-crew spacecraft",family:"gemini"};
- if(/Apollo 11|Apollo 12|Apollo 15|Apollo 17/.test(t))return {craft:"Apollo Lunar Module and Command/Service Module",family:"lunar"};
+ if(/Apollo 11|Apollo 12|Apollo 13|Apollo 15|Apollo 17/.test(t))return {craft:missionProfile(t).vehicle,family:"lunar"};
  if(/Apollo /.test(t))return {craft:"Apollo Command and Service Module",family:"apollo"};
  if(/STS-|Hubble servicing|Hubble deployment/.test(t))return {craft:"Space Shuttle Orbiter and payload",family:"shuttle"};
  if(/Salyut|Skylab|Mir|ISS |Apollo–Soyuz/.test(t))return {craft:"Modular orbital station",family:"station"};
  if(/James Webb/.test(t))return {craft:"James Webb segmented infrared telescope",family:"observatory"};
  if(/Hubble|Kepler/.test(t))return {craft:t+" orbital observatory",family:"telescope"};
- if(/Mars Pathfinder|Curiosity|Perseverance|Ingenuity/.test(t))return {craft:t+" Mars exploration vehicle",family:"rover"};
+ if(t==="Ingenuity")return {craft:missionProfile(t).vehicle,family:"helicopter"};
+ if(/Mars Pathfinder|Curiosity|Perseverance/.test(t))return {craft:missionProfile(t).vehicle,family:"rover"};
  if(/Luna 9|Luna 16|Viking 1|Chandrayaan|SLIM|Blue Ghost/.test(t))return {craft:t+" robotic lunar or planetary lander",family:"lander"};
  if(/Voyager|Pioneer|Mariner|Juno|Galileo|Cassini|Rosetta|Deep Impact|New Horizons|JUICE|Europa Clipper|OSIRIS/.test(t))return {craft:t+" uncrewed interplanetary probe",family:"probe"};
  if(/Artemis I/.test(t))return {craft:"Uncrewed Orion capsule and service module",family:"apollo"};
@@ -125,15 +128,39 @@ function tailored(m:HistoryMission):StoryTask[]|undefined{
  build("image","science","Prepare infrared observations","Run instrument calibration","Review the scientific readiness of the observatory.","Infrared calibration complete.")];
  return undefined;
 }
+/** Preserve actual mission locations: Apollo 8/10/13 never landed on the Moon.
+ * Earth-based first person mission control represents uncrewed missions. */
+export function historicalSetting(m:HistoryMission):StoryScenario["setting"]{
+ const surfaceMoon=/^(Apollo 11|Apollo 12|Apollo 15|Apollo 17|Luna 9|Luna 16|Chandrayaan-3|SLIM|Blue Ghost Mission 1)$/.test(m.title);
+ if(surfaceMoon)return "moon";
+ if(/Mars Pathfinder|Viking 1|Curiosity|Perseverance|Ingenuity/.test(m.title))return "mars";
+ if(/Earth orbit|Suborbital/i.test(m.destination))return "orbit";
+ return "deep";
+}
 export function createStoryScenario(m:HistoryMission):StoryScenario{
- const {craft,family}=historicalCraft(m);
- const setting:StoryScenario["setting"]=/Mars/i.test(m.destination)?"mars":/Moon/i.test(m.destination)?"moon":/Earth orbit|Suborbital/i.test(m.destination)?"orbit":"deep";
+ const profile=missionProfile(m.title);
+ const family=historicalCraft(m).family;
+ const setting=historicalSetting(m);
  const role:StoryScenario["role"]=m.category==="Crewed"||m.category==="Space station"?"astronaut":"mission operator";
- const tasks=tailored(m)||[
- build("brief","brief","Review "+m.title+" mission flight plan","Confirm mission briefing",m.background,"Historical mission briefing completed."),
- build("systems","systems","Check "+craft+" readiness","Verify engineering status",m.challenge+" Check the corresponding craft systems before the operation.","Spacecraft systems reviewed."),
- build("operations","operations",m.mission,"Execute mission procedure","Training exercise: "+m.mission,"Mission operation completed."),
- build("science","science","Record "+m.skill.toLowerCase(),"Log and transmit observations","Document the mission objective and relevant observations: "+m.mission,"Science data logged.")];
- return {missionId:m.id,title:m.title,craft,family,destination:m.destination,setting,role,tasks,
- historicalNote:m.title+" ("+m.year+") was a real space mission. This is a simplified first-person training scene with mission-inspired models and procedures, not an exact reconstruction."};
+ const bespoke=tailored(m);
+ const tasks=(bespoke||[
+  build("brief","brief","Review "+m.title+" flight plan","Confirm real mission context",
+    m.background+" This experience represents the historical mission without changing its actual outcome.","Historical briefing completed."),
+  build("systems","systems","Inspect "+profile.hardware,"Verify vehicle configuration",
+    "The actual mission used: "+profile.hardware+". "+m.challenge+" Confirm this system in the reconstruction.","Mission hardware checkout completed."),
+  build("operations","operations",profile.operation,"Execute historical procedure",
+    "Historically inspired operations: "+profile.operation+". "+m.mission,"Mission operation completed."),
+  build("science","science",profile.observation,"Record actual mission findings",
+    profile.observation+". Historical result: "+m.outcome,"Scientific and engineering record filed.")
+ ]).map(task=>{
+  if(!bespoke)return task;
+  if(task.station==="systems")return {...task,procedure:task.procedure+" Historical equipment: "+profile.hardware+"."};
+  if(task.station==="operations")return {...task,procedure:task.procedure+" Specific mission operation: "+profile.operation+"."};
+  if(task.station==="science")return {...task,procedure:task.procedure+" Historical record: "+profile.observation+"."};
+  return task;
+ });
+ return {
+  missionId:m.id,title:m.title,craft:profile.vehicle,family,destination:m.destination,setting,role,tasks,profile,
+  historicalNote:m.title+" ("+m.year+") really flew. Equipment and tasks follow recorded mission goals. This is a simplified 3D educational reconstruction, not an exact spacecraft interior or certified historical procedure."
+ };
 }
