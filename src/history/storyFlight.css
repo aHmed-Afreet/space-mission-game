@@ -77,3 +77,13 @@
  .story-fps-top-actions{gap:4px}
  .story-fps-top-actions button{font-size:9px;padding:9px 7px}
 }
+
+
+/* EVA flight thrusters and low-gravity jump use independent touch controls. */
+.story-fps-eva-vertical{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(113px,calc(env(safe-area-inset-bottom) + 104px));z-index:9;display:flex;gap:9px;align-items:center;pointer-events:auto}
+.story-fps-eva-vertical button{min-width:72px;min-height:56px;padding:10px 13px;border-radius:13px;background:#18384cdb;color:#ecfaf1;border:1px solid #a6cabeaa;font-weight:700;touch-action:none;box-shadow:0 4px 14px #0008}
+.story-fps-eva-vertical button:active{background:#467a86}
+@media(max-width:700px){
+.story-fps-eva-vertical{right:10px;bottom:105px;gap:6px}
+.story-fps-eva-vertical button{min-width:61px;min-height:48px;padding:8px;font-size:11px}
+}
