@@ -35,6 +35,8 @@ import { decodeStore, newStore, persist, loadStore, SAVE_KEY } from "./save";
 import { joystickVector } from "../controls";
 import { NavigationContent } from "./NavigationMap";
 import { readPreferences, writePreferences } from "./preferences";
+import { historyMissions } from "../../history/missionHistory";
+import { createStoryScenario,historicalCraft } from "../../history/storyScenarios";
 
 function stand(
   s: Session,
@@ -1312,4 +1314,46 @@ test("main menu contains exactly four commands with a combined history and story
   assert.doesNotMatch(menu, /setMode\("stories"\)/);
   assert.match(history, />READ HISTORY<\/button>/);
   assert.match(history, />LIVE THE STORY<\/button>/);
+});
+
+test("all 55 history entries have mission-specific spacecraft and first-person objectives", () => {
+  assert.equal(historyMissions.length,55);
+  const scenarios=historyMissions.map(createStoryScenario);
+  assert.equal(new Set(scenarios.map(s=>s.missionId)).size,55);
+  assert.ok(new Set(scenarios.map(s=>s.family)).size>=10);
+  for (let i=0;i<scenarios.length;i++){
+    const s=scenarios[i],m=historyMissions[i];
+    assert.equal(s.destination,m.destination);
+    assert.equal(s.tasks.length,4);
+    assert.deepEqual(s.tasks.map(t=>t.station),["brief","systems","operations","science"]);
+    assert.equal(new Set(s.tasks.map(t=>t.id)).size,4);
+    assert.ok(s.craft.length>12);
+    for(const task of s.tasks){
+      assert.ok(task.heading.length>=14);
+      assert.ok(task.procedure.length>=22);
+    }
+    assert.equal(s.role==="astronaut",m.category==="Crewed"||m.category==="Space station");
+    assert.match(s.historicalNote,/not an exact reconstruction/i);
+  }
+});
+test("important spacecraft use period-specific equipment and historical tasks",()=>{
+ const get=(title:string)=>createStoryScenario(historyMissions.find(m=>m.title===title)!);
+ assert.match(get("Apollo 11").tasks[2].heading,/lunar surface EVA/i);
+ assert.match(get("Apollo 13").tasks[1].procedure,/lifeboat/i);
+ assert.match(get("Voyager 1").tasks[1].procedure,/without using solar/i);
+ assert.match(get("Vostok 1").tasks[3].procedure,/parachute/i);
+ assert.match(get("STS-125 Hubble servicing").tasks[2].heading,/service Hubble/i);
+ assert.equal(get("Perseverance").role,"mission operator");
+ assert.equal(historicalCraft(historyMissions.find(m=>m.title==="James Webb Telescope")!).family,"observatory");
+});
+test("live history starts a 3D first-person scene with controls",()=>{
+ const hub=readFileSync("src/history/HistoryHub.tsx","utf8");
+ const flight=readFileSync("src/history/StoryFlight.tsx","utf8");
+ const world=readFileSync("src/history/storyWorld.ts","utf8");
+ assert.match(hub,/if\(chosen&&view==="live"\)return <StoryFlight/);
+ assert.match(flight,/joystickVector/);
+ assert.match(flight,/INTERACT/);
+ assert.match(flight,/SYSTEMS CALIBRATION/);
+ assert.match(world,/new THREE.WebGLRenderer/);
+ assert.match(world,/makeCraft\(scenario.family,scenario\)/);
 });

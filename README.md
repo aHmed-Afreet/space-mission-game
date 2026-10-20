@@ -65,13 +65,21 @@ ORBITAL is an independent **educational simulation**, not an official NASA produ
 
 **Remaining release checks:** verify all twelve Commander missions and twenty Strategy challenges on real touch devices and with keyboard/mouse; airplane/offline PWA install; save/restore and reset behavior; financial progression and legacy-save migration; viewport and fullscreen; controls, accessibility and performance on physical iPad/Safari and iPhone; host deployment and privacy link. A successful build does not by itself guarantee app-store acceptance.
 
+## New first-person historical spacecraft experience
+
+The Space History & Stories menu has **Read History** and **Live the Story**. Live the Story features procedurally modeled historic vehicle families (spherical satellites, Vostok, Mercury, Gemini, Apollo command modules, lunar landers, Space Shuttle, stations, robotic probes, rovers and telescopes). Each story uses mission-specific tasks and four interactive stations. Some famous missions have special historical checklists.
+
+Controls: WASD/arrows or floating touch joystick for movement; drag to look; Shift or Sprint to move faster; E or INTERACT at a station. Players verify engineering calibration, arm operations and record science readings. Finished experiences are saved in browser local storage.
+
+**Accuracy:** These are stylized playable training environments, not dimensionally correct vehicles or exact NASA procedures. For uncrewed probes the player is a mission operator, not an astronaut on board. Historical events cannot be changed by gameplay.
+
 ## Main menu, History and How to Play
 
 The main menu now offers **five experiences**:
 - **Strategy Mode:** 20 escalating, playable mission-design challenges. Each has specific science, reliability, budget and instrument requirements. Clearing one unlocks the next. Scores are stored in browser local storage.
 - **Commander Mode:** 12 implemented first-person, multi-phase spacecraft sorties, including EVA, orbital maintenance, lunar landing and geology work. Four more Mars/asteroid missions are listed as planned but cannot be launched.
 - **Real Space History:** An archive of 55 carefully selected spaceflight milestones across multiple agencies and decades, with historical background, outcomes and links to authoritative archives.
-- **Live the Story:** An interactive four-step educational story for each archival mission. The training decision is fictional and never changes the actual historical outcome; this is not a 3D replay.
+- **Live the Story:** Each of the 55 selected histories now opens a first-person 3D spacecraft training scene with a historically inspired vehicle and four mission-specific objectives. Astronaut and remote-robotic missions are distinguished. Real outcomes are shown after the exercise; it is not an exact replica of the mission.
 - **How to Play:** Controls and instructions for Strategy, Commander and historical stories.
 
 The history archive is a curated selection of major missions rather than a comprehensive listing of every flight. Some links open broad official chronology pages instead of a single mission's detailed record. Historical descriptions summarize real events, while simulations, decisions and game spacecraft are fictionalized for learning.
