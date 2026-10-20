@@ -36,6 +36,7 @@ import { joystickVector } from "../controls";
 import { NavigationContent } from "./NavigationMap";
 import { readPreferences, writePreferences } from "./preferences";
 import { historyMissions } from "../../history/missionHistory";
+import {planetKind} from "../celestial";
 import {missionProfiles,missionProfile} from "../../history/missionProfiles";
 import { createStoryScenario,historicalCraft,historicalSetting } from "../../history/storyScenarios";
 
@@ -1377,4 +1378,44 @@ test("historic first-person missions use 55 distinctive vehicles and flight obje
  assert.equal(historicalSetting(historyMissions.find(m=>m.title==="Apollo 11")!),"moon");
  assert.equal(historicalCraft(historyMissions.find(m=>m.title==="Ingenuity")!).family,"helicopter");
  assert.match(readFileSync("src/history/historicVehicles.ts","utf8"),/createHistoricVehicle/);
+});
+
+test("planet visuals classify orbital and planetary destinations accurately",()=>{
+ assert.equal(planetKind("Moon"),"moon");
+ assert.equal(planetKind("Jupiter system"),"jupiter");
+ assert.equal(planetKind("Mars"),"mars");
+ assert.equal(planetKind("Earth orbit"),"earth");
+ const source=readFileSync("src/commander/celestial.ts","utf8");
+ assert.match(source,/CanvasTexture/);
+ assert.match(source,/makePlanet/);
+ assert.match(source,/clouds/);
+});
+test("historical stories have airlocks, suit requirement, safe return and real exterior terrain",()=>{
+ const s=readFileSync("src/history/StoryFlight.tsx","utf8");
+ const world=readFileSync("src/history/storyWorld.ts","utf8");
+ assert.match(s,/EQUIP PROTECTIVE SPACE SUIT/);
+ assert.match(s,/CYCLE AIRLOCK & ENTER SHIP/);
+ assert.match(s,/if\(!canEva/);
+ assert.match(s,/oxygenRef\.current<=0/);
+ assert.match(world,/setExcursion/);
+ assert.match(world,/nearHatch/);
+ assert.match(world,/floor\.visible=!next/);
+ assert.match(world,/makePlanet/);
+ assert.match(world,/SUIT/gi);
+});
+test("Commander cabinet inventory, visible EVA suit and both-sided hatch buttons",()=>{
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+ const fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8");
+ const field=readFileSync("src/commander/campaign/world.ts","utf8");
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ const engine=readFileSync("src/commander/campaign/engine.ts","utf8");
+ assert.match(cabin,/kind:"airlock"/);
+ assert.match(cabin,/for\(const face of \[-1,1\]\)/);
+ assert.match(fixtures,/for \(const face of \[-1,1\]\)/);
+ assert.match(fixtures,/key==="eva"/);
+ assert.match(fixtures,/key==="samples"/);
+ assert.match(field,/orbitEarth/);
+ assert.match(flight,/target\?\.kind==="airlock"/);
+ assert.match(engine,/atSite\(s, "outerHatch"\)/);
+ assert.match(readFileSync("src/commander/interior.ts","utf8"),/evaHands\.visible/);
 });
