@@ -32,20 +32,20 @@ function beam(g:THREE.Group,a:THREE.Vector3,b:THREE.Vector3,r:number,m:Material)
 function badge(text:string){
  const c=document.createElement("canvas");c.width=512;c.height=128;
  const ctx=c.getContext("2d");if(!ctx)return null;
- ctx.fillStyle="#092c38";ctx.fillRect(0,0,512,128);
- ctx.strokeStyle="#5adcc6";ctx.lineWidth=4;ctx.strokeRect(3,3,506,122);
- ctx.fillStyle="#e0fff7";ctx.font="bold 38px Arial";ctx.textAlign="center";
+ ctx.fillStyle="#152c37";ctx.fillRect(0,0,512,128);
+ ctx.strokeStyle="#7ca8a1";ctx.lineWidth=3;ctx.strokeRect(3,3,506,122);
+ ctx.fillStyle="#e0fff7";ctx.font="bold 25px Arial";ctx.textAlign="center";
  ctx.fillText(text,256,79,486);
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
  const mat=new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide});
- return new THREE.Mesh(new THREE.PlaneGeometry(3.2,.8),mat);
+ return new THREE.Mesh(new THREE.PlaneGeometry(2.35,.58),mat);
 }
 function createScene(scenario:StoryScenario){
  const scene=new THREE.Scene();
  const inField=scenario.role==="astronaut"&&(scenario.setting==="moon"||scenario.setting==="mars");
   const sky=inField?(scenario.setting==="mars"?0x422b28:0x11171e):0x050f1e;
  scene.background=new THREE.Color(sky);
- scene.fog=new THREE.FogExp2(sky,scenario.setting==="orbit"?.012:.021);
+ scene.fog=scenario.setting==="mars"?new THREE.FogExp2(sky,.006):null;
  scene.add(new THREE.HemisphereLight(0xc6eaf8,0x43556a,2.1));
  const sun=new THREE.DirectionalLight(0xfff4d4,2.7);sun.position.set(-8,13,-6);scene.add(sun);
  const floorColor=inField?(scenario.setting==="mars"?0x805039:0x747b79):0x182b3d;
@@ -101,7 +101,7 @@ function createScene(scenario:StoryScenario){
   const scr=box(g,1.75,.85,.12,light,0,1.95,-.36);scr.rotation.x=-.18;
   for(let k=0;k<5;k++)box(g,.22,.07,.18,k%2?accent():light,-.73+k*.36,1.43,.32);
   for(let k=0;k<3;k++)box(g,1.5-k*.16,.035,.02,aluminum(),0,1.98+k*.15,-.292);
-  const tag=badge(taskTitles[id].toUpperCase().slice(0,38));if(tag){tag.position.set(0,2.82,0);g.add(tag);}
+  const tag=badge(taskTitles[id].toUpperCase().slice(0,38));if(tag){tag.position.set(0,2.47,-.25);g.add(tag);}
   const spot=new THREE.PointLight(0x4ec9ca,.6,3.5);spot.position.set(0,2.5,0);g.add(spot);
   const halo=new THREE.Mesh(new THREE.TorusGeometry(1.2,.025,5,48),new THREE.MeshBasicMaterial({color:i%2?0x6a99aa:0x63e4bf}));
   halo.rotation.x=Math.PI/2;halo.position.y=.02;g.add(halo);
@@ -208,9 +208,11 @@ function createScene(scenario:StoryScenario){
   cyl(suitView,.17,.17,.14,hatchLight,side*.38,-.36,-.93,Math.PI/2);
  }
  const craftDisplay=badge(scenario.craft.toUpperCase().slice(0,36));
- if(craftDisplay){craftDisplay.position.set(0,8,-15);craftDisplay.scale.setScalar(1.25);scene.add(craftDisplay);}
- const outline=new THREE.Mesh(new THREE.TorusGeometry(5.3,.04,8,72),new THREE.MeshBasicMaterial({color:0x4b7d8a}));
- outline.position.set(0,4,-15);scene.add(outline);
+ if(craftDisplay){craftDisplay.position.set(0,6.9,-15);craftDisplay.scale.setScalar(.8);scene.add(craftDisplay);}
+ // Physical spotlight and secure display pedestal instead of a large neon halo.
+ const workMount=new THREE.Group();scene.add(workMount);
+ box(workMount,2.7,.2,1.7,dark(),0,.3,-15);
+ box(workMount,.24,2.9,.22,aluminum(),0,1.7,-15);
  const stars=new THREE.BufferGeometry();const positions:number[]=[];
  let seed=(Number(scenario.missionId.replace(/\D/g,""))*49297+1217)|0;
  for(let i=0;i<550;i++){seed=(Math.imul(seed,1664525)+1013904223)|0;
@@ -242,14 +244,14 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  const nearHatch=()=>outside?Math.hypot(camera.position.x,camera.position.z-9)<3.7:Math.abs(camera.position.x)<2.2&&camera.position.z>4.65;
  const setExcursion=(next:boolean)=>{
   outside=next;
-  deck.visible=!next;hatchAssembly.visible=!next;
+  deck.visible=!next;hatchAssembly.visible=!next;workMount.visible=!next;
   for(const g of Object.values(stationMeshes))g.visible=!next;
   exterior.visible=next;craft.visible=!next;
   suitView.visible=next;
   camera.position.set(0,1.65,next?9.3:5.9);
   yaw=next?Math.PI:0;pitch=0;
-  if(next)scene.fog=new THREE.FogExp2(dusty?(scenario.setting==="mars"?0x422b28:0x11171e):0x050f1e,.012);
-  else scene.fog=new THREE.FogExp2(0x050f1e,.012);
+  scene.fog=scenario.setting==="mars"?new THREE.FogExp2(0x7e5a47,next?.004:.008):null;
+  scene.background=new THREE.Color(next&&scenario.setting==="mars"?0xa47e62:0x050f1e);
  };
  const resize=()=>{
   const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
