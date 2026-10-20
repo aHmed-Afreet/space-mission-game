@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { historyMissions, type HistoryMission } from "./missionHistory";
+import StoryFlight from "./StoryFlight";
 import "./history.css";
 
 const progressKey="orbital-history-progress-v1";
@@ -62,6 +63,16 @@ export default function HistoryHub({onExit,startIn="archive"}:{
     setStage(stageOrder[step+1]);
   };
   const choice=chosen?preferences[chosen.category]:null;
+  if(chosen&&view==="live")return <StoryFlight key={chosen.id} mission={chosen}
+    onExit={close}
+    onReadHistory={()=>{setView("archive");setStage("context");setAnswer(null)}}
+    onComplete={()=>{
+      const next={...results,[chosen.id]:2};
+      setResults(next);
+      try{localStorage.setItem(progressKey,JSON.stringify(next));}catch{/* storage may be disabled */}
+      close();
+    }}
+  />;
   return <main className="history-hub">
     <header className="history-header">
       <button type="button" className="history-back" onClick={chosen?close:onExit}>{chosen?"← All missions":"← Main menu"}</button>
@@ -72,7 +83,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       <section className="history-hero">
         <small>HUMANITY'S JOURNEY BEYOND EARTH</small>
         <h1>Real missions. <em>Remarkable stories.</em></h1>
-        <p>Explore {historyMissions.length} significant milestones in space exploration, from the first satellite to modern lunar and planetary science. Learn what happened, why it mattered, and experience a short, fictional mission-control decision inspired by the real event.</p>
+        <p>Explore {historyMissions.length} significant milestones in space exploration, from the first satellite to modern lunar and planetary science. Learn what happened and why it mattered. Then enter a first-person 3D training scene with a spacecraft inspired by the actual mission.</p>
         <div className="history-tabs" role="group" aria-label="Space history experience">
           <button type="button" aria-pressed={view==="archive"} onClick={()=>setView("archive")}>READ HISTORY</button>
           <button type="button" aria-pressed={view==="live"} onClick={()=>setView("live")}>LIVE THE STORY</button>
@@ -80,7 +91,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       </section>
       {view==="live"&&<section className="history-callout">
         <strong>Become the mission specialist</strong>
-        <p>Choose a real historical mission. Read the background, step through its operations, and make a training decision before discovering the actual outcome. These are <b>interactive educational stories, not full 3D recreations</b>; decisions never rewrite real history.</p>
+        <p>Choose a real mission and explore a first-person 3D training scene with mission-specific spacecraft hardware and interactive tasks. Crewed missions use astronaut training; uncrewed missions use remote-operations perspectives. These are <b>simplified, historically inspired models</b>, not exact reproductions of spacecraft interiors or flight procedures.</p>
       </section>}
       <div className="history-filters">
         <label>SEARCH MISSIONS<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Apollo, Mars, telescope, ISS…"/></label>
