@@ -28,7 +28,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  const [stage,setStage]=useState(0);
  const [procedure,setProcedure]=useState<StoryTask|null>(null);
  const [confirmed,setConfirmed]=useState(false);
- const [calibration,setCalibration]=useState(35);
+ const [powerVerified,setPowerVerified]=useState(false);
+ const [telemetryVerified,setTelemetryVerified]=useState(false);
  const [operationArmed,setOperationArmed]=useState(false);
  const [measurement,setMeasurement]=useState(false);
  const [logged,setLogged]=useState<string[]>([]);
@@ -36,6 +37,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  const [showGuide,setShowGuide]=useState(true);
  const [error,setError]=useState("");
  const task=scenario.tasks[stage]??null;
+ const activeStation=useRef<Station|null>(null);activeStation.current=task?.station??null;
  const completed=stage>=scenario.tasks.length;
  const pauseRef=useRef(false);
  pauseRef.current=paused||!!procedure||completed||showGuide;
@@ -44,7 +46,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   if(pauseRef.current)return;
   const st=aimRef.current;
   if(st&&task&&st===task.station){
-   setProcedure(task);setConfirmed(false);setCalibration(35);setOperationArmed(false);setMeasurement(false);
+   setProcedure(task);setConfirmed(false);setPowerVerified(false);setTelemetryVerified(false);setOperationArmed(false);setMeasurement(false);
   }
  };
  const onLook=useCallback((dx:number,dy:number)=>world.current?.look(dx,dy),[]);
@@ -66,7 +68,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     if(keys.current.has("d")||keys.current.has("arrowright"))x++;
     if(stick.current){const s=joystickVector(stick.current.dx,stick.current.dy,59);x+=s.x;y-=s.y;}
    }
-   const aimed=instance.update(observeLimit(x),observeLimit(y),sprint.current||keys.current.has("shift"),delta);
+   const aimed=instance.update(observeLimit(x),observeLimit(y),sprint.current||keys.current.has("shift"),delta,activeStation.current);
    if(lastAim!==aimed){lastAim=aimed;aimRef.current=aimed;setAim(aimed);}
   };
   const resize=()=>instance.resize();
@@ -131,7 +133,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  };
  const canFinish=!!procedure&&confirmed&&(
   procedure.station==="brief"||
-  (procedure.station==="systems"&&calibration>=70&&calibration<=85)||
+  (procedure.station==="systems"&&powerVerified&&telemetryVerified)||
   (procedure.station==="operations"&&operationArmed)||
   (procedure.station==="science"&&measurement)
  );
@@ -152,7 +154,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
    <small>{scenario.role==="astronaut"?"ASTRONAUT TRAINING":"REMOTE OPERATIONS / NO CREW ABOARD"}</small>
    <h2>{completed?"History exercise complete":task.heading}</h2>
    <p>{completed?mission.outcome:task.procedure}</p>
-   <span>PROCEDURE {Math.min(stage+1,scenario.tasks.length)} / {scenario.tasks.length}</span>
+   <span>PROCEDURE {Math.min(stage+1,scenario.tasks.length)} / {scenario.tasks.length} · {scenario.profile.visual}</span>
    <div className="story-fps-progress">{scenario.tasks.map((s,i)=><i key={s.id} className={i<stage?"done":i===stage?"current":""}/>)}</div>
   </div>
   {!completed&&<div className="story-fps-target" aria-live="polite">
@@ -176,8 +178,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   {showGuide&&<div className="story-fps-shade"><section className="story-fps-dialog">
     <small>REAL HISTORY · FIRST-PERSON OPERATIONS</small>
     <h1>{mission.title}</h1><p>{scenario.historicalNote}</p>
-    <p><strong>Spacecraft represented:</strong> {scenario.craft}</p>
-    <p><strong>Your role:</strong> {scenario.role==="astronaut"?"Astronaut aboard / near the historic vehicle (simplified training scene)":"Earth mission operator controlling an uncrewed vehicle remotely — no astronaut was on board."}</p>
+    <p><strong>Spacecraft represented:</strong> {scenario.craft}</p><p><strong>Recognizable hardware:</strong> {scenario.profile.visual}. {scenario.profile.hardware}.</p>
+    <p><strong>Your role:</strong> {scenario.role==="astronaut"?"First-person astronaut in a stylized mission training environment. Real spacecraft interiors were generally much smaller.":"First-person mission controller on Earth using remote spacecraft telemetry. The uncrewed vehicle is represented by a 3D model, not an astronaut aboard it."}</p>
     <p><strong>Objective:</strong> {mission.mission}</p>
     <p>Move with WASD or your floating joystick; drag to look. Hold Sprint and drag to turn. Aim at the labeled station and press INTERACT. Complete the checks in order.</p>
     <button type="button" onClick={()=>setShowGuide(false)}>BEGIN 3D MISSION →</button>
@@ -190,18 +192,25 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <div className="story-fps-instrument">
       {procedure.station==="brief"&&<p>Confirm the mission's historical objective and the necessary flight checklist.</p>}
       {procedure.station==="systems"&&<>
-        <label htmlFor="story-calibration">SYSTEMS CALIBRATION — {calibration}% {calibration>=70&&calibration<=85?"· NOMINAL":"· ADJUST TO 70–85%"}</label>
-        <input id="story-calibration" type="range" min="0" max="100" step="5" value={calibration}
-         onChange={e=>setCalibration(Number(e.target.value))}/>
-        <div className="story-fps-readout">POWER / THERMAL / TELEMETRY <strong>{calibration>=70&&calibration<=85?"NOMINAL":"NOT READY"}</strong></div>
+        <p><strong>Historical hardware:</strong> {scenario.profile.hardware}</p>
+        <p>This is a training-system checkout, not a real spacecraft switch sequence. Inspect both simulated subsystems:</p>
+        <button type="button" className={powerVerified?"story-fps-armed":"story-fps-minor"}
+          onClick={()=>setPowerVerified(true)}>
+          {powerVerified?"✓ POWER / THERMAL STATUS VERIFIED":"VERIFY POWER & THERMAL STATUS"}
+        </button>
+        <button type="button" className={telemetryVerified?"story-fps-armed":"story-fps-minor"}
+          onClick={()=>setTelemetryVerified(true)}>
+          {telemetryVerified?"✓ COMMUNICATIONS STATUS VERIFIED":"VERIFY TELEMETRY & COMMUNICATIONS"}
+        </button>
+        <div className="story-fps-readout">{scenario.profile.hardware} <strong>{powerVerified&&telemetryVerified?"CHECKS COMPLETE":"CHECKS PENDING"}</strong></div>
       </>}
       {procedure.station==="operations"&&<>
-        <p>Arm the correct operation sequence before running it. The training console records your selection.</p>
+        <p><strong>Historical task:</strong> {scenario.profile.operation}</p><p>Activate the simulated task sequence to record that this historical operation has been reviewed.</p>
         <button type="button" className={operationArmed?"story-fps-armed":"story-fps-minor"} onClick={()=>setOperationArmed(true)}>
           {operationArmed?"✓ MISSION SEQUENCE ARMED":"ARM "+procedure.action.toUpperCase()}</button>
       </>}
       {procedure.station==="science"&&<>
-        <p>Record the observation and confirm the mission's data are prepared for the ground team.</p>
+        <p><strong>Historical observation:</strong> {scenario.profile.observation}</p><p>Review this real result and file the simulated observation for mission control.</p>
         <button type="button" className={measurement?"story-fps-armed":"story-fps-minor"} onClick={()=>setMeasurement(true)}>
           {measurement?"✓ OBSERVATION CAPTURED":"CAPTURE SCIENCE READING"}</button>
       </>}
@@ -221,7 +230,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <p><strong>Historical challenge:</strong> {mission.challenge}</p>
     <p><strong>Skill practiced:</strong> {mission.skill}</p>
     <ul>{logged.map((entry,i)=><li key={i}>{entry}</li>)}</ul>
-    <p>These steps were simplified training procedures, not a complete historical reconstruction.</p>
+    <p>The spacecraft shapes and workstations are educational approximations, not flight-ready layouts. Procedures are simplified; historical outcomes remain unchanged.</p>
     <button type="button" onClick={()=>onComplete(true)}>SAVE COMPLETION & RETURN</button>
     <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ THE ACTUAL HISTORY</button>
     <a href={mission.source} target="_blank" rel="noopener noreferrer">Official mission archive ↗</a>
