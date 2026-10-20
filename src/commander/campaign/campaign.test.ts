@@ -1427,3 +1427,22 @@ test("Commander cabinet inventory, visible EVA suit and both-sided hatch buttons
  assert.match(engine,/atSite\(s, "outerHatch"\)/);
  assert.match(readFileSync("src/commander/interior.ts","utf8"),/evaHands\.visible/);
 });
+
+test("realism update preserves physical EVA hatch targeting and distinct exterior physics",()=>{
+ const story=readFileSync("src/history/storyWorld.ts","utf8");
+ const flow=readFileSync("src/history/StoryFlight.tsx","utf8");
+ const commander=readFileSync("src/commander/Cabin.tsx","utf8");
+ const images=readFileSync("src/commander/celestial.ts","utf8");
+ assert.match(story,/aimingAtHatch/);
+ assert.match(story,/nearHatch\(\)/);
+ assert.match(story,/tetherMaterial/);
+ assert.match(story,/jumpSpeed-=gravity\*time/);
+ assert.match(story,/if\(outside&&!dusty\)/);
+ assert.match(flow,/hatchAim/);
+ assert.match(flow,/AIRLOCK CONTROL · PRESS INTERACT/);
+ assert.match(commander,/orbitalThrust\.current/);
+ assert.match(commander,/SPACE\/CTRL EVA THRUSTERS/);
+ assert.match(images,/TextureLoader/);
+ assert.match(images,/earth_atmos_2048/);
+ assert.match(images,/moon_1024/);
+});
