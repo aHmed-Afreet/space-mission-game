@@ -48,8 +48,6 @@ export function createFixtures(scene: T.Scene) {
     return o;
   };
   // Round illuminated WORK targets on actual hatch control panels.
-  const buttonMaterial = new T.MeshBasicMaterial({color:"#83d6c5"});
-  materials.push(buttonMaterial);
   const buttonGeometry = new T.CylinderGeometry(.065,.065,.018,20);
   extraGeometry.push(buttonGeometry);
   // Physical electronic hatch buttons are reachable from BOTH bulkhead faces.
@@ -126,7 +124,7 @@ export function createFixtures(scene: T.Scene) {
       }else if(key==="science"){
         cyl(tray,0,-.02,0,.07,.2,toolSteel);
         cyl(tray,0,.1,0,.05,.1,waterBlue);
-        box(tray,.04,-.12,0,.1,.04,.1,gold);
+        box(tray,.04,-.12,0,.1,.04,.1,suitGold);
       }else if(key==="samples"){
         cyl(tray,0,0,0,.075,.24,toolSteel);
         const rock=new T.Mesh(new T.DodecahedronGeometry(.06,0),sampleRock);
