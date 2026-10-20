@@ -86,6 +86,24 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
  const map=textureFor(kind);
  const material=new THREE.MeshStandardMaterial({map,roughness:kind==="earth"?.85:1,metalness:0});
  const surface=new THREE.Mesh(geometry,material);g.add(surface);
+ // Optional photographic textures for Earth and the Moon. These are served
+ // over HTTPS from the three.js examples repository; the procedural canvas
+ // above remains fully functional if offline or if image loading fails.
+ const photos:Partial<Record<PlanetKind,string>>={
+  earth:"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg",
+  moon:"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg",
+ };
+ const source=photos[kind];
+ if(source){
+  const loader=new THREE.TextureLoader();
+  loader.setCrossOrigin("anonymous");
+  loader.load(source,real=>{
+   if(g.userData.disposed){real.dispose();return;}
+   real.colorSpace=THREE.SRGBColorSpace;real.anisotropy=2;
+   const fallback=material.map;
+   material.map=real;material.needsUpdate=true;fallback?.dispose();
+  },undefined,()=>{/* Keep the generated texture. */});
+ }
  if(kind==="earth"&&includeClouds){
   const cover=textureFor(kind,true);
   const layer=new THREE.Mesh(new THREE.SphereGeometry(radius*1.011,48,32),
@@ -103,6 +121,7 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
  return g;
 }
 export function disposePlanet(g:THREE.Group){
+ g.userData.disposed=true;
  g.traverse(obj=>{
   if(!(obj instanceof THREE.Mesh))return;
   obj.geometry.dispose();

@@ -1394,11 +1394,17 @@ test("historical stories have airlocks, suit requirement, safe return and real e
  const s=readFileSync("src/history/StoryFlight.tsx","utf8");
  const world=readFileSync("src/history/storyWorld.ts","utf8");
  assert.match(s,/EQUIP PROTECTIVE SPACE SUIT/);
- assert.match(s,/CYCLE AIRLOCK & ENTER SHIP/);
+ assert.match(s,/CLOSE OUTER HATCH.*ENTER/);
+ assert.match(s,/SIMULATE DEPRESSURIZATION/);
+ assert.match(s,/verticalTouch/);
  assert.match(s,/if\(!canEva/);
  assert.match(s,/oxygenRef\.current<=0/);
  assert.match(world,/setExcursion/);
  assert.match(world,/nearHatch/);
+ assert.match(world,/distanceToHatch/);
+ assert.match(world,/motion.clampLength/);
+ assert.match(world,/jumpSpeed/);
+ assert.match(world,/tether.geometry.attributes.position/);
  assert.match(world,/floor\.visible=!next/);
  assert.match(world,/makePlanet/);
  assert.match(world,/SUIT/gi);
@@ -1414,6 +1420,8 @@ test("Commander cabinet inventory, visible EVA suit and both-sided hatch buttons
  assert.match(fixtures,/for \(const face of \[-1,1\]\)/);
  assert.match(fixtures,/key==="eva"/);
  assert.match(fixtures,/key==="samples"/);
+ assert.match(fixtures,/COMPARTMENT EMPTY/);
+ assert.match(fixtures,/A hollow stowage compartment/);
  assert.match(field,/orbitEarth/);
  assert.match(flight,/target\?\.kind==="airlock"/);
  assert.match(engine,/atSite\(s, "outerHatch"\)/);
