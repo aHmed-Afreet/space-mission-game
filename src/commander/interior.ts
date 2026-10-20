@@ -1,4 +1,5 @@
 import type { ShipState } from "./campaign/ship";
+import {makePlanet,planetKind,disposePlanet} from "./celestial";
 import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -307,86 +308,9 @@ export function createInterior(
   const spaceMat = new T.MeshBasicMaterial({ color: "#060c16" });
   materials.push(spaceMat);
   dynamic(0, 2, -17, 30, 20, 1, spaceMat, plane);
-  const terrain = document.createElement("canvas");
-  terrain.width = 512;
-  terrain.height = 256;
-  const tc = terrain.getContext("2d")!;
-  const image = tc.createImageData(512, 256);
-  const hash = (x: number, y: number) => {
-    const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-    return v - Math.floor(v);
-  };
-  const noise = (x: number, y: number, size: number) => {
-    const gx = x / size,
-      gy = y / size,
-      ix = Math.floor(gx),
-      iy = Math.floor(gy);
-    const fx = gx - ix,
-      fy = gy - iy,
-      u = fx * fx * (3 - 2 * fx),
-      v = fy * fy * (3 - 2 * fy);
-    return (
-      (hash(ix, iy) * (1 - u) + hash(ix + 1, iy) * u) * (1 - v) +
-      (hash(ix, iy + 1) * (1 - u) + hash(ix + 1, iy + 1) * u) * v
-    );
-  };
-  for (let y = 0; y < 256; y++)
-    for (let x = 0; x < 512; x++) {
-      const n =
-        noise(x, y, 55) * 0.55 +
-        noise(x, y, 19) * 0.3 +
-        noise(x, y, 5) * 0.15 -
-        0.5;
-      const k = (y * 512 + x) * 4;
-      image.data[k] =
-        options.destination === "moon"
-          ? 148 + n * 70
-          : options.destination === "earth"
-            ? 45 + n * 40
-            : 177 + n * 80;
-      image.data[k + 1] =
-        options.destination === "moon"
-          ? 145 + n * 65
-          : options.destination === "earth"
-            ? 105 + n * 70
-            : 104 + n * 64;
-      image.data[k + 2] =
-        options.destination === "moon"
-          ? 138 + n * 60
-          : options.destination === "earth"
-            ? 153 + n * 60
-            : 69 + n * 48;
-      image.data[k + 3] = 255;
-      if (y < 7 + noise(x, 0, 20) * 5) {
-        image.data[k] = 199;
-        image.data[k + 1] = 184;
-        image.data[k + 2] = 161;
-      }
-    }
-  tc.putImageData(image, 0, 0);
-  tc.strokeStyle = "#6c4b3333";
-  for (let i = 0; i < 60; i++) {
-    tc.beginPath();
-    tc.ellipse(
-      (i * 73) % 512,
-      (i * 37) % 256,
-      2 + (i % 7),
-      1 + (i % 4),
-      0,
-      0,
-      Math.PI * 2,
-    );
-    tc.stroke();
-  }
-  const terrainTexture = new T.CanvasTexture(terrain);
-  terrainTexture.colorSpace = T.SRGBColorSpace;
-  textures.push(terrainTexture);
-  const planetMat = mat("#e0c2a4", 0.05, 0.95);
-  planetMat.map = terrainTexture;
-  planetMat.bumpMap = terrainTexture;
-  planetMat.bumpScale = 0.025;
-  const planet = dynamic(1.8, 1.45, -13, 1.45, 1.45, 1.45, planetMat, sphere);
-  planet.rotation.z = 0.3;
+  const planet=makePlanet(planetKind(options.destination||"earth"),1.48);
+  planet.position.set(1.8,1.45,-13);planet.rotation.z=.3;
+  scene.add(planet);
   const starGeo = new T.BufferGeometry();
   const pts: number[] = [];
   for (let i = 0; i < 180; i++)
@@ -478,6 +402,14 @@ export function createInterior(
   dynamic(0.66, 0, 0.06, 0.025, 0.23, 0.04, silver, box, cabinetPivot);
   for (let i = 0; i < 4; i++)
     part(1.68 + i * 0.12, 1.82, 0.19, 0.09, 0.25, 0.06, warm);
+  // The food cupboard is stocked with secured ration packs, visible only when open.
+  const mealStores=new T.Group();scene.add(mealStores);
+  for(let i=0;i<6;i++){
+   const ration=dynamic(1.68+(i%3)*.16,1.72+Math.floor(i/3)*.26,.11,.12,.19,.08,
+    i%3===0?warm:i%3===1?white:mint,box,mealStores);
+   ration.rotation.z=(i%2?-.08:.08);
+   dynamic(ration.position.x,ration.position.y+.042,.16,.09,.025,.013,dark,box,mealStores);
+  }
   label("MEALS / 05", 1.88, 2.26, 0.4, 0.54, 0.085);
   // Sleeping alcove: bed, cushions, restraint straps, personal recess and privacy partition.
   part(-2.2, 0.44, 4.4, 1.75, 0.6, 1.16, dark);
@@ -637,6 +569,7 @@ export function createInterior(
         m.position.x += (target - m.position.x) * 0.08;
       });
       const age = t - fxStart;
+      mealStores.visible=!!world?.lockers.food;
       cabinetPivot.rotation.y +=
         ((world
           ? world.lockers.food
@@ -667,6 +600,7 @@ export function createInterior(
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
       textures.forEach((t) => t.dispose());
+      disposePlanet(planet);
     },
   };
 }
