@@ -362,6 +362,56 @@ export function createInterior(
   const starMat = new T.PointsMaterial({ color: "#c5d6e7", size: 0.018 });
   materials.push(starMat);
   scene.add(new T.Points(starGeo, starMat));
+  // Cockpit exterior changes with mission phase. Orbital flight shows the
+  // textured planet and stars; on the launch pad the forward viewport instead
+  // reveals sky, pad service tower and launch structures. On a landed world,
+  // show a dark horizon and the proper planetary regolith.
+  const groundedWindow=new T.Group();scene.add(groundedWindow);
+  const surface=planetKind(options.destination||"earth");
+  const backdrop=document.createElement("canvas");backdrop.width=512;backdrop.height=256;
+  const bctx=backdrop.getContext("2d");
+  if(bctx){
+    const gradient=bctx.createLinearGradient(0,0,0,256);
+    if(surface==="earth"){
+      gradient.addColorStop(0,"#19314d");gradient.addColorStop(.46,"#668bad");
+      gradient.addColorStop(.76,"#bed3df");gradient.addColorStop(1,"#9b9c97");
+    }else if(surface==="mars"){
+      gradient.addColorStop(0,"#281f26");gradient.addColorStop(.62,"#856054");
+      gradient.addColorStop(1,"#b48461");
+    }else{
+      gradient.addColorStop(0,"#060b14");gradient.addColorStop(.76,"#0d1320");
+      gradient.addColorStop(1,"#70737a");
+    }
+    bctx.fillStyle=gradient;bctx.fillRect(0,0,512,256);
+    if(surface!=="earth"){
+      bctx.fillStyle=surface==="mars"?"#85654f":"#747b7b";
+      bctx.beginPath();bctx.moveTo(0,210);
+      for(let x=0;x<=512;x+=8)
+        bctx.lineTo(x,198+Math.sin(x*.032)*6+Math.sin(x*.1)*2);
+      bctx.lineTo(512,256);bctx.lineTo(0,256);bctx.fill();
+    }
+  }
+  const backgroundMap=new T.CanvasTexture(backdrop);
+  backgroundMap.colorSpace=T.SRGBColorSpace;textures.push(backgroundMap);
+  const backgroundMat=new T.MeshBasicMaterial({map:backgroundMap,side:T.DoubleSide});
+  materials.push(backgroundMat);
+  dynamic(0,1.8,-16.2,30,16,1,backgroundMat,plane,groundedWindow);
+  if(surface==="earth"){
+    // Simplified launch-tower silhouette with diagonal truss braces.
+    const towerMat=mat("#45515c",.54,.65);
+    for(const x of [-4.0,-3.1]){
+      dynamic(x,1.7,-13.8,.19,7,.31,towerMat,box,groundedWindow);
+      for(let y=-.2;y<4.9;y+=.63){
+        const brace=dynamic(x+.45,y,-13.7,1.15,.09,.18,towerMat,box,groundedWindow);
+        brace.rotation.z=(y*1.6)%2>.9?.48:-.48;
+      }
+    }
+    for(let y=0;y<4.5;y+=.8)
+      dynamic(-3.55,y,-13.65,1.2,.11,.17,towerMat,box,groundedWindow);
+    dynamic(1.7,.05,-14.1,3.8,1,.4,towerMat,box,groundedWindow);
+  }
+  // This foreground only appears during pad and landed phases.
+  groundedWindow.visible=false;
   // Science laboratory, microscope, sample carousel and restrained glass enclosure.
   console(-2.2, -3.1, "SCIENCE LAB");
   screen(-2.2, 1.85, -3.36, 1.16, 0.55, 1);
@@ -605,6 +655,7 @@ export function createInterior(
       suited = false,
     ) {
       planet.visible = !landed;
+      groundedWindow.visible = landed;
       evaHands.visible=suited&&pos.z>10.4;
       if (fx && fx.id !== lastFx) {
         lastFx = fx.id;
