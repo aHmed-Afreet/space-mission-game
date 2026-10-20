@@ -2,7 +2,7 @@ import type { HistoryMission } from "./missionHistory";
 export type CraftFamily="sphere"|"capsule"|"gemini"|"apollo"|"lunar"|"shuttle"|"station"|"telescope"|"probe"|"lander"|"rover"|"observatory";
 export type Station="brief"|"systems"|"operations"|"science";
 export type StoryTask={id:string;station:Station;heading:string;action:string;procedure:string;complete:string};
-export type StoryScenario={missionId:string;craft:string;family:CraftFamily;destination:string;setting:"moon"|"mars"|"orbit"|"deep";role:"astronaut"|"mission operator";tasks:StoryTask[];historicalNote:string};
+export type StoryScenario={missionId:string;title:string;craft:string;family:CraftFamily;destination:string;setting:"moon"|"mars"|"orbit"|"deep";role:"astronaut"|"mission operator";tasks:StoryTask[];historicalNote:string};
 const build=(id:string,station:Station,heading:string,action:string,procedure:string,complete:string):StoryTask=>({id,station,heading,action,procedure,complete});
 export function historicalCraft(m:HistoryMission):{craft:string;family:CraftFamily}{
  const t=m.title;
@@ -79,6 +79,6 @@ export function createStoryScenario(m:HistoryMission):StoryScenario{
  build("systems","systems","Check "+craft+" readiness","Verify engineering status",m.challenge+" Check the corresponding craft systems before the operation.","Spacecraft systems reviewed."),
  build("operations","operations",m.mission,"Execute mission procedure","Training exercise: "+m.mission,"Mission operation completed."),
  build("science","science","Record "+m.skill.toLowerCase(),"Log and transmit observations","Document the mission objective and relevant observations: "+m.mission,"Science data logged.")];
- return {missionId:m.id,craft,family,destination:m.destination,setting,role,tasks,
+ return {missionId:m.id,title:m.title,craft,family,destination:m.destination,setting,role,tasks,
  historicalNote:m.title+" ("+m.year+") was a real space mission. This is a simplified first-person training scene with mission-inspired models and procedures, not an exact reconstruction."};
 }

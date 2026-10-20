@@ -52,11 +52,18 @@ function makeCraft(family:StoryScenario["family"],mission:StoryScenario){
  if(family==="sphere"){
   sphere(g,1.05,/vostok|voskhod/i.test(label)?white:metal,0,0,0);
   cyl(g,.27,.27,.3,black,0,0,-1.03,Math.PI/2);
-  for(let i=0;i<4;i++){
-   const a=i*Math.PI/2;
-   beam(g,new THREE.Vector3(Math.cos(a)*.6,Math.sin(a)*.6,0),new THREE.Vector3(Math.cos(a)*2,Math.sin(a)*2,.2),.025,metal);
+  if(/sputnik/.test(label)){
+   for(let i=0;i<4;i++){
+    const a=i*Math.PI/2;
+    beam(g,new THREE.Vector3(Math.cos(a)*.6,Math.sin(a)*.6,.4),
+      new THREE.Vector3(Math.cos(a)*2.6,Math.sin(a)*2.6,1.5),.024,metal);
+   }
   }
-  if(/vostok|voskhod/.test(label)){box(g,.9,.65,.35,metal,0,0,1.18);sphere(g,.28,glass,0,.38,-.84);}
+  if(/vostok|voskhod/.test(label)){
+   cyl(g,.74,.74,.87,metal,0,-1.24,0);
+   box(g,.8,.45,.35,metal,0,0,1.15);
+   sphere(g,.27,glass,0,.38,-.84);
+  }
  } else if(family==="capsule"||family==="gemini"||family==="apollo"){
   cyl(g,.95,1.28,1.6,white,0,.25,0);
   cyl(g,.06,.95,1.05,metal,0,1.58,0);
@@ -128,7 +135,18 @@ function makeCraft(family:StoryScenario["family"],mission:StoryScenario){
   dish(g,0,.95,1.15,.48);
  } else {
   box(g,1.55,1.05,1.5,gold,0,0,0);
-  for(const side of [-1,1])panels(g,solar,side*2.3,.05,0,3);
+  // RTG-powered outer-planet missions must not be shown with photovoltaic wings.
+  const radioisotope=/Voyager|Pioneer|Cassini|New Horizons|Galileo/.test(mission.title);
+  if(radioisotope){
+    for(const side of [-1,1]){
+      const start=new THREE.Vector3(side*.7,-.2,0);
+      const end=new THREE.Vector3(side*3.5,-.6,.2);
+      beam(g,start,end,.055,metal);
+      cyl(g,.23,.23,.68,black,end.x,end.y,end.z,0,0,Math.PI/2);
+    }
+  }else{
+    for(const side of [-1,1])panels(g,solar,side*2.3,.05,0,3);
+  }
   dish(g,0,1.2,.05,.87);
   beam(g,new THREE.Vector3(0,0,0),new THREE.Vector3(0,-2,0),.05,metal);
   sphere(g,.18,glass,0,-2,0);
@@ -169,7 +187,7 @@ function createScene(scenario:StoryScenario){
       const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(.3+(k%5)*.11,0),terrain);
       stone.position.set(x,-.02,z);stone.scale.y=.46;scene.add(stone);
     }
-    if(scenario.family==="lunar"){
+    if(scenario.family==="lunar"&&/Apollo 15|Apollo 17/.test(scenario.title)){
       const lunarRover=new THREE.Group();lunarRover.position.set(6,0,-12);scene.add(lunarRover);
       box(lunarRover,2,.22,1.6,accent(),0,.78,0);
       for(const side of [-1,1])for(const z of [-.8,.8])
