@@ -59,3 +59,21 @@
 .story-fps-readout{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:10px;color:#a7c6bf}
 .story-fps-readout strong{color:#8ae4c4}
 .story-fps-dialog button.story-fps-armed{background:#24594a;border:1px solid #71e0b1;color:#c4ffe7}
+
+
+/* Suit and airlock remain readable without blocking the iPad movement controls. */
+.story-fps-top-actions{display:flex;align-items:center;gap:8px;pointer-events:auto}
+.story-fps-top .story-fps-eva-button{border-color:#dfca8f;background:#3b3732ef;color:#fff0c8}
+.story-fps-suit-hud{position:absolute;z-index:8;top:max(80px,env(safe-area-inset-top));right:max(13px,env(safe-area-inset-right));max-width:min(420px,40vw);
+ padding:12px 16px;border:1px solid #abd8c5a0;border-radius:10px;background:#071d25d9;box-shadow:0 8px 30px #0007;pointer-events:none;
+ display:flex;flex-direction:column;gap:5px;text-shadow:0 1px 3px #000}
+.story-fps-suit-hud strong{font-size:12px;letter-spacing:1.2px;color:#bdf3d1}
+.story-fps-suit-hud span{font-size:12px;color:#e6eff2}
+.story-fps-suit-hud small{font-size:10px;line-height:1.5;color:#bbd3d5}
+@media(max-width:750px){
+ .story-fps-suit-hud{top:74px;right:9px;max-width:43vw;padding:9px}
+ .story-fps-suit-hud strong,.story-fps-suit-hud span{font-size:10px}
+ .story-fps-suit-hud small{display:none}
+ .story-fps-top-actions{gap:4px}
+ .story-fps-top-actions button{font-size:9px;padding:9px 7px}
+}
