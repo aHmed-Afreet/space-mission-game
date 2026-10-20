@@ -492,6 +492,16 @@ export function createInterior(
   const handGroup = new T.Group();
   handGroup.visible = false;
   const camera = new T.PerspectiveCamera(65, 1, 0.08, 60);
+  // Visible white EVA sleeves and gloved hands anchor the first-person viewpoint
+  // when an equipped astronaut moves outside the pressurized vehicle.
+  const evaHands=new T.Group();camera.add(evaHands);evaHands.visible=false;
+  const suitFabric=mat("#e1e6e2",.08,.8),suitJoint=mat("#9baab1",.3,.55),suitGlove=mat("#b3babe",.2,.6);
+  for(const side of [-1,1]){
+   const cuff=dynamic(side*.37,-.43,-.67,.23,.4,.47,suitFabric,box,evaHands);
+   cuff.rotation.x=-.38;
+   dynamic(side*.36,-.62,-.92,.21,.16,.23,suitGlove,box,evaHands);
+   dynamic(side*.37,-.35,-.74,.25,.085,.28,suitJoint,box,evaHands);
+  }
   camera.position.set(0, 1.63, 6.5);
   camera.rotation.order = "YXZ";
   camera.add(handGroup);
@@ -548,8 +558,10 @@ export function createInterior(
       target?: Area | null,
       landed = false,
       world?: ShipState,
+      suited = false,
     ) {
       planet.visible = !landed;
+      evaHands.visible=suited&&pos.z>10.4;
       if (fx && fx.id !== lastFx) {
         lastFx = fx.id;
         fxStart = t;

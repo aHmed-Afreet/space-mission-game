@@ -1393,8 +1393,8 @@ export function command(s: Session, action: CampaignAction): Session {
         n.airlock.inner = true;
         break;
       case "closeInner":
-        if (!atSite(s, "airlock"))
-          return fail("Walk into the airlock before closing the hatch.");
+        if (!atSite(s, "airlock") && !atSite(s, "innerHatch"))
+          return fail("Stand beside the inner hatch control.");
         n.airlock.inner = false;
         break;
       case "vent":
@@ -1406,7 +1406,7 @@ export function command(s: Session, action: CampaignAction): Session {
         break;
       case "openOuter":
         if (
-          !atSite(s, "airlock") ||
+          (!atSite(s, "airlock") && !atSite(s, "outerHatch")) ||
           s.airlock.pressure > 0 ||
           s.airlock.inner ||
           s.airlock.cycling ||
@@ -1418,7 +1418,7 @@ export function command(s: Session, action: CampaignAction): Session {
         n.airlock.outer = true;
         break;
       case "closeOuter":
-        if (!atSite(s, "airlock")) return fail("Walk into the airlock first.");
+        if (!atSite(s, "airlock") && !atSite(s, "outerHatch")) return fail("Stand beside the outer hatch control.");
         n.airlock.outer = false;
         break;
       case "pressurize":

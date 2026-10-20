@@ -316,6 +316,7 @@ export default function Cabin(props: Props) {
         current.current.world?.session.landed ||
           current.current.world?.session.flight.status === "pad",
         current.current.world?.session.world,
+        !!current.current.world?.session.suit.equipped,
       );
       if (current.current.world) {
         field?.update(current.current.world.session);
