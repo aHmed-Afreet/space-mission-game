@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { StoryScenario, Station } from "./storyScenarios";
 import {createHistoricVehicle} from "./historicVehicles";
+import {makePlanet,planetKind} from "../commander/celestial";
 
 const stationLocations:Record<Station,[number,number]>={
  brief:[-3,2.5],systems:[3,2.5],operations:[-3,-2.5],science:[3,-2.5],
@@ -79,12 +80,8 @@ function createScene(scenario:StoryScenario){
       }
       beam(deck,new THREE.Vector3(side*6.2,3.9,-6.2),new THREE.Vector3(side*6.2,3.9,6.7),.07,aluminum());
     }
-    const bodyColor=/Jupiter/i.test(scenario.destination)?0xc6a573:
-      /Saturn/i.test(scenario.destination)?0xc5bd94:
-      /Venus/i.test(scenario.destination)?0xb6a474:
-      /Pluto|Mercury|Comet|Asteroid/i.test(scenario.destination)?0x99918b:0x2e81ad;
-    const planet=new THREE.Mesh(new THREE.SphereGeometry(7,28,20),
-      new THREE.MeshStandardMaterial({color:bodyColor,roughness:1}));
+    // Textured planetary bodies replace the single-colour placeholder sphere.
+    const planet=makePlanet(planetKind(scenario.destination),7);
     planet.position.set(17,14,-32);scene.add(planet);
   }
 
@@ -154,6 +151,62 @@ function createScene(scenario:StoryScenario){
  craft.position.set(0,4,-15);craft.rotation.y=.4;
  const scale=scenario.family==="station"?.8:scenario.family==="shuttle"?.85:scenario.family==="lunar"?.9:1.04;
  craft.scale.setScalar(scale);scene.add(craft);
+ // Pressure hatch: one control on the cabin side and one on the EVA side.
+ const hatchAssembly=new THREE.Group();hatchAssembly.position.set(0,0,7.35);scene.add(hatchAssembly);
+ const hatchShell=aluminum(),hatchPanel=dark(),hatchLight=accent();
+ for(const x of [-1.05,1.05])box(hatchAssembly,.23,2.65,.22,hatchShell,x,1.3,0);
+ box(hatchAssembly,2.3,.25,.2,hatchShell,0,2.7,0);
+ box(hatchAssembly,1.85,2.4,.14,hatchPanel,0,1.35,0);
+ for(const z of [-.26,.26]){
+  box(hatchAssembly,.31,.42,.11,hatchLight,.84,1.36,z);
+  box(hatchAssembly,.16,.22,.125,ceramic(),.84,1.36,z+Math.sign(z)*.025);
+ }
+ const exterior=new THREE.Group();scene.add(exterior);exterior.visible=false;
+ const dusty=scenario.setting==="moon"||scenario.setting==="mars";
+ const isMars=scenario.setting==="mars";
+ if(dusty){
+  // Low relief, rocks and impact sites give scale without blocking motion.
+  const terrain=new THREE.PlaneGeometry(100,110,58,58);
+  terrain.rotateX(-Math.PI/2);
+  const p=terrain.attributes.position;
+  for(let i=0;i<p.count;i++){
+   const x=p.getX(i),z=p.getZ(i),rough=(Math.sin(x*.34+z*.12)*Math.cos(z*.26)+Math.sin(z*.81+x*.44)*.28)*.13;
+   p.setY(i,Math.abs(x)<3&&Math.abs(z-17)<13?-.12:rough-.12);
+  }
+  terrain.computeVertexNormals();
+  const soil=new THREE.MeshStandardMaterial({color:isMars?0xb07152:0x858786,roughness:1});
+  const floor=new THREE.Mesh(terrain,soil);floor.position.z=25;exterior.add(floor);
+  const boulder=new THREE.DodecahedronGeometry(1,0),rockMaterial=new THREE.MeshStandardMaterial({color:isMars?0x7a4736:0x666862,roughness:1});
+  const rocks=new THREE.InstancedMesh(boulder,rockMaterial,160),dummy=new THREE.Object3D();
+  for(let i=0;i<160;i++){
+   const x=Math.sin(i*37.19)*39,z=9+(i*13.73)%65;
+   dummy.position.set(Math.abs(x)<3?x+5:x,.01,z);
+   dummy.rotation.set(i*.3,i*.4,0);const scale=.18+(i%8)*.11;
+   dummy.scale.set(scale,scale*.4,scale*.85);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
+  }
+  exterior.add(rocks);
+  const crater=new THREE.Mesh(new THREE.TorusGeometry(3,.18,7,48),rockMaterial);
+  crater.rotation.x=Math.PI/2;crater.position.set(-7,-.09,25);exterior.add(crater);
+  const earth=makePlanet("earth",isMars?1.9:1.3);
+  earth.position.set(-22,20,-55);exterior.add(earth);
+ }else{
+  // A large textured Earth for low-Earth orbit; other destinations have their own globe.
+  const planet=makePlanet(planetKind(scenario.destination),18);
+  planet.position.set(-21,-7,32);exterior.add(planet);
+  const sun=new THREE.DirectionalLight(0xfff8e0,2.8);
+  sun.position.set(13,24,9);exterior.add(sun);
+ }
+ const outerCraft=createHistoricVehicle(scenario);
+ outerCraft.position.set(0,2,3.1);outerCraft.scale.setScalar(dusty?1.4:1.2);
+ exterior.add(outerCraft);
+ // First-person glove and cuff meshes appear only when the suit is worn outside.
+ const suitView=new THREE.Group();
+ for(const side of [-1,1]){
+  const sleeve=box(suitView,.22,.38,.56,ceramic(),side*.39,-.47,-.83);
+  sleeve.rotation.x=-.42;
+  sphere(suitView,.18,ceramic(),side*.38,-.59,-1.12);
+  cyl(suitView,.17,.17,.14,hatchLight,side*.38,-.36,-.93,Math.PI/2);
+ }
  const craftDisplay=badge(scenario.craft.toUpperCase().slice(0,36));
  if(craftDisplay){craftDisplay.position.set(0,8,-15);craftDisplay.scale.setScalar(1.25);scene.add(craftDisplay);}
  const outline=new THREE.Mesh(new THREE.TorusGeometry(5.3,.04,8,72),new THREE.MeshBasicMaterial({color:0x4b7d8a}));
@@ -167,12 +220,14 @@ function createScene(scenario:StoryScenario){
  positions.push(x*80,y*60+5,z*80);}
  stars.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
  const pts=new THREE.Points(stars,new THREE.PointsMaterial({color:0xbbdce1,size:.19,sizeAttenuation:true}));scene.add(pts);
- return {scene,craft,stationMeshes};
+ return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty};
 }
 export type StoryWorld={
  canvas:HTMLCanvasElement;
  look:(dx:number,dy:number,sensitivity?:number)=>void;
  update:(axisX:number,axisY:number,sprint:boolean,dt:number,active?:Station|null)=>Station|null;
+ setExcursion:(outside:boolean)=>void;
+ nearHatch:()=>boolean;
  resize:()=>void;
  dispose:()=>void;
 };
@@ -180,9 +235,22 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:"high-performance"});
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.45));
  renderer.outputColorSpace=THREE.SRGBColorSpace;
- const {scene,craft,stationMeshes}=createScene(scenario);
+ const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty}=createScene(scenario);
  const camera=new THREE.PerspectiveCamera(72,1,.04,170);camera.position.set(0,1.65,6.25);
- let yaw=0,pitch=0,t=0;
+ let yaw=0,pitch=0,t=0,outside=false;
+ camera.add(suitView);scene.add(camera);suitView.visible=false;
+ const nearHatch=()=>outside?Math.hypot(camera.position.x,camera.position.z-9)<3.7:Math.abs(camera.position.x)<2.2&&camera.position.z>4.65;
+ const setExcursion=(next:boolean)=>{
+  outside=next;
+  deck.visible=!next;hatchAssembly.visible=!next;
+  for(const g of Object.values(stationMeshes))g.visible=!next;
+  exterior.visible=next;craft.visible=!next;
+  suitView.visible=next;
+  camera.position.set(0,1.65,next?9.3:5.9);
+  yaw=next?Math.PI:0;pitch=0;
+  if(next)scene.fog=new THREE.FogExp2(dusty?(scenario.setting==="mars"?0x422b28:0x11171e):0x050f1e,.012);
+  else scene.fog=new THREE.FogExp2(0x050f1e,.012);
+ };
  const resize=()=>{
   const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
   renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
@@ -199,12 +267,13 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
   const len=Math.max(1,Math.hypot(axisX,axisY));
   const x=camera.position.x+(rightX*axisX+forwardX*axisY)/len*speed;
   const z=camera.position.z+(rightZ*axisX+forwardZ*axisY)/len*speed;
-  camera.position.x=Math.max(-5.6,Math.min(5.6,x));
-  camera.position.z=Math.max(-5.65,Math.min(6.75,z));
+  camera.position.x=Math.max(outside?-24:-5.6,Math.min(outside?24:5.6,x));
+  camera.position.z=Math.max(outside?7:-5.65,Math.min(outside?65:6.65,z));
   camera.rotation.order="YXZ";camera.rotation.y=yaw;camera.rotation.x=pitch;
-  t+=time;craft.rotation.y=.35+Math.sin(t*.33)*.12;
+  t+=time;if(!outside)craft.rotation.y=.35+Math.sin(t*.33)*.12;
   let candidate:Station|null=null,maxAlign=.32;
   for(const [id,[sx,sz]] of Object.entries(stationLocations) as [Station,[number,number]][]){
+   if(outside)break;
    const dx=sx-camera.position.x,dz=sz-camera.position.z;
    const dist=Math.hypot(dx,dz);
    const alignment=(-Math.sin(yaw)*dx-Math.cos(yaw)*dz)/Math.max(.001,dist);
@@ -229,5 +298,5 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    }
   });renderer.dispose();
  };
- return {canvas,look,update,resize,dispose};
+ return {canvas,look,update,resize,dispose,setExcursion,nearHatch};
 }
