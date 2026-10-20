@@ -255,7 +255,7 @@ export type StoryWorld={
 export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario):StoryWorld{
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:"high-performance"});
  const pixelLimit=Math.min(window.devicePixelRatio||1,1.55);
- let pixelRatio=pixelLimit,frameClock=performance.now(),drawn=0;
+ let pixelRatio=pixelLimit,frameClock=performance.now(),drawn=0,lastRender=0;
  renderer.setPixelRatio(pixelRatio);
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -361,17 +361,22 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    if(ring&&ring.material instanceof THREE.MeshBasicMaterial)
     ring.material.color.set(candidate===id?0xe8ffcd:id===active?0xffd879:0x477b86);
   }
-  renderer.render(scene,camera);
-  drawn++;
-  const now=performance.now(),interval=now-frameClock;
-  if(interval>3100){
-   const fps=drawn*1000/interval;
-   const desired=fps<38?Math.max(.8,pixelRatio-.12):fps>52?Math.min(pixelLimit,pixelRatio+.06):pixelRatio;
-   if(Math.abs(desired-pixelRatio)>.015){
-    pixelRatio=desired;renderer.setPixelRatio(pixelRatio);
-    renderer.setSize(Math.max(1,canvas.clientWidth),Math.max(1,canvas.clientHeight),false);
+  // At 120 Hz tablets, avoid GPU renders in excess of 60 FPS. All movement,
+  // aiming and EVA simulation still update on every animation frame.
+  const now=performance.now();
+  if(now-lastRender>=14){
+   renderer.render(scene,camera);
+   lastRender=now;drawn++;
+   const interval=now-frameClock;
+   if(interval>3100){
+    const fps=drawn*1000/interval;
+    const desired=fps<40?Math.max(.8,pixelRatio-.12):fps>54?Math.min(pixelLimit,pixelRatio+.06):pixelRatio;
+    if(Math.abs(desired-pixelRatio)>.015){
+     pixelRatio=desired;renderer.setPixelRatio(pixelRatio);
+     renderer.setSize(Math.max(1,canvas.clientWidth),Math.max(1,canvas.clientHeight),false);
+    }
+    frameClock=now;drawn=0;
    }
-   frameClock=now;drawn=0;
   }
   return candidate;
  };
