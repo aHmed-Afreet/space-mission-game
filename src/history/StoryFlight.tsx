@@ -24,6 +24,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  const sprint=useRef(false);
  const [joystick,setJoystick]=useState<{x:number;y:number;dx:number;dy:number}|null>(null);
  const [aim,setAim]=useState<Station|null>(null);
+ const [hatchAim,setHatchAim]=useState(false);
  const aimRef=useRef<Station|null>(null);
  const [stage,setStage]=useState(0);
  const [procedure,setProcedure]=useState<StoryTask|null>(null);
@@ -56,6 +57,9 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  actRef.current=()=>{
   if(pauseRef.current)return;
   const st=aimRef.current;
+  if(scenario.role==="astronaut"&&world.current?.aimingAtHatch()){
+    setEvaNote("");setEvaPanel(true);return;
+  }
   if(st&&task&&st===task.station&&!evaOutsideRef.current){
    setProcedure(task);setConfirmed(false);setPowerVerified(false);setTelemetryVerified(false);setOperationArmed(false);setMeasurement(false);
   }
@@ -66,7 +70,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   let instance:StoryWorld;
   try{instance=startStoryWorld(canvas.current,scenario);world.current=instance;}
   catch(e){setError("3D graphics are unavailable in this browser. Try another browser with WebGL enabled.");return;}
-  let frame=0,last=0,lastAim:Station|null=null;
+  let frame=0,last=0,lastAim:Station|null=null,lastHatchAim=false;
   const tick=(time:number)=>{
    frame=requestAnimationFrame(tick);
    if(time-last<30)return;
@@ -96,6 +100,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     }
    }
    if(lastAim!==aimed){lastAim=aimed;aimRef.current=aimed;setAim(aimed);}
+   const nowHatchAim=scenario.role==="astronaut"&&instance.aimingAtHatch();
+   if(nowHatchAim!==lastHatchAim){lastHatchAim=nowHatchAim;setHatchAim(nowHatchAim);}
   };
   const resize=()=>instance.resize();
   const down=(e:KeyboardEvent)=>{
@@ -212,7 +218,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   </div>
   {!completed&&<div className="story-fps-target" aria-live="polite">
    <div className="story-fps-crosshair">+</div>
-   {aim&&<span>{displayName[aim]} · {aim===task.station?"PRESS INTERACT":"Find "+displayName[task.station]}</span>}
+   {hatchAim?<span>AIRLOCK CONTROL · PRESS INTERACT</span>:aim&&<span>{displayName[aim]} · {aim===task.station?"PRESS INTERACT":"Find "+displayName[task.station]}</span>}
   </div>}
   <div className="story-fps-instruction">{evaOutside?"EXPLORE THE ENVIRONMENT · RETURN TO HATCH FOR ORIGINAL TASKS":`FIND ${task?displayName[task.station].toUpperCase():"MISSION COMPLETE"} · AIM + INTERACT`}</div>
   <div className="story-fps-look" onPointerDown={beginLook} onPointerMove={moveLook} onPointerUp={endLook} onPointerCancel={endLook} onLostPointerCapture={endLook} aria-label="Drag to look around"/>
@@ -237,7 +243,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   <div className="story-fps-actions">
     <button type="button" className="story-fps-sprint" onPointerDown={beginSprint} onPointerMove={moveSprint}
       onPointerUp={endSprint} onPointerCancel={endSprint} onLostPointerCapture={endSprint}>SPRINT</button>
-    <button type="button" className="story-fps-interact" disabled={!!procedure||completed||paused||showGuide||aim!==task?.station}
+    <button type="button" className="story-fps-interact" disabled={!!procedure||completed||paused||showGuide||evaPanel||!(hatchAim||(!evaOutside&&aim===task?.station))}
       onClick={()=>actRef.current()}>INTERACT</button>
   </div>
   {evaPanel&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="EVA safety and airlock">

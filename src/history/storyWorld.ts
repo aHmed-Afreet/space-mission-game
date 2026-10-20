@@ -161,6 +161,7 @@ function createScene(scenario:StoryScenario){
   box(hatchAssembly,.31,.42,.11,hatchLight,.84,1.36,z);
   box(hatchAssembly,.16,.22,.125,ceramic(),.84,1.36,z+Math.sign(z)*.025);
  }
+ hatchAssembly.visible=scenario.role==="astronaut";
  const exterior=new THREE.Group();scene.add(exterior);exterior.visible=false;
  const dusty=scenario.setting==="moon"||scenario.setting==="mars";
  const isMars=scenario.setting==="mars";
@@ -245,6 +246,7 @@ export type StoryWorld={
  distanceToHatch:()=>number;
  setExcursion:(outside:boolean)=>void;
  nearHatch:()=>boolean;
+ aimingAtHatch:()=>boolean;
  resize:()=>void;
  dispose:()=>void;
 };
@@ -259,6 +261,14 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  let jumpSpeed=0,jumpHeight=0;
  const distanceToHatch=()=>outside?camera.position.distanceTo(AIRLOCK):Math.max(0,7.35-camera.position.z);
  const nearHatch=()=>outside?distanceToHatch()<2.8:Math.abs(camera.position.x)<1.7&&camera.position.z>4.65;
+ const aimingAtHatch=()=>{
+  if(scenario.role!=="astronaut"||!nearHatch())return false;
+  const panel=outside?new THREE.Vector3(.98,1.42,9.37):new THREE.Vector3(.84,1.36,7.06);
+  const ray=panel.sub(camera.position);
+  const range=ray.length();
+  const direction=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  return range<3.2&&ray.normalize().dot(direction)>.66;
+ };
  const jump=()=>{
   if(outside&&dusty&&jumpHeight<.015&&jumpSpeed===0)jumpSpeed=scenario.setting==="moon"?2.3:2.65;
  };
@@ -355,5 +365,5 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    }
   });renderer.dispose();
  };
- return {canvas,look,update,resize,dispose,setExcursion,nearHatch,jump,distanceToHatch};
+ return {canvas,look,update,resize,dispose,setExcursion,nearHatch,aimingAtHatch,jump,distanceToHatch};
 }
