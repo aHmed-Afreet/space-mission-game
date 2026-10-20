@@ -286,7 +286,7 @@ export default function Flight({
           { action: "measureRadiation", label: "Measure radiation" },
         ] as { action: CampaignAction; label: string }[])
       : [];
-  if (m.eva && (atSite(s, "airlock") || atSite(s, "innerHatch")))
+  if (m.eva && (atSite(s, "airlock") || atSite(s, "innerHatch") || atSite(s, "outerHatch")))
     extras.push(
       ...([
         { action: "openInner", label: "Open cabin hatch" },
@@ -299,6 +299,20 @@ export default function Flight({
     );
   const handleWork = (target: AimTarget | null) => {
     if (s.state.paused || s.state.sleeping || tablet || navOpen || tutorial) return;
+    if(target?.kind==="airlock"){
+      if(!m.eva)return;
+      const id=target.id,lock=s.airlock;
+      if(id==="inner"){
+        if(lock.inner)run("closeInner");
+        else if(lock.pressure<100)run("pressurize");
+        else run("openInner");
+      }else{
+        if(lock.outer)run("closeOuter");
+        else if(lock.pressure>0)run("vent");
+        else run("openOuter");
+      }
+      setActions(false);return;
+    }
     if (target?.kind === "door") {
       onWorld({ kind: "door", id: target.id as keyof typeof doors });
       setActions(false);

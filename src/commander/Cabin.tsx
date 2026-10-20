@@ -18,7 +18,7 @@ import { environments } from "./campaign/environments";
 import { missionById } from "./campaign/definitions";
 import type { PlayerPreferences } from "./campaign/preferences";
 
-export type AimTarget = { kind: "door" | "locker" | "station"; id: string };
+export type AimTarget = { kind: "door" | "locker" | "station" | "airlock"; id: string };
 const lockerPositions: Record<string, [number, number, number]> = {
   food: [2.2,1.3,.45], water: [2.7,1.8,.75], science: [-2.45,1.8,-2.7],
   samples: [-2.45,1.8,-3.7], equipment: [2.4,1.8,5.7],
@@ -260,8 +260,14 @@ export default function Cabin(props: Props) {
       if (current.current.world && now - lastAim > 120) {
         lastAim = now;
         const targets: {kind: AimTarget["kind"]; id: string; position: THREE.Vector3; distance: number}[] = [];
-        for (const [id, d] of Object.entries(doors)) for (const x of [-.98,.98])
-          targets.push({kind:"door",id,position:new THREE.Vector3(x,1.35,d.z+.18),distance:2.5});
+        for (const [id,d] of Object.entries(doors))
+          for(const x of [-.98,.98])for(const face of [-1,1])
+           targets.push({kind:"door",id,position:new THREE.Vector3(x,1.35,d.z+face*.23),distance:2.5});
+        if(current.current.world && missionById(current.current.world.session.missionId).eva)
+          for(const [id,z] of [["inner",7.75],["outer",10.25]] as const)
+           for(const face of [-1,1])targets.push({
+            kind:"airlock",id,position:new THREE.Vector3(.67,1.36,z+face*.24),distance:2.25
+           });
         for (const [id, loc] of Object.entries(lockerPositions))
           targets.push({kind:"locker",id,position:new THREE.Vector3(...loc),distance:2.6});
         for (const [id, loc] of Object.entries(deck))
@@ -278,7 +284,8 @@ export default function Cabin(props: Props) {
         }
         aim.current = picked;
         const label = picked
-          ? picked.kind === "door" ? doors[picked.id as keyof typeof doors].name
+          ? picked.kind === "airlock" ? `${picked.id==="inner"?"INNER":"OUTER"} AIRLOCK HATCH · PRESS INTERACT`
+          : picked.kind === "door" ? doors[picked.id as keyof typeof doors].name
           : picked.kind === "locker" ? lockers[picked.id as keyof typeof lockers].name
           : deck[picked.id as keyof typeof deck].name
           : "";

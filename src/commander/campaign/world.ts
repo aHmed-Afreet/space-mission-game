@@ -65,6 +65,16 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
   }
   const inner = box(0, 1.25, 7.75, 1.42, 2.46, 0.1, white),
     outer = box(0, 1.25, 10.25, 1.42, 2.46, 0.1, white);
+  // Each pressure hatch has the same physical button inside and outside,
+  // letting the player reach it after exiting the spacecraft.
+  const buttons:{mesh:T.Mesh;side:"inner"|"outer"}[]=[];
+  for(const [id,z] of [["inner",7.75],["outer",10.25]] as const)
+   for(const face of [-1,1]){
+    box(.67,1.36,z+face*.19,.26,.35,.06,dark);
+    const m=material("#d2a45e",.15,.45);
+    const control=box(.67,1.36,z+face*.24,.14,.19,.07,m);
+    buttons.push({mesh:control,side:id});
+   }
   box(0.72, 1.4, 8.8, 0.04, 0.37, 0.35, dark);
   box(0.68, 1.4, 8.8, 0.015, 0.2, 0.25, solar);
   // Exterior pressure shell and landing feet do not change the existing cabin geometry.
@@ -182,6 +192,11 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
   const result = box(0, 0.9, 1.07, 0.45, 0.07, 0.3, solar, camp);
   return {
     update(s: Session) {
+      for(const btn of buttons){
+       const isOpen=btn.side==="inner"?s.airlock.inner:s.airlock.outer;
+       if(btn.mesh.material instanceof T.MeshStandardMaterial)
+        btn.mesh.material.color.set(isOpen?"#73e4bf":"#d3ae6c");
+      }
       satellite.visible = s.missionId === "mission-2";
       serviceMaterial.color.set(
         s.systems.satelliteOnline
