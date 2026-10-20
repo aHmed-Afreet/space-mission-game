@@ -78,16 +78,21 @@ export function createFixtures(scene: T.Scene) {
     emergency: [1.5, 1.8, 6.1],
     maintenance: [-2.4, 2, 0.75],
   };
-  const cabinets: Partial<Record<LockerId, { pivot: T.Group; items: T.Object3D[] }>> = {};
+  const cabinets: Partial<Record<LockerId, { pivot: T.Group; items: T.Object3D[]; empty: T.Mesh }>> = {};
   for (const [id, p] of Object.entries(positions)) {
     const key = id as LockerId,
       [x, y, z] = p;
-    box(root, x, y, z, 0.63, 0.7, 0.24, dark);
+    // A hollow stowage compartment: the previous SOLID cuboid blocked every
+    // item from the camera. Construct the back, frame and shelves separately.
+    box(root,x,y,z-.17,.9,1.15,.045,dark);
+    for(const side of [-1,1])box(root,x+side*.46,y,z+.035,.055,1.15,.47,panel);
+    for(const side of [-1,1])box(root,x,y+side*.56,z+.045,.95,.05,.48,panel);
+    for(const dy of [-.35,.05])box(root,x,y+dy,z+.05,.86,.028,.43,silver);
     const pivot = new T.Group();
-    pivot.position.set(x - 0.32, y, z + 0.15);
+    pivot.position.set(x-.47,y,z+.31);
     root.add(pivot);
-    box(pivot, 0.32, 0, 0, 0.63, 0.68, 0.035, panel);
-    box(pivot, 0.55, 0, 0.03, 0.025, 0.2, 0.035, silver);
+    box(pivot,.47,0,0,.92,1.1,.045,panel);
+    box(pivot,.84,0,.035,.028,.26,.04,silver);
     const c = document.createElement("canvas");
     c.width = 512;
     c.height = 64;
@@ -101,14 +106,14 @@ export function createFixtures(scene: T.Scene) {
     textures.push(texture);
     const labelMat = new T.MeshBasicMaterial({ map: texture });
     materials.push(labelMat);
-    const labelGeometry = new T.PlaneGeometry(0.55, 0.07);
+    const labelGeometry = new T.PlaneGeometry(0.78, 0.1);
     extraGeometry.push(labelGeometry);
     const label = new T.Mesh(labelGeometry, labelMat);
-    label.position.set(0.32, 0.22, 0.024);
+    label.position.set(0.46, 0.42, 0.035);
     pivot.add(label);
     // Each compartment has real recognizable contents rather than three empty cubes.
     const items=[0,1,2].map(i=>{
-      const tray=new T.Group();tray.position.set(x-.2+i*.2,y-.13,z+.02);root.add(tray);
+      const tray=new T.Group();tray.position.set(x-.29+i*.29,y-.11,z+.12);root.add(tray);
       if(key==="water"){
         cyl(tray,0,0,0,.07,.26,waterBlue);
         cyl(tray,0,.15,0,.044,.04,oxygenWhite);
@@ -139,7 +144,20 @@ export function createFixtures(scene: T.Scene) {
       }
       return tray;
     });
-    cabinets[key] = { pivot, items };
+    // A clearly readable empty stowage plaque is better than a black hole:
+    // it never implies gear exists when the mission manifest says otherwise.
+    const marker=document.createElement("canvas");marker.width=512;marker.height=90;
+    const ctx2=marker.getContext("2d")!;
+    ctx2.fillStyle="#183039";ctx2.fillRect(0,0,512,90);
+    ctx2.strokeStyle="#b0c6bd";ctx2.lineWidth=3;ctx2.strokeRect(3,3,506,84);
+    ctx2.fillStyle="#d8e6df";ctx2.font="bold 31px sans-serif";
+    ctx2.textAlign="center";ctx2.fillText("COMPARTMENT EMPTY",256,58);
+    const map2=new T.CanvasTexture(marker);textures.push(map2);
+    const m2=new T.MeshBasicMaterial({map:map2,side:T.DoubleSide});materials.push(m2);
+    const plaque=new T.Mesh(new T.PlaneGeometry(.73,.13),m2);
+    extraGeometry.push(plaque.geometry);
+    plaque.position.set(x,y-.18,z+.15);root.add(plaque);plaque.visible=false;
+    cabinets[key] = { pivot, items, empty:plaque };
   }
   return {
     update(s: Session) {
@@ -180,6 +198,7 @@ export function createFixtures(scene: T.Scene) {
         c.items.forEach(
           (o, i) => (o.visible = s.world.lockers[key] && i < count),
         );
+        c.empty.visible=s.world.lockers[key]&&count<=0;
       }
     },
     dispose() {
