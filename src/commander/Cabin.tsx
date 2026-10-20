@@ -59,6 +59,7 @@ export default function Cabin(props: Props) {
       undefined,
     ),
     jump = useRef({ height: 0, velocity: 0 }),
+    orbitalThrust = useRef(0),
     [error, setError] = useState("");
   current.current = props;
   useEffect(() => {
@@ -145,6 +146,11 @@ export default function Cabin(props: Props) {
         return;
       const k = e.key.toLowerCase();
       if (k === "shift") keys.current.add("shift");
+      if([" ","control","pageup","pagedown"].includes(k) &&
+        current.current.world?.session.position.z!>10.4 &&
+        missionById(current.current.world!.session.missionId).destination==="earth"){
+        e.preventDefault();keys.current.add(k);
+      }
       if (
         [
           "w",
@@ -182,6 +188,7 @@ export default function Cabin(props: Props) {
       stick.current = { x: 0, y: 0 };
       pointer.current = undefined;
       sprint.current = false;
+      orbitalThrust.current=0;
       sprintTouch.current = null;
       lookPointer.current = undefined;
       if (thumb.current) thumb.current.style.transform = "translate(0px,0px)";
@@ -238,7 +245,20 @@ export default function Cabin(props: Props) {
         if (allowed(x, camera.position.z)) camera.position.x = x;
         if (allowed(camera.position.x, z)) camera.position.z = z;
         camera.rotation.set(look.current.pitch, yaw, 0);
-        if (camera.position.z > 10.4 && env) {
+        if(camera.position.z>10.4&&env?.gravity===0){
+          // Suit cold-gas training thrusters: drift persists until counter-thrust
+          // or damping slows it. The anchor boundary prevents untethered escape.
+          const lift=(Number(k.has(" ")||k.has("pageup"))-
+            Number(k.has("control")||k.has("pagedown"))+orbitalThrust.current);
+          jump.current.velocity=Math.max(-2.3,Math.min(2.3,
+            jump.current.velocity+(Math.max(-1,Math.min(1,lift))*3.2-
+              jump.current.velocity*.8)*dt));
+          jump.current.height=Math.max(-.65,Math.min(5.4,
+            jump.current.height+jump.current.velocity*dt));
+          if((jump.current.height===-.65&&jump.current.velocity<0)||
+             (jump.current.height===5.4&&jump.current.velocity>0))
+            jump.current.velocity=0;
+        }else if (camera.position.z > 10.4 && env) {
           jump.current.height = Math.max(
             0,
             jump.current.height + jump.current.velocity * dt,
@@ -261,13 +281,16 @@ export default function Cabin(props: Props) {
         lastAim = now;
         const targets: {kind: AimTarget["kind"]; id: string; position: THREE.Vector3; distance: number}[] = [];
         for (const [id,d] of Object.entries(doors))
-          for(const x of [-.98,.98])for(const face of [-1,1])
+          for(const x of [-.98,.98])for(const face of [-1,1]){
+           if((camera.position.z-d.z)*face<=.025)continue;
            targets.push({kind:"door",id,position:new THREE.Vector3(x,1.35,d.z+face*.23),distance:2.5});
+          }
         if(current.current.world && missionById(current.current.world.session.missionId).eva)
           for(const [id,z] of [["inner",7.75],["outer",10.25]] as const)
-           for(const face of [-1,1])targets.push({
-            kind:"airlock",id,position:new THREE.Vector3(.67,1.36,z+face*.24),distance:2.25
-           });
+           for(const face of [-1,1]){
+            if((camera.position.z-z)*face<=.025)continue;
+            targets.push({kind:"airlock",id,position:new THREE.Vector3(.67,1.36,z+face*.24),distance:2.25});
+           }
         for (const [id, loc] of Object.entries(lockerPositions))
           targets.push({kind:"locker",id,position:new THREE.Vector3(...loc),distance:2.6});
         for (const [id, loc] of Object.entries(deck))
@@ -482,9 +505,21 @@ export default function Cabin(props: Props) {
             disabled={props.locked} onClick={() => props.onInteract(aim.current)}>INTERACT</button>
         </div>
       </>}
+      {props.world&&props.world.session.position.z>10.4&&
+        missionById(props.world.session.missionId).destination==="earth"&&
+        props.device!=="laptop"&&
+        <div className="cmd-orbital-thrusters" aria-label="Spacesuit vertical thrusters">
+          {(["UP","DOWN"] as const).map(direction=><button key={direction} type="button"
+            onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);orbitalThrust.current=direction==="UP"?1:-1;}}
+            onPointerUp={()=>orbitalThrust.current=0}
+            onPointerCancel={()=>orbitalThrust.current=0}
+            onLostPointerCapture={()=>orbitalThrust.current=0}>
+            {direction==="UP"?"↑ ASCEND":"↓ DESCEND"}
+          </button>)}
+        </div>}
       {props.settings?.showHints !== false && <div className="cmd-control-hint">
         {props.device === "laptop"
-          ? "WASD / ARROWS MOVE · SHIFT SPRINT · DRAG MOUSE LOOK · AIM + E INTERACT"
+          ? "WASD MOVE · SHIFT SPRINT · DRAG TO LOOK · E INTERACT · SPACE/CTRL EVA THRUSTERS"
           : "LEFT TOUCH MOVE · HOLD & DRAG SPRINT TO TURN · AIM + INTERACT"}
       </div>}
       {props.settings?.showHints !== false && aimLabel && !props.locked && <div className="cmd-aim-target"><i />{aimLabel}</div>}
