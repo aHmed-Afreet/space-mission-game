@@ -211,8 +211,10 @@ export default function Cabin(props: Props) {
       lastAim = 0,
       elapsed = 0;
     // Keep touch input fluid: adaptive pixel ratio instead of a hard 30 FPS cap.
-    const coarse=matchMedia("(pointer: coarse)").matches;
-    const targetFps=graphicsMode==="battery"?30:graphicsMode==="quality"?60:coarse?50:60;
+    // Balance visual quality by pixel ratio, not a 30 FPS touch-device cap.
+    // 60 Hz rAF calls land at ~16.67 ms; slight pacing slack prevents
+    // accidental every-other-frame rendering at a nominal 60 FPS.
+    const targetFps=graphicsMode==="battery"?30:60;
     const frameDuration=1000/targetFps;
     let sampleStart=performance.now(),sampleFrames=0,lastResizeAdjust=0;
     const movement={forward:0,sideways:0};
@@ -372,7 +374,7 @@ export default function Cabin(props: Props) {
         field?.update(current.current.world.session);
         fixtures?.update(current.current.world.session);
       }
-      if (!document.hidden && now - lastDraw >= frameDuration) {
+      if (!document.hidden && now - lastDraw >= frameDuration*.83) {
         renderer.render(scene, camera);
         lastDraw = now;
         sampleFrames++;
