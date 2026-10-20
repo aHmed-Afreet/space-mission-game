@@ -61,6 +61,18 @@ export function createFixtures(scene: T.Scene) {
     button.position.set(side*.98,1.35,d.z+face*.232);root.add(button);
     hatchButtons.push({mesh:button,id});
    }
+  // Large illuminated panels physically attached to each moving hatch.
+  const hatchPlate=mat("#142b35"),hatchGreen=new T.MeshStandardMaterial({
+    color:"#b2ffe8",emissive:"#20dcaa",emissiveIntensity:1.3,metalness:.2,roughness:.24
+  });
+  materials.push(hatchGreen);
+  const leafSwitches:{door:keyof typeof doors;plate:T.Mesh;key:T.Mesh}[]=[];
+  for(const [id,d] of Object.entries(doors) as [keyof typeof doors,{name:string;z:number}][])
+    for(const face of [-1,1]){
+      const plate=box(root,.54,1.38,d.z+face*.12,.43,.55,.08,hatchPlate);
+      const key=box(root,.54,1.4,d.z+face*.19,.26,.3,.055,hatchGreen);
+      leafSwitches.push({door:id,plate,key});
+    }
   const leaves: Record<string, T.Mesh[]> = {};
   for (const [id, d] of Object.entries(doors)) {
     if (id === "flight") continue;
@@ -164,6 +176,12 @@ export function createFixtures(scene: T.Scene) {
       for(const {mesh,id} of hatchButtons)
        if(mesh.material instanceof T.MeshBasicMaterial)
         mesh.material.color.set(s.world.doors[id].open?"#70e7c8":"#e5b36f");
+      for(const control of leafSwitches){
+        const open=s.world.doors[control.door].open;
+        const x=.54+(open?1.05:0);
+        control.plate.position.x+=(x-control.plate.position.x)*.14;
+        control.key.position.x+=(x-control.key.position.x)*.14;
+      }
       for (const [id, mesh] of Object.entries(leaves))
         mesh.forEach((o, i) => {
           const target =

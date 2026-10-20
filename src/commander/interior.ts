@@ -12,7 +12,8 @@ export function createInterior(
 ) {
   const scene = new T.Scene();
   scene.background = new T.Color("#070c15");
-  scene.fog = new T.Fog("#101922", 13, 38);
+  // A cabin is pressurized and clear: previous distance fog washed out the 3D geometry.
+  scene.fog = null;
   const geometries: T.BufferGeometry[] = [],
     materials: T.Material[] = [],
     textures: T.Texture[] = [];
@@ -32,14 +33,14 @@ export function createInterior(
     materials.push(m);
     return m;
   };
-  const shell = mat("#444b4e", 0.35, 0.5),
-    panel = mat("#62696a", 0.25, 0.62),
+  const shell = mat("#78898f", 0.37, 0.5),
+    panel = mat("#9aa9ab", 0.26, 0.52),
     dark = mat("#141e26", 0.3, 0.62),
-    floor = mat("#243039", 0.4, 0.74),
+    floor = mat("#35444b", 0.33, 0.7),
     silver = mat("#89979b", 0.8, 0.34),
     fabric = mat("#3a4c57", 0, 0.97),
     warm = mat("#b6aa8c", 0.15, 0.77),
-    white = mat("#b8c1bf", 0.2, 0.58),
+    white = mat("#d3dcda", 0.18, 0.52),
     glass = mat("#12252c", 0.5, 0.17),
     light = mat("#d6e4dd", 0, 0.4, "#c2d9cf"),
     amber = mat("#8c6040", 0.3, 0.5, "#c48c50"),
@@ -248,6 +249,14 @@ export function createInterior(
     hatchLeaves.push(m);
     part(side * 1.35, 2.4, -4.2, 0.12, 0.055, 0.025, amber);
   }
+  // Two large lit buttons, one on each side of the moving flight-deck leaf.
+  // They track the actual leaf position when it slides open.
+  const doorKeyMat=mat("#e8fff3",.15,.26,"#72e8c0");
+  doorKeyMat.emissiveIntensity=1.6;
+  const flightDoorButtons:T.Mesh[]=[];
+  for(const face of [-1,1]){
+    flightDoorButtons.push(dynamic(.54,1.4,-4.35+face*.15,.29,.37,.075,doorKeyMat));
+  }
   label("FLIGHT DECK / 01", 0, 2.57, -4.18, 0.78, 0.105);
   label("LIFE SUPPORT / 02", 0, 2.57, -1.18, 0.83, 0.105);
   label("HABITATION / 03", 0, 2.57, 2.52, 0.98, 0.105);
@@ -261,6 +270,11 @@ export function createInterior(
     part(0, 1.4, 7.85, 6.6, 2.9, 0.15, shell);
     part(0, 1.25, 7.72, 1.5, 2.3, 0.12, dark);
     part(0, 1.25, 7.63, 1.22, 2.05, 0.08, panel);
+    // Restricted exterior bulkhead on non-EVA missions: real visible control,
+    // but its button only displays why an unsuited flight cannot exit.
+    part(.82,1.35,7.46,.37,.5,.085,dark);
+    part(.82,1.36,7.40,.26,.28,.055,amber);
+    label("EVA LOCKED", 0,2.48,7.44,.9,.15);
     dynamic(0, 1.35, 7.55, 0.24, 0.035, 0.24, silver, cylinder).rotation.x =
       Math.PI / 2;
   }
@@ -467,12 +481,12 @@ export function createInterior(
     for (const x of [-1.2, 1.2])
       dynamic(x, 2.38, z, 0.065, 0.04, 0.06, alarmMat);
   // Ambient fill and bounded practical lights. No real-time shadows or post-processing.
-  scene.add(new T.HemisphereLight("#dbe6e5", "#303742", 1.7));
-  const sun = new T.DirectionalLight("#d8dfe7", 1.4);
+  scene.add(new T.HemisphereLight("#ebf5f9", "#364951", 1.85));
+  const sun = new T.DirectionalLight("#f1f4f8", 1.6);
   sun.position.set(-2, 4, -10);
   scene.add(sun);
   // One bounded practical and two broad fills avoid a large per-fragment light loop.
-  const practical = new T.PointLight("#d9e3da", 14, 10, 2);
+  const practical = new T.PointLight("#f2f6ee", 17, 11, 2);
   practical.position.set(0, 2.5, 0.5);
   scene.add(practical);
   const aftFill = new T.DirectionalLight("#d6d5c7", 0.85);
@@ -580,6 +594,10 @@ export function createInterior(
         const target = (i === 0 ? -1 : 1) * (0.53 + open * 1.05);
         m.position.x += (target - m.position.x) * 0.08;
       });
+      for(const key of flightDoorButtons){
+        const target=.54+open*1.05;
+        key.position.x+=(target-key.position.x)*.08;
+      }
       const age = t - fxStart;
       mealStores.visible=!!world?.lockers.food;
       cabinetPivot.rotation.y +=
