@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { StoryScenario, Station } from "./storyScenarios";
 import {createHistoricVehicle} from "./historicVehicles";
 import {makePlanet,planetKind} from "../commander/celestial";
+import {installStoryBridge} from "./storyBridge";
 
 const stationLocations:Record<Station,[number,number]>={
  brief:[-3,2.5],systems:[3,2.5],operations:[-3,-2.5],science:[3,-2.5],
@@ -83,6 +84,7 @@ function createScene(scenario:StoryScenario){
     // Textured planetary bodies replace the single-colour placeholder sphere.
     const planet=makePlanet(planetKind(scenario.destination),7);
     planet.position.set(17,14,-32);scene.add(planet);
+    installStoryBridge(deck,scenario);
   }
 
  const stationMeshes:Record<Station,THREE.Group>={} as Record<Station,THREE.Group>;
@@ -252,12 +254,17 @@ export type StoryWorld={
 };
 export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario):StoryWorld{
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:"high-performance"});
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.45));
+ const pixelLimit=Math.min(window.devicePixelRatio||1,1.55);
+ let pixelRatio=pixelLimit,frameClock=performance.now(),drawn=0;
+ renderer.setPixelRatio(pixelRatio);
  renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.13;
  const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether}=createScene(scenario);
  const camera=new THREE.PerspectiveCamera(72,1,.04,170);camera.position.set(0,1.65,6.25);
  let yaw=0,pitch=0,t=0,outside=false;
  const motion=new THREE.Vector3(),AIRLOCK=new THREE.Vector3(0,1.65,9.05);
+ const movement={x:0,z:0};
  let jumpSpeed=0,jumpHeight=0;
  const distanceToHatch=()=>outside?camera.position.distanceTo(AIRLOCK):Math.max(0,7.35-camera.position.z);
  const nearHatch=()=>outside?distanceToHatch()<2.8:Math.abs(camera.position.x)<1.7&&camera.position.z>4.65;
@@ -300,10 +307,13 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
   const len=Math.max(1,Math.hypot(axisX,axisY));
   const moveX=(rightX*axisX+forwardX*axisY)/len;
   const moveZ=(rightZ*axisX+forwardZ*axisY)/len;
+  const damping=Math.min(1,time*9);
+  movement.x+=(moveX-movement.x)*damping;
+  movement.z+=(moveZ-movement.z)*damping;
   if(outside&&!dusty){
    // No gravity in vacuum: directional bursts change velocity and inertia persists.
-   motion.x+=(moveX*3.7-motion.x*.64)*time;
-   motion.z+=(moveZ*3.7-motion.z*.64)*time;
+   motion.x+=(movement.x*3.7-motion.x*.64)*time;
+   motion.z+=(movement.z*3.7-motion.z*.64)*time;
    motion.y+=(Math.max(-1,Math.min(1,vertical))*3.7-motion.y*.64)*time;
    motion.clampLength(0,sprint?3.25:2.05);
    camera.position.addScaledVector(motion,time);
@@ -316,8 +326,8 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    camera.position.y=Math.max(-10,Math.min(18,camera.position.y));
   }else{
    const speed=(outside?(scenario.setting==="moon"?1.5:1.65):2.65)*(sprint?1.55:1);
-   const nx=camera.position.x+moveX*speed*time;
-   const nz=camera.position.z+moveZ*speed*time;
+   const nx=camera.position.x+movement.x*speed*time;
+   const nz=camera.position.z+movement.z*speed*time;
    camera.position.x=Math.max(outside?-23:-5.6,Math.min(outside?23:5.6,nx));
    camera.position.z=Math.max(outside?9.9:-5.65,Math.min(outside?64:6.65,nz));
    if(outside){
@@ -352,6 +362,17 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
     ring.material.color.set(candidate===id?0xe8ffcd:id===active?0xffd879:0x477b86);
   }
   renderer.render(scene,camera);
+  drawn++;
+  const now=performance.now(),interval=now-frameClock;
+  if(interval>3100){
+   const fps=drawn*1000/interval;
+   const desired=fps<38?Math.max(.8,pixelRatio-.12):fps>52?Math.min(pixelLimit,pixelRatio+.06):pixelRatio;
+   if(Math.abs(desired-pixelRatio)>.015){
+    pixelRatio=desired;renderer.setPixelRatio(pixelRatio);
+    renderer.setSize(Math.max(1,canvas.clientWidth),Math.max(1,canvas.clientHeight),false);
+   }
+   frameClock=now;drawn=0;
+  }
   return candidate;
  };
  const dispose=()=>{
