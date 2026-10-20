@@ -1471,3 +1471,31 @@ test("door aim feedback matches the real physical interaction distance",()=>{
  assert.match(flight,/Move closer to the illuminated hatch control/);
  assert.match(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
 });
+
+test("new spacecraft visuals are instanced and do not relocate mission stations",()=>{
+ const interior=readFileSync("src/commander/interior.ts","utf8");
+ const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");
+ const story=readFileSync("src/history/storyWorld.ts","utf8");
+ const bridge=readFileSync("src/history/storyBridge.ts","utf8");
+ assert.match(interior,/installShipArchitecture\(part,pipe,screen,label,mat/);
+ assert.match(interior,/InstancedMesh/);
+ assert.match(architecture,/panoramic canopy/i);
+ assert.match(architecture,/pressure tunnel/i);
+ assert.match(architecture,/FLIGHT CONTROL/);
+ assert.match(story,/installStoryBridge\(deck,scenario\)/);
+ assert.match(bridge,/new THREE.InstancedMesh/);
+ assert.match(bridge,/CREW VEHICLE/);
+ assert.match(bridge,/GROUND MISSION CONTROL/);
+});
+test("performance options adapt iPad image quality without removing controls",()=>{
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+ const story=readFileSync("src/history/storyWorld.ts","utf8");
+ assert.match(cabin,/targetFps=graphicsMode==="battery"\?30:60/);
+ assert.match(cabin,/actualFps<targetFps/);
+ assert.match(cabin,/renderer.setPixelRatio\(renderRatio\)/);
+ assert.match(cabin,/movement.forward/);
+ assert.match(cabin,/kind:"airlock"/);
+ assert.match(story,/now-lastRender>=14/);
+ assert.match(story,/pixelRatio=desired/);
+ assert.match(story,/aimingAtHatch/);
+});

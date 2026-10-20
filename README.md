@@ -200,3 +200,27 @@ Commander now includes vertical RCS-style orbital EVA motion using Space/Ctrl on
 Storage cabinets are hollow models with separate back, frame, shelves, hinged doors and correctly positioned physical equipment. Actual carried/stored quantities determine which resources appear; an empty-state label appears when nothing is stored. This avoids inventing collectable equipment or making stocked lockers look empty because contents were hidden behind opaque cabinet bodies.
 
 **Remaining limitations:** Simulated pressure transitions are intentionally simplified, the character body is represented by first-person suit sleeves, and orbital navigation is a bounded training model rather than a six-degree-of-freedom physics engine. Not every spacecraft is EVA-capable; Commander flight missions without prepared EVA gear do not unlock unsafe departures. Full photorealism requires licensed models/textures, physically based lighting and per-mission set design beyond this pass.
+
+## Original spacecraft visual redesign and smooth iPad gameplay
+
+The first-person visual presentation now uses a new original, instanced spaceship
+architecture in src/commander/shipArchitecture.ts with layered pressure hull,
+angled structural ribs, visible panoramic cockpit framing, a multi-display flight
+instrument arc, overhead controls, physical bulkheads, side equipment carriers,
+recessed lighting, and fitted non-slip floor sections. The prior mission systems,
+coordinates, inventory, saves, pressure hatches and campaign objectives are
+unchanged. This is an original stylized spacecraft, not a copy of a third-party
+stock photograph or a certified replica of a specific real vehicle.
+
+Historical Live the Story scenes now use a separate instanced structural bridge
+in src/history/storyBridge.ts for crew spacecraft and Earth-based control
+centres for robotic missions; historical vehicle models and tasks remain available.
+
+Performance: balanced and quality graphics aim for up to 60 frames/s, subject to
+actual device capacity, with a dynamic internal WebGL pixel density. Battery mode
+caps Commander rendering at 30 frames/s. A short acceleration filter smooths
+touch-joystick movement; Story Mode avoids unnecessary 120 Hz GPU renders. No
+network download of commercial stock artwork is required. These are quality
+settings, not guaranteed benchmark frame rates; test on an actual iPad.
+
+See How to Play for joystick, look and INTERACT controls.
