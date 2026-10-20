@@ -319,6 +319,11 @@ export default function Flight({
       setActions(false);return;
     }
     if (target?.kind === "door") {
+      const door=doors[target.id as keyof typeof doors];
+      if(Math.abs(s.position.z-door.z)>1.6||Math.abs(s.position.x)>1.5){
+        setHatchNotice("Move closer to the illuminated hatch control on your side of the door, then press INTERACT.");
+        return;
+      }
       setHatchNotice("");
       onWorld({ kind: "door", id: target.id as keyof typeof doors });
       setActions(false);

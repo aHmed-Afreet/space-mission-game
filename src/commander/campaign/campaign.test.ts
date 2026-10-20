@@ -1463,3 +1463,11 @@ test("quality setting adds surface microdetail without affecting battery mode",(
  assert.match(interior,/bumpMap/);
  assert.match(interior,/CanvasTexture/);
 });
+
+test("door aim feedback matches the real physical interaction distance",()=>{
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ assert.match(cabin,/MOVE CLOSER/);
+ assert.match(flight,/Move closer to the illuminated hatch control/);
+ assert.match(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
+});

@@ -316,7 +316,11 @@ export default function Cabin(props: Props) {
           ? picked.kind === "airlock" ? (supportsEva
               ? `${picked.id==="inner"?"INNER":"OUTER"} AIRLOCK CONTROL · INTERACT`
               : "RESTRICTED AIRLOCK · INTERACT FOR INFO")
-          : picked.kind === "door" ? `${current.current.world.session.world.doors[picked.id as keyof typeof doors].open?"CLOSE":"OPEN"} ${doors[picked.id as keyof typeof doors].name.toUpperCase()} · INTERACT`
+          : picked.kind === "door" ? (
+              Math.abs(camera.position.z-doors[picked.id as keyof typeof doors].z)>1.55
+              || Math.abs(camera.position.x)>1.45
+              ? `MOVE CLOSER · ${doors[picked.id as keyof typeof doors].name.toUpperCase()}`
+              : `${current.current.world.session.world.doors[picked.id as keyof typeof doors].open?"CLOSE":"OPEN"} ${doors[picked.id as keyof typeof doors].name.toUpperCase()} · INTERACT`)
           : picked.kind === "locker" ? lockers[picked.id as keyof typeof lockers].name
           : deck[picked.id as keyof typeof deck].name
           : "";
