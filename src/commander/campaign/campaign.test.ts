@@ -36,7 +36,8 @@ import { joystickVector } from "../controls";
 import { NavigationContent } from "./NavigationMap";
 import { readPreferences, writePreferences } from "./preferences";
 import { historyMissions } from "../../history/missionHistory";
-import { createStoryScenario,historicalCraft } from "../../history/storyScenarios";
+import {missionProfiles,missionProfile} from "../../history/missionProfiles";
+import { createStoryScenario,historicalCraft,historicalSetting } from "../../history/storyScenarios";
 
 function stand(
   s: Session,
@@ -1356,7 +1357,24 @@ test("live history starts a 3D first-person scene with controls",()=>{
  assert.match(hub,/if\(chosen&&view==="live"\)return <StoryFlight/);
  assert.match(flight,/joystickVector/);
  assert.match(flight,/INTERACT/);
- assert.match(flight,/SYSTEMS CALIBRATION/);
+ assert.match(flight,/VERIFY POWER & THERMAL STATUS/);
  assert.match(world,/new THREE.WebGLRenderer/);
- assert.match(world,/makeCraft\(scenario.family,scenario\)/);
+ assert.match(world,/createHistoricVehicle/);
+});
+
+test("historic first-person missions use 55 distinctive vehicles and flight objectives",()=>{
+ assert.equal(Object.keys(missionProfiles).length,55);
+ for(const m of historyMissions){
+  const sc=createStoryScenario(m),p=missionProfile(m.title);
+  assert.equal(sc.craft,p.vehicle);
+  assert.equal(sc.profile.hardware,p.hardware);
+  assert.ok(sc.tasks.some(t=>t.procedure.includes(p.hardware)));
+  assert.ok(sc.tasks.some(t=>t.procedure.includes(p.operation)));
+  assert.ok(sc.tasks.some(t=>t.procedure.includes(p.observation)));
+ }
+ assert.equal(historicalSetting(historyMissions.find(m=>m.title==="Apollo 8")!),"deep");
+ assert.equal(historicalSetting(historyMissions.find(m=>m.title==="Apollo 13")!),"deep");
+ assert.equal(historicalSetting(historyMissions.find(m=>m.title==="Apollo 11")!),"moon");
+ assert.equal(historicalCraft(historyMissions.find(m=>m.title==="Ingenuity")!).family,"helicopter");
+ assert.match(readFileSync("src/history/historicVehicles.ts","utf8"),/createHistoricVehicle/);
 });

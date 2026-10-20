@@ -161,6 +161,6 @@ export function createStoryScenario(m:HistoryMission):StoryScenario{
  });
  return {
   missionId:m.id,title:m.title,craft:profile.vehicle,family,destination:m.destination,setting,role,tasks,profile,
-  historicalNote:m.title+" ("+m.year+") really flew. Equipment and tasks follow recorded mission goals. This is a simplified 3D educational reconstruction, not an exact spacecraft interior or certified historical procedure."
+  historicalNote:m.title+" ("+m.year+") really flew. Equipment and tasks follow recorded mission goals. This is a simplified 3D educational reconstruction, not an exact reconstruction of the spacecraft interior or historical procedures."
  };
 }
