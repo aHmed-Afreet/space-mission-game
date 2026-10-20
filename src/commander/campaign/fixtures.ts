@@ -20,7 +20,16 @@ export function createFixtures(scene: T.Scene) {
   const panel = mat("#56616b"),
     dark = mat("#18242e"),
     silver = mat("#91a1a8"),
-    itemMat = mat("#b6aa8e");
+    itemMat = mat("#b6aa8e"),
+    oxygenWhite=mat("#d6e1e0"), waterBlue=mat("#3a9bbc"),
+    suitGold=mat("#c4a867"), toolSteel=mat("#97a9ae"),
+    firstAid=mat("#a1cbd0"), sampleRock=mat("#787875");
+  const round=new T.CylinderGeometry(1,1,1,12);
+  extraGeometry.push(round);
+  const cyl=(parent:T.Object3D,x:number,y:number,z:number,r:number,height:number,m:T.Material)=>{
+    const obj=new T.Mesh(round,m);obj.position.set(x,y,z);
+    obj.scale.set(r,height,r);parent.add(obj);return obj;
+  };
 
   const box = (
     parent: T.Object3D,
@@ -43,13 +52,17 @@ export function createFixtures(scene: T.Scene) {
   materials.push(buttonMaterial);
   const buttonGeometry = new T.CylinderGeometry(.065,.065,.018,20);
   extraGeometry.push(buttonGeometry);
-  for (const d of Object.values(doors)) for (const x of [-.98,.98]) {
-    box(root,x,1.35,d.z+.13,.2,.28,.055,dark);
-    const button = new T.Mesh(buttonGeometry,buttonMaterial);
-    button.rotation.x=Math.PI/2;
-    button.position.set(x,1.35,d.z+.175);
-    root.add(button);
-  }
+  // Physical electronic hatch buttons are reachable from BOTH bulkhead faces.
+  const hatchButtons:{mesh:T.Mesh;id:keyof typeof doors}[]=[];
+  for (const [id,d] of Object.entries(doors) as [keyof typeof doors,{name:string;z:number}][])
+   for (const side of [-1,1])for (const face of [-1,1]){
+    box(root,side*.98,1.35,d.z+face*.19,.24,.32,.05,dark);
+    const m=new T.MeshBasicMaterial({color:0xe4ad6a});
+    materials.push(m);
+    const button=new T.Mesh(buttonGeometry,m);button.rotation.x=Math.PI/2;
+    button.position.set(side*.98,1.35,d.z+face*.232);root.add(button);
+    hatchButtons.push({mesh:button,id});
+   }
   const leaves: Record<string, T.Mesh[]> = {};
   for (const [id, d] of Object.entries(doors)) {
     if (id === "flight") continue;
@@ -67,9 +80,7 @@ export function createFixtures(scene: T.Scene) {
     emergency: [1.5, 1.8, 6.1],
     maintenance: [-2.4, 2, 0.75],
   };
-  const cabinets: Partial<
-    Record<LockerId, { pivot: T.Group; items: T.Mesh[] }>
-  > = {};
+  const cabinets: Partial<Record<LockerId, { pivot: T.Group; items: T.Object3D[] }>> = {};
   for (const [id, p] of Object.entries(positions)) {
     const key = id as LockerId,
       [x, y, z] = p;
@@ -97,22 +108,46 @@ export function createFixtures(scene: T.Scene) {
     const label = new T.Mesh(labelGeometry, labelMat);
     label.position.set(0.32, 0.22, 0.024);
     pivot.add(label);
-    const items = [0, 1, 2].map((i) =>
-      box(
-        root,
-        x - 0.2 + i * 0.2,
-        y - 0.13,
-        z + 0.02,
-        0.12,
-        0.23,
-        0.13,
-        itemMat,
-      ),
-    );
+    // Each compartment has real recognizable contents rather than three empty cubes.
+    const items=[0,1,2].map(i=>{
+      const tray=new T.Group();tray.position.set(x-.2+i*.2,y-.13,z+.02);root.add(tray);
+      if(key==="water"){
+        cyl(tray,0,0,0,.07,.26,waterBlue);
+        cyl(tray,0,.15,0,.044,.04,oxygenWhite);
+      }else if(key==="eva"){
+        box(tray,0,.035,0,.18,.26,.14,oxygenWhite);
+        const helmet=new T.Mesh(new T.SphereGeometry(.083,12,8),oxygenWhite);
+        helmet.position.y=.22;tray.add(helmet);extraGeometry.push(helmet.geometry);
+        box(tray,0,-.11,.09,.19,.085,.08,suitGold);
+      }else if(key==="repair"||key==="maintenance"){
+        box(tray,0,0,0,.13,.2,.13,dark);
+        cyl(tray,0,.135,0,.055,.085,toolSteel);
+        box(tray,.055,-.12,.09,.03,.24,.04,toolSteel);
+      }else if(key==="science"){
+        cyl(tray,0,-.02,0,.07,.2,toolSteel);
+        cyl(tray,0,.1,0,.05,.1,waterBlue);
+        box(tray,.04,-.12,0,.1,.04,.1,gold);
+      }else if(key==="samples"){
+        cyl(tray,0,0,0,.075,.24,toolSteel);
+        const rock=new T.Mesh(new T.DodecahedronGeometry(.06,0),sampleRock);
+        rock.position.y=.1;tray.add(rock);extraGeometry.push(rock.geometry);
+      }else if(key==="emergency"){
+        box(tray,0,0,0,.16,.21,.14,firstAid);
+        box(tray,0,0,.075,.035,.12,.012,toolSteel);
+        box(tray,0,0,.085,.11,.035,.013,toolSteel);
+      }else{
+        box(tray,0,0,0,.16,.2,.12,itemMat);
+        box(tray,0,.07,.066,.12,.03,.01,waterBlue);
+      }
+      return tray;
+    });
     cabinets[key] = { pivot, items };
   }
   return {
     update(s: Session) {
+      for(const {mesh,id} of hatchButtons)
+       if(mesh.material instanceof T.MeshBasicMaterial)
+        mesh.material.color.set(s.world.doors[id].open?"#70e7c8":"#e5b36f");
       for (const [id, mesh] of Object.entries(leaves))
         mesh.forEach((o, i) => {
           const target =
@@ -127,6 +162,12 @@ export function createFixtures(scene: T.Scene) {
         const count =
           key === "water"
             ? Math.ceil(s.state.water / 6)
+            : key === "food"
+              ? Math.ceil(s.state.food / 3)
+              : key === "emergency"
+                ? 2
+                : key === "maintenance"
+                  ? 2
             : key === "repair"
               ? s.world.partsStored +
                 (s.world.stored.includes("repair") ? 1 : 0)
