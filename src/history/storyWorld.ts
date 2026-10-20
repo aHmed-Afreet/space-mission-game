@@ -222,7 +222,7 @@ function createScene(scenario:StoryScenario){
  positions.push(x*80,y*60+5,z*80);}
  stars.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
  const pts=new THREE.Points(stars,new THREE.PointsMaterial({color:0xbbdce1,size:.19,sizeAttenuation:true}));scene.add(pts);
- return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty};
+ return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount};
 }
 export type StoryWorld={
  canvas:HTMLCanvasElement;
@@ -237,7 +237,7 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:"high-performance"});
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.45));
  renderer.outputColorSpace=THREE.SRGBColorSpace;
- const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty}=createScene(scenario);
+ const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount}=createScene(scenario);
  const camera=new THREE.PerspectiveCamera(72,1,.04,170);camera.position.set(0,1.65,6.25);
  let yaw=0,pitch=0,t=0,outside=false;
  camera.add(suitView);scene.add(camera);suitView.visible=false;
