@@ -1072,7 +1072,7 @@ export function command(s: Session, action: CampaignAction): Session {
         );
         return evaluate(
           logged(
-            n,
+            receipt(n, action),
             action === "inspectPower"
               ? `POWER: battery ${s.state.battery.toFixed(2)} / ${s.life.batteries} kWh; net margin ${e.power.toFixed(0)} W; ${s.state.malfunction ? "Bus fault diagnosed." : "bus operating normally."}`
               : action === "inspectComms"
