@@ -1,4 +1,5 @@
 import * as T from "three";
+import {makePlanet,disposePlanet} from "../celestial";
 import { fieldSites, type Session } from "./engine";
 import { environments, type Destination } from "./environments";
 /** Only the active destination is constructed. No remote models, giant textures or other worlds. */
@@ -88,16 +89,20 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
     }
   for (let z = -6; z < 7; z += 2)
     for (const x of [-3.48, 3.48]) box(x, 1.4, z, 0.06, 2.5, 0.08, alloy);
+  const orbitEarth=destination==="earth"?makePlanet("earth",17):null;
+  if(orbitEarth){orbitEarth.position.set(-20,-12,43);group.add(orbitEarth);}
   if (destination === "earth") {
-    box(0, -0.12, 14, 8, 0.2, 8.8, dark);
-    for (let z = 10.5; z < 19; z += 1)
-      box(0, 0.015, z, 7.6, 0.025, 0.025, alloy);
-    for (const x of [-3.8, 3.8]) {
-      box(x, 0.52, 14, 0.035, 0.035, 8.8, alloy);
-      for (let z = 10.5; z < 19; z += 1.4) rod(x, 0.25, z, 0.02, 0.55);
+    // Zero-ground orbital EVA scene: worksite and tether points on the hull,
+    // not an impossible runway floating in Earth's orbit.
+    for(const x of [-2.7,2.7]){
+      box(x,1.65,13,.1,.1,5.8,alloy);
+      for(let z=11.5;z<17;z+=1.3)
+       box(x,1.65,z,.22,.21,.28,gold);
     }
-    for (const x of [-2.4, 2.4]) box(x, 2, 15, 0.06, 1.2, 0.06, white);
-    box(2.4, 2, 15, 0.5, 0.5, 0.05, gold);
+    for(let z=11.8;z<=17.1;z+=1.35)
+      box(0,2.82,z,5.5,.07,.07,alloy);
+    box(0,1.3,18,2.1,1.8,.58,white);
+    for(let x=-.8;x<=.8;x+=.4)box(x,1.9,17.65,.18,.22,.08,solar);
   } else {
     // Low-amplitude relief avoids empty flat-colour maps while preserving a clear walking path.
     const terrain = new T.PlaneGeometry(64, 64, 38, 38);
@@ -217,6 +222,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
       scene.remove(group);
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
+      if(orbitEarth)disposePlanet(orbitEarth);
     },
   };
 }
