@@ -77,7 +77,12 @@ export default function Cabin(props: Props) {
       );
       return;
     }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, props.settings?.graphics === "quality" ? 2 : props.settings?.graphics === "battery" ? 1 : 1.5));
+    // Adapt rendering resolution to the iPad's actual graphics performance.
+    const graphicsMode=props.settings?.graphics||"balanced";
+    const pixelRatioLimit=Math.min(devicePixelRatio||1,
+      graphicsMode==="quality"?1.85:graphicsMode==="battery"?1:1.45);
+    let renderRatio=pixelRatioLimit;
+    renderer.setPixelRatio(renderRatio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
@@ -205,7 +210,12 @@ export default function Cabin(props: Props) {
       lastArea: Area | undefined,
       lastAim = 0,
       elapsed = 0;
-    const frameDuration = current.current.settings?.graphics === "battery" ? 1000 / 25 : current.current.settings?.graphics === "quality" ? 1000 / 60 : matchMedia("(pointer: coarse)").matches ? 1000 / 30 : 1000 / 60;
+    // Keep touch input fluid: adaptive pixel ratio instead of a hard 30 FPS cap.
+    const coarse=matchMedia("(pointer: coarse)").matches;
+    const targetFps=graphicsMode==="battery"?30:graphicsMode==="quality"?60:coarse?50:60;
+    const frameDuration=1000/targetFps;
+    let sampleStart=performance.now(),sampleFrames=0,lastResizeAdjust=0;
+    const movement={forward:0,sideways:0};
     const clock = performance.now();
     const allowed = (x: number, z: number) =>
       current.current.world
@@ -228,6 +238,11 @@ export default function Cabin(props: Props) {
         const length = Math.max(1, Math.hypot(forward, sideways));
         forward /= length;
         sideways /= length;
+        // Soft acceleration avoids jitter as the floating joystick changes angle.
+        const smoothing=Math.min(1,dt*10);
+        movement.forward+=(forward-movement.forward)*smoothing;
+        movement.sideways+=(sideways-movement.sideways)*smoothing;
+        forward=movement.forward;sideways=movement.sideways;
         const yaw = look.current.yaw;
         const env = current.current.world
           ? environments[
@@ -360,6 +375,22 @@ export default function Cabin(props: Props) {
       if (!document.hidden && now - lastDraw >= frameDuration) {
         renderer.render(scene, camera);
         lastDraw = now;
+        sampleFrames++;
+        const sampleElapsed=now-sampleStart;
+        if(sampleElapsed>3200&&now-lastResizeAdjust>2700){
+          const actualFps=sampleFrames*1000/sampleElapsed;
+          const minRatio=graphicsMode==="battery"?.7:.85;
+          let nextRatio=renderRatio;
+          if(actualFps<targetFps*.78)nextRatio=Math.max(minRatio,renderRatio-.13);
+          else if(actualFps>targetFps*.93)nextRatio=Math.min(pixelRatioLimit,renderRatio+.07);
+          if(Math.abs(nextRatio-renderRatio)>.015){
+            renderRatio=nextRatio;
+            renderer.setPixelRatio(renderRatio);
+            renderer.setSize(Math.max(1,el.clientWidth),Math.max(1,el.clientHeight),false);
+            lastResizeAdjust=now;
+          }
+          sampleStart=now;sampleFrames=0;
+        }
       }
       frame = requestAnimationFrame(loop);
     };
