@@ -43,6 +43,9 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  const [suitOxygen,setSuitOxygen]=useState(100);
  const oxygenRef=useRef(100);
  const [evaNote,setEvaNote]=useState("");
+ const [hatchPrepared,setHatchPrepared]=useState(false);
+ const [evaDistance,setEvaDistance]=useState(0);
+ const verticalTouch=useRef(0);
  const suitReadout=useRef(0);
  const task=scenario.tasks[stage]??null;
  const activeStation=useRef<Station|null>(null);activeStation.current=task?.station??null;
@@ -76,11 +79,16 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     if(keys.current.has("d")||keys.current.has("arrowright"))x++;
     if(stick.current){const s=joystickVector(stick.current.dx,stick.current.dy,59);x+=s.x;y-=s.y;}
    }
-   const aimed=instance.update(observeLimit(x),observeLimit(y),sprint.current||keys.current.has("shift"),delta,activeStation.current);
+   const vertical=(keys.current.has(" ")||keys.current.has("pageup")?1:0)-(keys.current.has("control")||keys.current.has("pagedown")?1:0)+verticalTouch.current;
+   const aimed=instance.update(observeLimit(x),observeLimit(y),sprint.current||keys.current.has("shift"),delta,activeStation.current,observeLimit(vertical));
+
    if(evaOutsideRef.current){
     oxygenRef.current=Math.max(0,oxygenRef.current-delta*.06);
     suitReadout.current+=delta;
-    if(suitReadout.current>=1){setSuitOxygen(Math.round(oxygenRef.current));suitReadout.current=0;}
+    if(suitReadout.current>=.5){
+     setSuitOxygen(Math.round(oxygenRef.current));setEvaDistance(Math.round(instance.distanceToHatch()));
+     suitReadout.current=0;
+    }
     if(oxygenRef.current<=0){
      evaOutsideRef.current=false;instance.setExcursion(false);setEvaOutside(false);
      setEvaNote("Emergency training return: suit oxygen depleted. Restore reserves before another EVA.");
@@ -92,12 +100,13 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   const resize=()=>instance.resize();
   const down=(e:KeyboardEvent)=>{
    if(e.key.toLowerCase()==="e"&&!e.repeat){e.preventDefault();actRef.current();}
+   if((e.key===" "||e.key==="Spacebar")&&!e.repeat)world.current?.jump();
    if(e.key==="Escape")setPaused(p=>!p);
    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
    keys.current.add(e.key.toLowerCase());
   };
   const up=(e:KeyboardEvent)=>keys.current.delete(e.key.toLowerCase());
-  const blur=()=>{keys.current.clear();sprint.current=false;stick.current=null;};
+  const blur=()=>{keys.current.clear();sprint.current=false;stick.current=null;verticalTouch.current=0;};
   window.addEventListener("keydown",down);
   window.addEventListener("keyup",up);
   window.addEventListener("blur",blur);
@@ -169,11 +178,13 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  };
  const cycleEva=()=>{
   if(!world.current?.nearHatch())return;
-  if(!evaOutside&&!suitEquipped)return;
+  if(!evaOutside&&(!suitEquipped||!hatchPrepared))return;
   if(!evaOutside&&oxygenRef.current<=2)return;
   const next=!evaOutside;
   world.current.setExcursion(next);
   evaOutsideRef.current=next;setEvaOutside(next);setEvaPanel(false);
+  setHatchPrepared(false);verticalTouch.current=0;
+  setEvaDistance(Math.round(world.current.distanceToHatch()));
  };
  return <div className="story-fps-root">
   <canvas ref={canvas} className="story-fps-canvas" aria-label={"First person interactive 3D training scene for "+mission.title}/>
@@ -189,8 +200,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   </header>
   {evaOutside&&<div className="story-fps-suit-hud" role="status">
     <strong>● SUIT SEALED · {scenario.setting==="moon"?"LUNAR SURFACE":scenario.setting==="mars"?"SURFACE EVA":"ORBITAL EVA"}</strong>
-    <span>O₂ {suitOxygen}% · PRESSURE NOMINAL · TETHERED TRAINING</span>
-    <small>{scenario.setting==="moon"?"LOW GRAVITY · WALKABLE TERRAIN":"SIMULATED FREE-FLIGHT MOVEMENT"} · RETURN TO AIRLOCK BEFORE O₂ RUNS OUT</small>
+    <span>O₂ {suitOxygen}% · SUIT SEALED · {evaDistance} m FROM HATCH</span>
+    <small>{scenario.setting==="moon"?"LOW GRAVITY · JUMP AND WALK":scenario.setting==="mars"?"MARS GRAVITY · JUMP AND WALK":"ZERO-G THRUSTERS · UP / DOWN · 24 m TETHER"} · RETURN TO HATCH</small>
    </div>}
   <div className="story-fps-objective">
    <small>{evaOutside?"OPTIONAL EVA TRAINING — ORIGINAL MISSION TASKS REMAIN INSIDE":scenario.role==="astronaut"?"ASTRONAUT TRAINING":"REMOTE OPERATIONS / NO CREW ABOARD"}</small>
@@ -211,6 +222,18 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
       <div style={{transform:"translate("+joystick.dx+"px,"+joystick.dy+"px)"}}/>
     </div>}
   </div>
+  {evaOutside&&<div className="story-fps-eva-vertical">
+    {scenario.setting==="moon"||scenario.setting==="mars"
+      ? <button type="button" onClick={()=>world.current?.jump()} aria-label="Jump in low gravity">JUMP</button>
+      : <>
+       <button type="button" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);verticalTouch.current=1;}}
+         onPointerUp={()=>verticalTouch.current=0} onPointerCancel={()=>verticalTouch.current=0}
+         onLostPointerCapture={()=>verticalTouch.current=0} aria-label="Ascend in zero gravity">↑ UP</button>
+       <button type="button" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);verticalTouch.current=-1;}}
+         onPointerUp={()=>verticalTouch.current=0} onPointerCancel={()=>verticalTouch.current=0}
+         onLostPointerCapture={()=>verticalTouch.current=0} aria-label="Descend in zero gravity">↓ DOWN</button>
+      </>}
+   </div>}
   <div className="story-fps-actions">
     <button type="button" className="story-fps-sprint" onPointerDown={beginSprint} onPointerMove={moveSprint}
       onPointerUp={endSprint} onPointerCancel={endSprint} onLostPointerCapture={endSprint}>SPRINT</button>
@@ -227,8 +250,12 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
       {suitEquipped?"✓ HELMET SEALED · GLOVES SECURED · O₂ CONNECTED":"EQUIP PROTECTIVE SPACE SUIT"}
     </button>}
     <div className="story-fps-readout">SUIT OXYGEN <strong>{suitOxygen}%</strong></div>
-    <button type="button" disabled={!world.current?.nearHatch()||(!evaOutside&&(!suitEquipped||suitOxygen<=2))} onClick={cycleEva}>
-      {evaOutside?"CYCLE AIRLOCK & ENTER SHIP":"VERIFY SUIT · CYCLE AIRLOCK · EXIT"}
+    {!evaOutside&&suitEquipped&&<button type="button" className={hatchPrepared?"story-fps-armed":"story-fps-minor"}
+      onClick={()=>setHatchPrepared(true)}>
+       {hatchPrepared?"✓ INNER HATCH SEALED · CHAMBER SIMULATED AT VACUUM":"CLOSE INNER HATCH · SIMULATE DEPRESSURIZATION"}
+    </button>}
+    <button type="button" disabled={!world.current?.nearHatch()||(!evaOutside&&(!suitEquipped||!hatchPrepared||suitOxygen<=2))} onClick={cycleEva}>
+      {evaOutside?"CLOSE OUTER HATCH · REPRESSURIZE · ENTER":"OPEN OUTER HATCH · EXIT IN SUIT"}
     </button>
     <button type="button" className="story-fps-minor" onClick={()=>setEvaPanel(false)}>BACK TO GAME</button>
    </section></div>}
@@ -238,7 +265,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <p><strong>Spacecraft represented:</strong> {scenario.craft}</p><p><strong>Recognizable hardware:</strong> {scenario.profile.visual}. {scenario.profile.hardware}.</p>
     <p><strong>Your role:</strong> {scenario.role==="astronaut"?"First-person astronaut in a stylized mission training environment. Real spacecraft interiors were generally much smaller.":"First-person mission controller on Earth using remote spacecraft telemetry. The uncrewed vehicle is represented by a 3D model, not an astronaut aboard it."}</p>
     <p><strong>Objective:</strong> {mission.mission}</p>
-    <p>Move with WASD or your floating joystick; drag to look. Hold Sprint and drag to turn. Aim at mission hardware and press INTERACT. To explore outside, go to the airlock and equip a protective spacesuit. EVA training is optional and never changes history.</p>
+    <p>Move with WASD or the floating joystick; drag to look. Outside, use UP/DOWN (Space/Ctrl) to steer in zero gravity or JUMP on a surface. To leave, visit the airlock, equip a suit and close the inner hatch before depressurizing. Return through the exterior hatch. EVA training is optional and does not change real history.</p>
     <button type="button" onClick={()=>setShowGuide(false)}>BEGIN 3D MISSION →</button>
     <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ REAL HISTORY</button>
   </section></div>}
