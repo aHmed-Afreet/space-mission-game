@@ -146,9 +146,10 @@ export default function Cabin(props: Props) {
         return;
       const k = e.key.toLowerCase();
       if (k === "shift") keys.current.add("shift");
+      const currentFlight=current.current.world?.session;
       if([" ","control","pageup","pagedown"].includes(k) &&
-        current.current.world?.session.position.z!>10.4 &&
-        missionById(current.current.world!.session.missionId).destination==="earth"){
+        currentFlight && currentFlight.position.z>10.4 &&
+        missionById(currentFlight.missionId).destination==="earth"){
         e.preventDefault();keys.current.add(k);
       }
       if (

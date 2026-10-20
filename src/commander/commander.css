@@ -2155,3 +2155,9 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* Touchable EVA RCS controls; cabin walk controls remain unchanged. */
+.cmd-orbital-thrusters{position:absolute;z-index:14;right:max(18px,env(safe-area-inset-right));bottom:max(119px,calc(env(safe-area-inset-bottom) + 110px));display:flex;gap:9px}
+.cmd-orbital-thrusters button{min-width:93px;min-height:52px;padding:9px 11px;border-radius:14px;background:#1c4055dc;border:1px solid #9bc5ccae;color:#e2faf2;font:700 12px system-ui;touch-action:none;box-shadow:0 5px 15px #0007}
+.cmd-orbital-thrusters button:active{background:#387c86}
+@media(max-width:670px){.cmd-orbital-thrusters{right:10px;bottom:109px;gap:5px}.cmd-orbital-thrusters button{min-width:69px;padding:7px;font-size:10px}}
