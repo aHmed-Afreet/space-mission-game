@@ -159,6 +159,41 @@ function createScene(scenario:StoryScenario){
  const deck=new THREE.Group();scene.add(deck);
  for(let x=-6;x<=6;x+=2){box(deck,.028,.02,14,aluminum(),x,0,0);}
  for(let z=-6;z<=7;z+=2){box(deck,12,.02,.028,aluminum(),0,0,z);}
+
+  // Outdoor lunar and Martian operations feature mission-specific hardware and terrain.
+  if(scenario.setting==="moon"||scenario.setting==="mars"){
+    const terrain=new THREE.MeshStandardMaterial({color:scenario.setting==="mars"?0xa66a43:0x949c96,roughness:.95});
+    for(let k=0;k<30;k++){
+      const x=(k%2===0?-1:1)*(7+(k%6)*1.7);
+      const z=-8-Math.floor(k/6)*2.5;
+      const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(.3+(k%5)*.11,0),terrain);
+      stone.position.set(x,-.02,z);stone.scale.y=.46;scene.add(stone);
+    }
+    if(scenario.family==="lunar"){
+      const lunarRover=new THREE.Group();lunarRover.position.set(6,0,-12);scene.add(lunarRover);
+      box(lunarRover,2,.22,1.6,accent(),0,.78,0);
+      for(const side of [-1,1])for(const z of [-.8,.8])
+        cyl(lunarRover,.32,.32,.16,dark(),side*1,.29,z,0,0,Math.PI/2);
+      beam(lunarRover,new THREE.Vector3(0,.85,0),new THREE.Vector3(0,2.1,-.2),.05,aluminum());
+    }
+  }else{
+    // Interior ribs and overhead rails of a crew training cabin / remote probe-control bay.
+    for(const side of [-1,1]){
+      for(let z=-6;z<=6;z+=2){
+        box(deck,.28,3.9,.25,aluminum(),side*6.2,1.92,z);
+        sphere(deck,.07,new THREE.MeshStandardMaterial({color:0x80cdbf,emissive:0x1a8470,emissiveIntensity:1}),side*6.05,2.6,z);
+      }
+      beam(deck,new THREE.Vector3(side*6.2,3.9,-6.2),new THREE.Vector3(side*6.2,3.9,6.7),.07,aluminum());
+    }
+    const bodyColor=/Jupiter/i.test(scenario.destination)?0xc6a573:
+      /Saturn/i.test(scenario.destination)?0xc5bd94:
+      /Venus/i.test(scenario.destination)?0xb6a474:
+      /Pluto|Mercury|Comet|Asteroid/i.test(scenario.destination)?0x99918b:0x2e81ad;
+    const planet=new THREE.Mesh(new THREE.SphereGeometry(7,28,20),
+      new THREE.MeshStandardMaterial({color:bodyColor,roughness:1}));
+    planet.position.set(17,14,-32);scene.add(planet);
+  }
+
  const stationMeshes:Record<Station,THREE.Group>={} as Record<Station,THREE.Group>;
  (Object.keys(stationLocations) as Station[]).forEach((id,i)=>{
   const [x,z]=stationLocations[id];

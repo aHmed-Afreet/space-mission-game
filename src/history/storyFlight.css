@@ -52,3 +52,10 @@
 .story-fps-actions button{min-width:72px;min-height:65px;padding:12px 10px;font-size:10px}
 .story-fps-instruction{bottom:12px;font-size:8px}
 }
+
+.story-fps-instrument{padding:15px;background:#0e303dbb;border:1px solid #79b9a179;border-radius:9px;display:grid;gap:12px}
+.story-fps-instrument label{font-size:12px;color:#c8f4e0;letter-spacing:.5px}
+.story-fps-instrument input[type=range]{width:100%;min-height:26px;accent-color:#72e2bd}
+.story-fps-readout{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:10px;color:#a7c6bf}
+.story-fps-readout strong{color:#8ae4c4}
+.story-fps-dialog button.story-fps-armed{background:#24594a;border:1px solid #71e0b1;color:#c4ffe7}
