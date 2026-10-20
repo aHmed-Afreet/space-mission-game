@@ -122,7 +122,8 @@ export default function Flight({
     [showOther, setShowOther] = useState(false),
     [tutorial, setTutorial] = useState<string | null>(null),
     [effect, setEffect] = useState<VisualAction>(),
-    [toast, setToast] = useState(true);
+    [toast, setToast] = useState(true),
+    [hatchNotice,setHatchNotice] = useState("");
   const resumedAfterGuide = useRef(false),
     lastTutorial = useRef(""),
     lastLog = useRef("");
@@ -300,7 +301,11 @@ export default function Flight({
   const handleWork = (target: AimTarget | null) => {
     if (s.state.paused || s.state.sleeping || tablet || navOpen || tutorial) return;
     if(target?.kind==="airlock"){
-      if(!m.eva)return;
+      if(!m.eva){
+        setHatchNotice("The rear pressure hatch is secured because this spacecraft is not EVA-equipped. To reach Communications, use the illuminated controls on the three interior section doors.");
+        return;
+      }
+      setHatchNotice("");
       const id=target.id,lock=s.airlock;
       if(id==="inner"){
         if(lock.inner)run("closeInner");
@@ -314,6 +319,7 @@ export default function Flight({
       setActions(false);return;
     }
     if (target?.kind === "door") {
+      setHatchNotice("");
       onWorld({ kind: "door", id: target.id as keyof typeof doors });
       setActions(false);
       return;
@@ -494,6 +500,10 @@ export default function Flight({
           <button onClick={onHome}>Save & campaign</button>
         </div>
       )}
+      {hatchNotice&&<div className="cmd-hatch-notice" role="status">
+        <strong>AIRLOCK SECURED</strong><span>{hatchNotice}</span>
+        <button type="button" onClick={()=>setHatchNotice("")} aria-label="Dismiss airlock status">×</button>
+      </div>}
       {saveError && (
         <button
           className="campaign-save-warning"

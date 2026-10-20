@@ -2161,3 +2161,9 @@ select {
 .cmd-orbital-thrusters button{min-width:93px;min-height:52px;padding:9px 11px;border-radius:14px;background:#1c4055dc;border:1px solid #9bc5ccae;color:#e2faf2;font:700 12px system-ui;touch-action:none;box-shadow:0 5px 15px #0007}
 .cmd-orbital-thrusters button:active{background:#387c86}
 @media(max-width:670px){.cmd-orbital-thrusters{right:10px;bottom:109px;gap:5px}.cmd-orbital-thrusters button{min-width:69px;padding:7px;font-size:10px}}
+
+/* Door interaction status, intentionally outside the mission objective panel. */
+.cmd-hatch-notice{position:absolute;z-index:20;left:50%;transform:translateX(-50%);bottom:125px;width:min(520px,85vw);background:#0d2531ef;border:1px solid #bbd8d1;border-radius:12px;padding:12px 38px 12px 18px;color:#e8f4f0;box-shadow:0 10px 30px #0008;display:flex;flex-direction:column;gap:6px}
+.cmd-hatch-notice strong{font-size:12px;letter-spacing:.1em;color:#f1d7a2}
+.cmd-hatch-notice span{font-size:12px;line-height:1.5}
+.cmd-hatch-notice button{position:absolute;right:9px;top:6px;background:none;border:none;color:#fff;font-size:22px}

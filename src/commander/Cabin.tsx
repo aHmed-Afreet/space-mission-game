@@ -281,17 +281,22 @@ export default function Cabin(props: Props) {
       if (current.current.world && now - lastAim > 120) {
         lastAim = now;
         const targets: {kind: AimTarget["kind"]; id: string; position: THREE.Vector3; distance: number}[] = [];
-        for (const [id,d] of Object.entries(doors))
-          for(const x of [-.98,.98])for(const face of [-1,1]){
-           if((camera.position.z-d.z)*face<=.025)continue;
-           targets.push({kind:"door",id,position:new THREE.Vector3(x,1.35,d.z+face*.23),distance:2.5});
+        // Large touch-accessible door panels and frame controls on the facing side.
+        // Aim at the door itself to open it, even if the tiny control is hard to see.
+        for(const [id,d] of Object.entries(doors)){
+          const facingSide=camera.position.z>d.z?1:-1;
+          for(const x of [-1.08,1.08,.53,0]){
+            targets.push({kind:"door",id,position:new THREE.Vector3(x,1.35,d.z+facingSide*.19),distance:3.5});
           }
-        if(current.current.world && missionById(current.current.world.session.missionId).eva)
-          for(const [id,z] of [["inner",7.75],["outer",10.25]] as const)
-           for(const face of [-1,1]){
-            if((camera.position.z-z)*face<=.025)continue;
-            targets.push({kind:"airlock",id,position:new THREE.Vector3(.67,1.36,z+face*.24),distance:2.25});
-           }
+        }
+        const supportsEva=missionById(current.current.world.session.missionId).eva;
+        for(const [id,z] of [["inner",7.75],["outer",10.25]] as const){
+          if(id==="outer"&&!supportsEva)continue;
+          const facingSide=camera.position.z>z?1:-1;
+          for(const x of [.67,0]){
+            targets.push({kind:"airlock",id,position:new THREE.Vector3(x,1.35,z+facingSide*.24),distance:3.4});
+          }
+        }
         for (const [id, loc] of Object.entries(lockerPositions))
           targets.push({kind:"locker",id,position:new THREE.Vector3(...loc),distance:2.6});
         for (const [id, loc] of Object.entries(deck))
@@ -303,13 +308,15 @@ export default function Cabin(props: Props) {
           const p = t.position.clone().project(camera);
           if (p.z < -1 || p.z > 1) continue;
           const error = Math.hypot(p.x, p.y*.8);
-          if (error > (t.kind === "door" ? .38 : .52)) continue;
+          if (error > (t.kind === "door" || t.kind === "airlock" ? .68 : .52)) continue;
           if (error + d*.04 < best) { best = error + d*.04; picked = {kind:t.kind,id:t.id}; }
         }
         aim.current = picked;
         const label = picked
-          ? picked.kind === "airlock" ? `${picked.id==="inner"?"INNER":"OUTER"} AIRLOCK HATCH · PRESS INTERACT`
-          : picked.kind === "door" ? doors[picked.id as keyof typeof doors].name
+          ? picked.kind === "airlock" ? (supportsEva
+              ? `${picked.id==="inner"?"INNER":"OUTER"} AIRLOCK CONTROL · INTERACT`
+              : "RESTRICTED AIRLOCK · INTERACT FOR INFO")
+          : picked.kind === "door" ? `${current.current.world.session.world.doors[picked.id as keyof typeof doors].open?"CLOSE":"OPEN"} ${doors[picked.id as keyof typeof doors].name.toUpperCase()} · INTERACT`
           : picked.kind === "locker" ? lockers[picked.id as keyof typeof lockers].name
           : deck[picked.id as keyof typeof deck].name
           : "";
