@@ -199,6 +199,19 @@ function createScene(scenario:StoryScenario){
  const outerCraft=createHistoricVehicle(scenario);
  outerCraft.position.set(0,2,3.1);outerCraft.scale.setScalar(dusty?1.4:1.2);
  exterior.add(outerCraft);
+ // An actual external hatch housing, control panel and lit handle sit behind the vehicle.
+ const outerHatch=new THREE.Group();outerHatch.position.set(0,0,9.05);
+ exterior.add(outerHatch);
+ box(outerHatch,2.4,2.55,.22,aluminum(),0,1.4,0);
+ box(outerHatch,1.7,2.0,.16,dark(),0,1.35,.15);
+ box(outerHatch,.28,.42,.16,accent(),.98,1.42,.22);
+ box(outerHatch,.15,.18,.18,ceramic(),.98,1.42,.33);
+ box(outerHatch,.46,.05,.12,accent(),0,2.48,.23);
+ // A physical tether connects the suit to a fixed spacecraft attachment.
+ const tetherMaterial=new THREE.LineBasicMaterial({color:0xe8c46f,transparent:true,opacity:.88});
+ const tetherGeometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,1.4,9.15),new THREE.Vector3(0,1.4,9.15)]);
+ const tether=new THREE.Line(tetherGeometry,tetherMaterial);exterior.add(tether);
+
  // First-person glove and cuff meshes appear only when the suit is worn outside.
  const suitView=new THREE.Group();
  for(const side of [-1,1]){
@@ -222,12 +235,14 @@ function createScene(scenario:StoryScenario){
  positions.push(x*80,y*60+5,z*80);}
  stars.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
  const pts=new THREE.Points(stars,new THREE.PointsMaterial({color:0xbbdce1,size:.19,sizeAttenuation:true}));scene.add(pts);
- return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor};
+ return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether};
 }
 export type StoryWorld={
  canvas:HTMLCanvasElement;
  look:(dx:number,dy:number,sensitivity?:number)=>void;
- update:(axisX:number,axisY:number,sprint:boolean,dt:number,active?:Station|null)=>Station|null;
+ update:(axisX:number,axisY:number,sprint:boolean,dt:number,active?:Station|null,vertical?:number)=>Station|null;
+ jump:()=>void;
+ distanceToHatch:()=>number;
  setExcursion:(outside:boolean)=>void;
  nearHatch:()=>boolean;
  resize:()=>void;
@@ -237,18 +252,25 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:"high-performance"});
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.45));
  renderer.outputColorSpace=THREE.SRGBColorSpace;
- const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor}=createScene(scenario);
+ const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether}=createScene(scenario);
  const camera=new THREE.PerspectiveCamera(72,1,.04,170);camera.position.set(0,1.65,6.25);
  let yaw=0,pitch=0,t=0,outside=false;
+ const motion=new THREE.Vector3(),AIRLOCK=new THREE.Vector3(0,1.65,9.05);
+ let jumpSpeed=0,jumpHeight=0;
+ const distanceToHatch=()=>outside?camera.position.distanceTo(AIRLOCK):Math.max(0,7.35-camera.position.z);
+ const nearHatch=()=>outside?distanceToHatch()<2.8:Math.abs(camera.position.x)<1.7&&camera.position.z>4.65;
+ const jump=()=>{
+  if(outside&&dusty&&jumpHeight<.015&&jumpSpeed===0)jumpSpeed=scenario.setting==="moon"?2.3:2.65;
+ };
  camera.add(suitView);scene.add(camera);suitView.visible=false;
- const nearHatch=()=>outside?Math.hypot(camera.position.x,camera.position.z-9)<3.7:Math.abs(camera.position.x)<2.2&&camera.position.z>4.65;
  const setExcursion=(next:boolean)=>{
   outside=next;
+  motion.set(0,0,0);jumpSpeed=0;jumpHeight=0;
   deck.visible=!next;floor.visible=!next;hatchAssembly.visible=!next;workMount.visible=!next;
   for(const g of Object.values(stationMeshes))g.visible=!next;
   exterior.visible=next;craft.visible=!next;
   suitView.visible=next;
-  camera.position.set(0,1.65,next?9.3:5.9);
+  camera.position.set(0,1.65,next?10.55:5.9);
   yaw=next?Math.PI:0;pitch=0;
   scene.fog=scenario.setting==="mars"?new THREE.FogExp2(0x7e5a47,next?.004:.008):null;
   scene.background=new THREE.Color(next&&scenario.setting==="mars"?0xa47e62:0x050f1e);
@@ -261,17 +283,50 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  const look=(dx:number,dy:number,sensitivity=1)=>{
   yaw-=dx*.0032*sensitivity;pitch=Math.max(-1.15,Math.min(1.15,pitch-dy*.0028*sensitivity));
  };
- const update=(axisX:number,axisY:number,sprint:boolean,dt:number,active?:Station|null):Station|null=>{
+ const update=(axisX:number,axisY:number,sprint:boolean,dt:number,active?:Station|null,vertical=0):Station|null=>{
   const time=Math.min(dt,.07);
-  const speed=(sprint?5.1:2.75)*time;
   const rightX=Math.cos(yaw),rightZ=-Math.sin(yaw);
   const forwardX=-Math.sin(yaw),forwardZ=-Math.cos(yaw);
   const len=Math.max(1,Math.hypot(axisX,axisY));
-  const x=camera.position.x+(rightX*axisX+forwardX*axisY)/len*speed;
-  const z=camera.position.z+(rightZ*axisX+forwardZ*axisY)/len*speed;
-  camera.position.x=Math.max(outside?-24:-5.6,Math.min(outside?24:5.6,x));
-  camera.position.z=Math.max(outside?7:-5.65,Math.min(outside?65:6.65,z));
+  const moveX=(rightX*axisX+forwardX*axisY)/len;
+  const moveZ=(rightZ*axisX+forwardZ*axisY)/len;
+  if(outside&&!dusty){
+   // No gravity in vacuum: directional bursts change velocity and inertia persists.
+   motion.x+=(moveX*3.7-motion.x*.64)*time;
+   motion.z+=(moveZ*3.7-motion.z*.64)*time;
+   motion.y+=(Math.max(-1,Math.min(1,vertical))*3.7-motion.y*.64)*time;
+   motion.clampLength(0,sprint?3.25:2.05);
+   camera.position.addScaledVector(motion,time);
+   // An anchored tether limits the free-flight training range.
+   const offset=camera.position.clone().sub(AIRLOCK);
+   if(offset.length()>24){
+    camera.position.copy(AIRLOCK).addScaledVector(offset.normalize(),24);
+    motion.multiplyScalar(.32);
+   }
+   camera.position.y=Math.max(-10,Math.min(18,camera.position.y));
+  }else{
+   const speed=(outside?(scenario.setting==="moon"?1.5:1.65):2.65)*(sprint?1.55:1);
+   const nx=camera.position.x+moveX*speed*time;
+   const nz=camera.position.z+moveZ*speed*time;
+   camera.position.x=Math.max(outside?-23:-5.6,Math.min(outside?23:5.6,nx));
+   camera.position.z=Math.max(outside?9.9:-5.65,Math.min(outside?64:6.65,nz));
+   if(outside){
+    const gravity=scenario.setting==="moon"?1.62:3.71;
+    jumpHeight=Math.max(0,jumpHeight+jumpSpeed*time);
+    jumpSpeed-=gravity*time;
+    if(jumpHeight===0&&jumpSpeed<0)jumpSpeed=0;
+   }
+   camera.position.y=1.65+(outside?jumpHeight:0);
+  }
   camera.rotation.order="YXZ";camera.rotation.y=yaw;camera.rotation.x=pitch;
+  if(outside){
+   // Update the safety tether without allocating a new geometry every frame.
+   const coords=tether.geometry.attributes.position as THREE.BufferAttribute;
+   coords.setXYZ(0,0,1.4,9.15);
+   coords.setXYZ(1,camera.position.x,camera.position.y-.34,camera.position.z);
+   coords.needsUpdate=true;
+   tether.geometry.computeBoundingSphere();
+  }
   t+=time;if(!outside)craft.rotation.y=.35+Math.sin(t*.33)*.12;
   let candidate:Station|null=null,maxAlign=.32;
   for(const [id,[sx,sz]] of Object.entries(stationLocations) as [Station,[number,number]][]){
@@ -300,5 +355,5 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    }
   });renderer.dispose();
  };
- return {canvas,look,update,resize,dispose,setExcursion,nearHatch};
+ return {canvas,look,update,resize,dispose,setExcursion,nearHatch,jump,distanceToHatch};
 }
