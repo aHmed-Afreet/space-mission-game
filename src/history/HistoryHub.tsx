@@ -8,7 +8,7 @@ const readHistory=():HistoryProgress=>{
   try {
     const stored=JSON.parse(localStorage.getItem(progressKey)||"{}");
     if(!stored||Array.isArray(stored)||typeof stored!=="object")return {};
-    return Object.fromEntries(Object.entries(stored).filter(([,v])=>v===1||v===2));
+    return Object.fromEntries(Object.entries(stored).filter(([,v])=>v===1||v===2)) as HistoryProgress;
   } catch {return {};}
 };
 const preferences:{
