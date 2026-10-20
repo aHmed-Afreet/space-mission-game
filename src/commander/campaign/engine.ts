@@ -1304,7 +1304,7 @@ export function command(s: Session, action: CampaignAction): Session {
         break;
       case "diagnoseSatellite":
         if (
-          m.id !== "mission-2" ||
+          !m.eva || m.surface ||
           (!atSite(s, "power") && !(outside(s) && atSite(s, "survey")))
         )
           return fail(

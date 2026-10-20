@@ -1015,7 +1015,7 @@ for(const [index,entry] of added.entries()){
     ]) : entry.eva ? phase("RENDEZVOUS OPERATIONS",[
       use("communications","Confirm target satellite acquisition.","comms"),
       use("cockpit","Match the target satellite approach corridor.","course"),
-      use("science","Inspect the target system telemetry.","diagnoseSatellite"),
+      use("power","Inspect target electrical and radio telemetry at Engineering.","diagnoseSatellite"),
     ]) : []),
     ...(entry.eva?phase("EVA PREPARATION",evaOut()):[]),
     ...entry.activities,
