@@ -1303,3 +1303,13 @@ test("published privacy page and release disclaimer exist", () => {
   assert.match(privacy,/Reset campaign progress/i);
   assert.match(privacy,/NASA does not operate or endorse/i);
 });
+
+test("main menu contains exactly four commands with a combined history and story entry", () => {
+  const menu = readFileSync("src/ModeSelect.tsx", "utf8");
+  const history = readFileSync("src/history/HistoryHub.tsx", "utf8");
+  assert.equal((menu.match(/<button onClick=\{\(\) => setMode\("/g) || []).length, 4);
+  assert.match(menu, /Space History &amp; Stories/);
+  assert.doesNotMatch(menu, /setMode\("stories"\)/);
+  assert.match(history, />READ HISTORY<\/button>/);
+  assert.match(history, />LIVE THE STORY<\/button>/);
+});

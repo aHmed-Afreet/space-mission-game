@@ -4,14 +4,14 @@ const Commander = lazy(() => import("./commander/Commander"));
 const HistoryHub = lazy(() => import("./history/HistoryHub"));
 const HowToPlay = lazy(() => import("./HowToPlay"));
 export default function ModeSelect() {
-  const [mode, setMode] = useState<"strategy" | "commander" | "history" | "stories" | "guide" | null>(null);
+  const [mode, setMode] = useState<"strategy" | "commander" | "history" | "guide" | null>(null);
   if (!mode)
     return (
       <div className="cmd-mode-select">
         <span className="eyebrow">ORBITAL MISSION LAB</span>
         <h1>Choose your command.</h1>
         <p>Build a spacecraft, command astronaut missions, or explore real spaceflight history.</p>
-        <div>
+        <div className="cmd-mode-cards">
           <button onClick={() => setMode("strategy")}>
             <strong>Strategy Mode</strong>
             <span>The original Mars Explorer design-and-launch game.</span>
@@ -24,12 +24,8 @@ export default function ModeSelect() {
             </span>
           </button>
           <button onClick={() => setMode("history")}>
-            <strong>Real Space History</strong>
-            <span>55 major missions from Sputnik to the modern Moon era, with timelines, real achievements and sources.</span>
-          </button>
-          <button onClick={() => setMode("stories")}>
-            <strong>Live the Story</strong>
-            <span>Step inside a historically inspired mission and make realistic training decisions.</span>
+            <strong>Space History &amp; Stories</strong>
+            <span>Read 55 real space mission histories or switch to Live the Story for interactive training decisions.</span>
           </button>
           <button onClick={() => setMode("guide")}>
             <strong>How to Play</strong>
@@ -42,10 +38,10 @@ export default function ModeSelect() {
         </footer>
       </div>
     );
-  if (mode === "history" || mode === "stories" || mode === "guide") {
+  if (mode === "history" || mode === "guide") {
     return <Suspense fallback={<p className="cmd-builder">Loading mission records…</p>}>
       {mode === "guide" ? <HowToPlay onExit={() => setMode(null)} /> :
-        <HistoryHub key={mode} startIn={mode === "stories" ? "live" : "archive"} onExit={() => setMode(null)} />}
+        <HistoryHub startIn="archive" onExit={() => setMode(null)} />}
     </Suspense>;
   }
   return (

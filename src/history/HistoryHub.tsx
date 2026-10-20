@@ -74,7 +74,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
         <h1>Real missions. <em>Remarkable stories.</em></h1>
         <p>Explore {historyMissions.length} significant milestones in space exploration, from the first satellite to modern lunar and planetary science. Learn what happened, why it mattered, and experience a short, fictional mission-control decision inspired by the real event.</p>
         <div className="history-tabs" role="group" aria-label="Space history experience">
-          <button type="button" aria-pressed={view==="archive"} onClick={()=>setView("archive")}>SPACE HISTORY</button>
+          <button type="button" aria-pressed={view==="archive"} onClick={()=>setView("archive")}>READ HISTORY</button>
           <button type="button" aria-pressed={view==="live"} onClick={()=>setView("live")}>LIVE THE STORY</button>
         </div>
       </section>

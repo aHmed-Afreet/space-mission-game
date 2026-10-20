@@ -2143,3 +2143,15 @@ select {
  .cmd-mode-select>div button {padding:17px 19px;min-height:98px}
  .cmd-mode-select>div button strong {font-size:19px}
 }
+
+/* Keep the four primary commands together in a balanced two-by-two menu. */
+.cmd-mode-select > .cmd-mode-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 700px) {
+  .cmd-mode-select > .cmd-mode-cards {
+    grid-template-columns: 1fr;
+  }
+}
