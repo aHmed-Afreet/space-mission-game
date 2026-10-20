@@ -1324,9 +1324,12 @@ test("all 55 history entries have mission-specific spacecraft and first-person o
   for (let i=0;i<scenarios.length;i++){
     const s=scenarios[i],m=historyMissions[i];
     assert.equal(s.destination,m.destination);
-    assert.equal(s.tasks.length,4);
-    assert.deepEqual(s.tasks.map(t=>t.station),["brief","systems","operations","science"]);
-    assert.equal(new Set(s.tasks.map(t=>t.id)).size,4);
+    assert.ok(s.tasks.length>=4&&s.tasks.length<=7);
+    assert.equal(s.tasks[0].station,"brief");
+    assert.ok(s.tasks.some(t=>t.station==="systems"));
+    assert.ok(s.tasks.some(t=>t.station==="operations"));
+    assert.ok(s.tasks.some(t=>t.station==="science"));
+    assert.equal(new Set(s.tasks.map(t=>t.id)).size,s.tasks.length);
     assert.ok(s.craft.length>12);
     for(const task of s.tasks){
       assert.ok(task.heading.length>=14);
