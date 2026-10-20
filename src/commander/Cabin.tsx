@@ -77,7 +77,7 @@ export default function Cabin(props: Props) {
       );
       return;
     }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, props.settings?.graphics === "quality" ? 1.8 : props.settings?.graphics === "battery" ? 1 : 1.5));
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, props.settings?.graphics === "quality" ? 2 : props.settings?.graphics === "battery" ? 1 : 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
@@ -92,8 +92,8 @@ export default function Cabin(props: Props) {
         props.world
           ? {
               eva: missionById(props.world.session.missionId).eva,
-              destination: missionById(props.world.session.missionId)
-                .destination,
+              destination: missionById(props.world.session.missionId).destination,
+              graphics: props.settings?.graphics,
             }
           : {},
       );

@@ -8,7 +8,7 @@ import type { Action, Area } from "./simulation";
 export type VisualAction = { id: number; action: Action };
 /** Shared primitive geometry and instanced static fittings keep the cabin inexpensive. */
 export function createInterior(
-  options: { eva?: boolean; destination?: string } = {},
+  options: { eva?: boolean; destination?: string; graphics?: "quality" | "balanced" | "battery" } = {},
 ) {
   const scene = new T.Scene();
   scene.background = new T.Color("#070c15");
@@ -45,6 +45,33 @@ export function createInterior(
     light = mat("#d6e4dd", 0, 0.4, "#c2d9cf"),
     amber = mat("#8c6040", 0.3, 0.5, "#c48c50"),
     mint = mat("#41716b", 0.2, 0.5, "#3f827c");
+  // Quality-mode fine-grain hull microstructure. One tiny repeatable texture
+  // creates subtle brushed materials, rather than expensive 4K surfaces on iPads.
+  if (options.graphics === "quality") {
+    const textureCanvas=document.createElement("canvas");
+    textureCanvas.width=128;textureCanvas.height=128;
+    const context=textureCanvas.getContext("2d");
+    if(context){
+      const pixels=context.createImageData(128,128);
+      for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+        // Fine industrial horizontal brushed-grain and deterministic micro-noise.
+        const grain=Math.sin(y*2.43)*15+
+          (Math.sin(x*14.61+y*3.33)*Math.cos(y*6.92+x*2.67))*12;
+        const grey=Math.max(50,Math.min(217,Math.round(143+grain)));
+        const p=(y*128+x)*4;
+        pixels.data[p]=grey;pixels.data[p+1]=grey;
+        pixels.data[p+2]=grey;pixels.data[p+3]=255;
+      }
+      context.putImageData(pixels,0,0);
+      const brushed=new T.CanvasTexture(textureCanvas);
+      brushed.wrapS=T.RepeatWrapping;brushed.wrapT=T.RepeatWrapping;
+      brushed.repeat.set(4,3);brushed.anisotropy=2;
+      textures.push(brushed);
+      for(const mat of [shell,panel,floor]){
+        mat.bumpMap=brushed;mat.bumpScale=.025;mat.needsUpdate=true;
+      }
+    }
+  }
   const batch = new Map<
     string,
     { geometry: T.BufferGeometry; material: T.Material; matrices: T.Matrix4[] }

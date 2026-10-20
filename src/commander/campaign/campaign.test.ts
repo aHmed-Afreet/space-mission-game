@@ -1416,8 +1416,12 @@ test("Commander cabinet inventory, visible EVA suit and both-sided hatch buttons
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  const engine=readFileSync("src/commander/campaign/engine.ts","utf8");
  assert.match(cabin,/kind:"airlock"/);
- assert.match(cabin,/for\(const face of \[-1,1\]\)/);
- assert.match(fixtures,/for \(const face of \[-1,1\]\)/);
+ assert.match(cabin,/for\(const x of \[-1\.08,1\.08,\.53,0\]\)/);
+ assert.match(cabin,/distance:3\.5/);
+ assert.match(cabin,/OPEN/);
+ assert.match(fixtures,/for\(const face of \[-1,1\]\)/);
+ assert.match(fixtures,/leafSwitches/);
+ assert.match(fixtures,/hatchGreen/);
  assert.match(fixtures,/key==="eva"/);
  assert.match(fixtures,/key==="samples"/);
  assert.match(fixtures,/COMPARTMENT EMPTY/);
@@ -1425,7 +1429,11 @@ test("Commander cabinet inventory, visible EVA suit and both-sided hatch buttons
  assert.match(field,/orbitEarth/);
  assert.match(flight,/target\?\.kind==="airlock"/);
  assert.match(engine,/atSite\(s, "outerHatch"\)/);
- assert.match(readFileSync("src/commander/interior.ts","utf8"),/evaHands\.visible/);
+ const interior=readFileSync("src/commander/interior.ts","utf8");
+ assert.match(interior,/evaHands\.visible/);
+ assert.match(interior,/flightDoorButtons/);
+ assert.match(interior,/EVA LOCKED/);
+ assert.match(flight,/hatchNotice/);
 });
 
 test("realism update preserves physical EVA hatch targeting and distinct exterior physics",()=>{
@@ -1445,4 +1453,13 @@ test("realism update preserves physical EVA hatch targeting and distinct exterio
  assert.match(images,/TextureLoader/);
  assert.match(images,/earth_atmos_2048/);
  assert.match(images,/moon_1024/);
+});
+
+test("quality setting adds surface microdetail without affecting battery mode",()=>{
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+ const interior=readFileSync("src/commander/interior.ts","utf8");
+ assert.match(cabin,/graphics: props.settings\?\.graphics/);
+ assert.match(interior,/options.graphics === "quality"/);
+ assert.match(interior,/bumpMap/);
+ assert.match(interior,/CanvasTexture/);
 });
