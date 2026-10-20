@@ -1,5 +1,6 @@
 import type { ShipState } from "./campaign/ship";
 import {makePlanet,planetKind,disposePlanet} from "./celestial";
+import {installShipArchitecture} from "./shipArchitecture";
 import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -33,15 +34,15 @@ export function createInterior(
     materials.push(m);
     return m;
   };
-  const shell = mat("#78898f", 0.37, 0.5),
-    panel = mat("#9aa9ab", 0.26, 0.52),
-    dark = mat("#141e26", 0.3, 0.62),
-    floor = mat("#35444b", 0.33, 0.7),
-    silver = mat("#89979b", 0.8, 0.34),
-    fabric = mat("#3a4c57", 0, 0.97),
-    warm = mat("#b6aa8c", 0.15, 0.77),
-    white = mat("#d3dcda", 0.18, 0.52),
-    glass = mat("#12252c", 0.5, 0.17),
+  const shell = mat("#2c3844", 0.56, 0.39),
+    panel = mat("#526574", 0.44, 0.42),
+    dark = mat("#101b27", 0.24, 0.56),
+    floor = mat("#222e38", 0.36, 0.68),
+    silver = mat("#a0b0b8", 0.72, 0.31),
+    fabric = mat("#263b47", 0.05, 0.91),
+    warm = mat("#b9a588", 0.2, 0.69),
+    white = mat("#9caab0", 0.24, 0.55),
+    glass = mat("#112b38", 0.35, 0.13),
     light = mat("#d6e4dd", 0, 0.4, "#c2d9cf"),
     amber = mat("#8c6040", 0.3, 0.5, "#c48c50"),
     mint = mat("#41716b", 0.2, 0.5, "#3f827c");
@@ -493,6 +494,8 @@ export function createInterior(
       0.105,
     );
   }
+  // Rich instanced spacecraft structure and cockpit, without moving gameplay stations.
+  installShipArchitecture(part,pipe,screen,label,mat,options.graphics||"balanced");
   // Interactive edges are almost invisible until in reach.
   const highlights = new Map<Area, T.MeshStandardMaterial>();
   for (const id of Object.keys(deck) as Area[]) {
@@ -508,15 +511,15 @@ export function createInterior(
     for (const x of [-1.2, 1.2])
       dynamic(x, 2.38, z, 0.065, 0.04, 0.06, alarmMat);
   // Ambient fill and bounded practical lights. No real-time shadows or post-processing.
-  scene.add(new T.HemisphereLight("#ebf5f9", "#364951", 1.85));
-  const sun = new T.DirectionalLight("#f1f4f8", 1.6);
+  scene.add(new T.HemisphereLight("#bed7e4", "#101821", 1.35));
+  const sun = new T.DirectionalLight("#d9ecfa", 1.75);
   sun.position.set(-2, 4, -10);
   scene.add(sun);
   // One bounded practical and two broad fills avoid a large per-fragment light loop.
-  const practical = new T.PointLight("#f2f6ee", 17, 11, 2);
+  const practical = new T.PointLight("#c9f4fc", 12, 12, 2);
   practical.position.set(0, 2.5, 0.5);
   scene.add(practical);
-  const aftFill = new T.DirectionalLight("#d6d5c7", 0.85);
+  const aftFill = new T.DirectionalLight("#dfd4bd", 0.75);
   aftFill.position.set(0, 3, 8);
   scene.add(aftFill);
   // Flush all repeated fittings into instanced draw calls.
