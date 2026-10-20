@@ -227,6 +227,47 @@ function createScene(scenario:StoryScenario){
   const halo=new THREE.Mesh(new THREE.TorusGeometry(1.2,.025,5,48),new THREE.MeshBasicMaterial({color:i%2?0x6a99aa:0x63e4bf}));
   halo.rotation.x=Math.PI/2;halo.position.y=.02;g.add(halo);
  });
+ // Distinctive historic-vehicle equipment instead of a uniform generic simulator.
+ // These are recognizable low-poly training interpretations, not museum-accurate plans.
+ if(scenario.family==="lunar"){
+   const lmPanel=new THREE.Group();lmPanel.position.set(0,0,-5.9);deck.add(lmPanel);
+   box(lmPanel,2.5,2,.22,dark(),0,1.45,0);
+   for(let i=0;i<6;i++)box(lmPanel,.2,.22,.075,i%2?accent():aluminum(),-1+i*.4,1.95,-.16);
+   for(const x of [-.65,.65])box(lmPanel,.55,.48,.09,new THREE.MeshStandardMaterial({color:0x3c7392,emissive:0x133246}),x,1.1,-.19);
+   if(/Apollo 15|Apollo 17/.test(scenario.title)){
+     const sampleRack=new THREE.Group();sampleRack.position.set(5.1,0,-4.8);deck.add(sampleRack);
+     box(sampleRack,.8,1.2,.7,aluminum(),0,.65,0);
+     for(let i=0;i<3;i++)cyl(sampleRack,.12,.12,.46,ceramic(),-.25+i*.25,1.48,0);
+   }
+ }
+ if(scenario.family==="gemini"||scenario.family==="capsule"||scenario.family==="apollo"||scenario.family==="sphere"){
+   const console=new THREE.Group();console.position.set(0,0,-5.55);deck.add(console);
+   box(console,3,1.6,.65,dark(),0,.95,0);
+   for(let i=0;i<13;i++){const x=-1.32+(i%7)*.41,y=1.15+Math.floor(i/7)*.36;
+     cyl(console,.075,.075,.04,i%3===0?accent():aluminum(),x,y,-.39,Math.PI/2);}
+   if(scenario.family==="gemini")for(const side of [-1,1]){
+     box(console,.65,.5,.65,ceramic(),side*1.1,.48,1.2);
+   }
+ }
+ if(scenario.family==="shuttle"){
+   const flightdeck=new THREE.Group();flightdeck.position.set(0,0,-5.7);deck.add(flightdeck);
+   box(flightdeck,3.6,1.4,.7,dark(),0,1.15,0);
+   for(let i=0;i<4;i++)box(flightdeck,.55,.43,.09,new THREE.MeshStandardMaterial({color:0x1b7184,emissive:0x13404e,emissiveIntensity:.6}),-1.17+i*.78,1.56,-.4);
+   for(let i=0;i<8;i++)box(flightdeck,.17,.09,.17,accent(),-1.3+i*.37,.92,-.45);
+ }
+ if(scenario.family==="station"){
+   for(const side of [-1,1])for(let i=0;i<4;i++){
+     const rack=new THREE.Group();rack.position.set(side*5.8,0,-4.7+i*2.65);deck.add(rack);
+     box(rack,.55,2.2,1.55,ceramic(),0,1.2,0);
+     box(rack,.6,.7,1.2,dark(),-side*.05,1.46,0);
+     box(rack,.61,.28,.75,accent(),-side*.06,.87,0);
+   }
+ }
+ if(scenario.family==="rover"){
+   const roboticBay=new THREE.Group();roboticBay.position.set(0,0,-5.8);deck.add(roboticBay);
+   box(roboticBay,3.4,1.4,.52,dark(),0,1.12,0);
+   for(let i=0;i<3;i++)box(roboticBay,.78,.55,.08,new THREE.MeshStandardMaterial({color:i===0?0xb66c40:0x3d7686,emissive:0x10222a}),-1+i,1.65,-.3);
+ }
  const craft=makeCraft(scenario.family,scenario);
  craft.position.set(0,4,-15);craft.rotation.y=.4;
  const scale=scenario.family==="station"?.8:scenario.family==="shuttle"?.85:scenario.family==="lunar"?.9:1.04;
