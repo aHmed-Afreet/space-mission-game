@@ -28,6 +28,9 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  const [stage,setStage]=useState(0);
  const [procedure,setProcedure]=useState<StoryTask|null>(null);
  const [confirmed,setConfirmed]=useState(false);
+ const [calibration,setCalibration]=useState(35);
+ const [operationArmed,setOperationArmed]=useState(false);
+ const [measurement,setMeasurement]=useState(false);
  const [logged,setLogged]=useState<string[]>([]);
  const [paused,setPaused]=useState(false);
  const [showGuide,setShowGuide]=useState(true);
@@ -40,7 +43,9 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  actRef.current=()=>{
   if(pauseRef.current)return;
   const st=aimRef.current;
-  if(st&&task&&st===task.station){setProcedure(task);setConfirmed(false);}
+  if(st&&task&&st===task.station){
+   setProcedure(task);setConfirmed(false);setCalibration(35);setOperationArmed(false);setMeasurement(false);
+  }
  };
  const onLook=useCallback((dx:number,dy:number)=>world.current?.look(dx,dy),[]);
  useEffect(()=>{
@@ -124,8 +129,14 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   if(sprintPointer.current?.id!==e.pointerId)return;
   sprintPointer.current=null;sprint.current=false;
  };
+ const canFinish=!!procedure&&confirmed&&(
+  procedure.station==="brief"||
+  (procedure.station==="systems"&&calibration>=70&&calibration<=85)||
+  (procedure.station==="operations"&&operationArmed)||
+  (procedure.station==="science"&&measurement)
+ );
  const finishTask=()=>{
-  if(!task||!confirmed)return;
+  if(!task||!canFinish)return;
   setLogged(a=>[...a,task.complete]);
   setStage(s=>s+1);setProcedure(null);setConfirmed(false);
  };
@@ -176,12 +187,31 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <small>MISSION CONTROL PROCEDURE · {displayName[procedure.station].toUpperCase()}</small>
     <h2>{procedure.heading}</h2>
     <p>{procedure.procedure}</p>
+    <div className="story-fps-instrument">
+      {procedure.station==="brief"&&<p>Confirm the mission's historical objective and the necessary flight checklist.</p>}
+      {procedure.station==="systems"&&<>
+        <label htmlFor="story-calibration">SYSTEMS CALIBRATION — {calibration}% {calibration>=70&&calibration<=85?"· NOMINAL":"· ADJUST TO 70–85%"}</label>
+        <input id="story-calibration" type="range" min="0" max="100" step="5" value={calibration}
+         onChange={e=>setCalibration(Number(e.target.value))}/>
+        <div className="story-fps-readout">POWER / THERMAL / TELEMETRY <strong>{calibration>=70&&calibration<=85?"NOMINAL":"NOT READY"}</strong></div>
+      </>}
+      {procedure.station==="operations"&&<>
+        <p>Arm the correct operation sequence before running it. The training console records your selection.</p>
+        <button type="button" className={operationArmed?"story-fps-armed":"story-fps-minor"} onClick={()=>setOperationArmed(true)}>
+          {operationArmed?"✓ MISSION SEQUENCE ARMED":"ARM "+procedure.action.toUpperCase()}</button>
+      </>}
+      {procedure.station==="science"&&<>
+        <p>Record the observation and confirm the mission's data are prepared for the ground team.</p>
+        <button type="button" className={measurement?"story-fps-armed":"story-fps-minor"} onClick={()=>setMeasurement(true)}>
+          {measurement?"✓ OBSERVATION CAPTURED":"CAPTURE SCIENCE READING"}</button>
+      </>}
+    </div>
     <div className="story-fps-check">
      <label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>
-       I reviewed this step, checked the equipment indication and am ready to record the operation.
+       Verify the checklist and acknowledge the simulated operation.
      </label>
     </div>
-    <button type="button" disabled={!confirmed} onClick={finishTask}>{procedure.action.toUpperCase()} ✓</button>
+    <button type="button" disabled={!canFinish} onClick={finishTask}>{procedure.action.toUpperCase()} ✓</button>
     <button type="button" className="story-fps-minor" onClick={()=>setProcedure(null)}>BACK TO SPACECRAFT</button>
   </section></div>}
   {completed&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission completed">
