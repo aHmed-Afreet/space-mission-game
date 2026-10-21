@@ -368,7 +368,7 @@ export default function Flight({
           settings={preferences}
           onInteract={handleWork}
           onGraphicsError={() => onTickPause(true)}
-          locked={s.state.sleeping || tablet || navOpen || !!tutorial || rendezvousOpen}
+          locked={s.state.paused || s.state.sleeping || tablet || navOpen || !!tutorial || rendezvousOpen}
           alarm={shipAlerts(s).some(
             (a) => a.level === "WARNING" || a.level === "EMERGENCY",
           )}
