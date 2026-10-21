@@ -1581,6 +1581,41 @@ test("Mission 2 confirmation advances valid objectives and explains blocked atte
  assert.match(rendezvousBlocker(lowFuel)!,/2 fuel/);
  assert.equal(command(lowFuel,"approach").objective,objective);
 });
+test("Mission 2 does not trigger its recovery fault during rendezvous and restores stuck saves",()=>{
+ const m=missionById("mission-2");
+ const rendezvous=m.objectives.findIndex(o=>o.action==="approach");
+ const recovery=m.objectives.findIndex(o=>o.event==="power");
+ const warning=m.objectives[recovery];
+ assert.ok(recovery>rendezvous,"the scripted bus warning belongs to a later phase");
+ let s=createSession(m,design,life,m.requiredEquipment,qualified(1));
+ s={...s,objective:rendezvous,position:{x:0,z:-5.2,heading:0},
+    flight:{...s.flight,status:"orbit"},state:{...s.state,paused:false,minutes:121},
+    observations:{...s.observations,orbitMinute:95}};
+ // Time in orbit exceeded 8 minutes, but the future recovery warning must wait.
+ s=tickSession(s,0.5);
+ assert.equal(s.state.malfunction,false);
+ assert.equal(s.eventIds.includes(warning.id),false);
+ // An existing iPad checkpoint may contain the premature scripted fault.
+ const stale={...s,eventIds:[...s.eventIds,warning.id],
+   state:{...s.state,malfunction:true}};
+ assert.equal(rendezvousBlocker(stale),null);
+ const fixed=command(stale,"approach");
+ assert.ok(fixed.objective>rendezvous,"confirm must advance objective 15");
+ assert.equal(fixed.state.malfunction,false);
+ assert.equal(fixed.eventIds.includes(warning.id),false);
+ // The warning still occurs at the actual recovery checklist, not earlier.
+ let later={...fixed,objective:recovery};
+ later=tickSession(later,0.5);
+ assert.equal(later.state.malfunction,true);
+ assert.ok(later.eventIds.includes(warning.id));
+ // Real hardware failures remain blocking; the fix is not a safety bypass.
+ const hardware={...stale,world:{...stale.world,faults:[{
+   id:"actual-bus-fault",kind:"bus" as const,diagnosed:false,repaired:false,
+   verified:false,at:120
+ }]}};
+ assert.match(rendezvousBlocker(hardware)!,/malfunction/);
+ assert.equal(command(hardware,"approach").objective,rendezvous);
+});
 test("Redesigned ship uses stamped panel materials and shared instanced assets",()=>{
  const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");
  assert.match(architecture,/CanvasTexture/);

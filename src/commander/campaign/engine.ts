@@ -425,8 +425,32 @@ export function preflight(
 export function currentObjective(s: Session) {
   return missionById(s.missionId).objectives[s.objective];
 }
+/**
+ * An earlier build activated Mission 2's CABIN RECOVERY power failure during
+ * RENDEZVOUS. Reschedule that future checklist event when loading old saves.
+ * Preserve any genuine, unresolved hardware-bus fault.
+ */
+function earlySatelliteRecoveryWarning(s: Session) {
+  if (s.missionId !== "mission-2") return null;
+  const mission = missionById(s.missionId);
+  const index = mission.objectives.findIndex(task => task.event === "power");
+  const id = mission.objectives[index]?.id;
+  return index > s.objective && id && s.eventIds.includes(id) ? id : null;
+}
+function rescheduleSatelliteRecoveryWarning(s: Session): Session {
+  const warningId = earlySatelliteRecoveryWarning(s);
+  if (!warningId) return s;
+  const hardwareBusFault = s.world.faults.some(f => f.kind === "bus" && !f.verified);
+  return {
+    ...s,
+    eventIds: s.eventIds.filter(id => id !== warningId),
+    state: { ...s.state, malfunction: hardwareBusFault },
+    observations: { ...s.observations, powerDiagnosed: false },
+  };
+}
 /** Shared engine/UI prerequisites for Satellite Repair's rendezvous objective. */
 export function rendezvousBlocker(s: Session): string | null {
+  s = rescheduleSatelliteRecoveryWarning(s);
   if (s.missionId !== "mission-2" || currentObjective(s)?.action !== "approach")
     return "Satellite rendezvous is not the current mission objective.";
   if (s.report || s.state.ended) return "This flight has already ended.";
@@ -537,9 +561,13 @@ function applyEvents(s: Session) {
       );
     }
   }
-  for (const taskEvent of missionById(n.missionId).objectives.filter(
+  const scheduledMission = missionById(n.missionId);
+  for (const taskEvent of scheduledMission.objectives.filter(
     (o) => o.event,
   )) {
+    // Satellite Repair: the end-of-mission bus warning must not halt rendezvous.
+    if (n.missionId === "mission-2" && taskEvent.event === "power" &&
+        n.objective < scheduledMission.objectives.indexOf(taskEvent)) continue;
     if (n.eventIds.includes(taskEvent.id) || n.completed.includes(taskEvent.id))
       continue;
     const elapsed =
@@ -581,7 +609,7 @@ function applyEvents(s: Session) {
   return n;
 }
 export function tickSession(s: Session, minutes = 1): Session {
-  s = withObservations(s);
+  s = rescheduleSatelliteRecoveryWarning(withObservations(s));
   if (s.state.paused || s.state.ended || s.report) return s;
   const waiting = currentObjective(s);
   if (waiting?.type === "WAIT" && waiting.condition === "minutes")
@@ -845,7 +873,7 @@ const gearFor: Partial<Record<CampaignAction, EquipmentId>> = {
   repairCamp: "repair",
 };
 export function command(s: Session, action: CampaignAction): Session {
-  s = withObservations(s);
+  s = rescheduleSatelliteRecoveryWarning(withObservations(s));
   if (s.report || s.state.paused || s.state.ended) return s;
   if (s.state.sleeping && action !== "wake")
     return say(s, "Wake up before using equipment.");
