@@ -36,6 +36,38 @@ export function installShipArchitecture(
  const seal=mat("#0d141a",.06,.86);
  const accent=mat("#d0a76c",.4,.42);
  const bolts=mat("#c9d0cd",.6,.34);
+ // A tiny reusable painted-alloy texture with seams, serial marks and
+ // brushed wear makes large panels look manufactured instead of flat cubes.
+ // All geometry still uses shared materials/instancing.
+ const textureCanvas=document.createElement("canvas");
+ textureCanvas.width=512;textureCanvas.height=512;
+ const g=textureCanvas.getContext("2d");
+ if(g){
+  g.fillStyle="#d5d9d8";g.fillRect(0,0,512,512);
+  for(let y=0;y<512;y+=2){
+   const shade=Math.round(171+Math.sin(y*.77)*13+Math.sin(y*3.29)*6);
+   g.fillStyle=`rgba(26,37,45,${Math.max(.03,(210-shade)/800)})`;
+   g.fillRect(0,y,512,1);
+  }
+  g.strokeStyle="rgba(32,42,51,.28)";g.lineWidth=5;
+  g.strokeRect(12,12,488,488);
+  g.strokeStyle="rgba(245,248,249,.54)";g.lineWidth=2;
+  g.strokeRect(20,20,472,472);
+  g.fillStyle="#596772";
+  for(const x of [31,481])for(const y of [31,481]){
+   g.beginPath();g.arc(x,y,6,0,Math.PI*2);g.fill();
+   g.strokeStyle="#dbe3e5";g.lineWidth=1;
+   g.beginPath();g.moveTo(x-3,y+2);g.lineTo(x+3,y-2);g.stroke();
+  }
+  g.fillStyle="#53636a";g.font="bold 17px monospace";
+  g.fillText("ORBITAL / PANEL ASSY",35,63);
+  g.font="13px monospace";g.fillText("ACCESS  ·  04 / INSPECT",35,467);
+  const map=new T.CanvasTexture(textureCanvas);
+  map.colorSpace=T.SRGBColorSpace;map.anisotropy=2;
+  for(const material of [ceramic,trim,alloy]){
+   material.map=map;material.needsUpdate=true;
+  }
+ }
  const v=(x:number,y:number,z:number)=>new T.Vector3(x,y,z);
 
  // Eight-sided pressure tunnel: tapered overhead shoulders and thick frames.
