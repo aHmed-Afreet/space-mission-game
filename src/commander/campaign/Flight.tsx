@@ -1,5 +1,6 @@
 import { sound } from "./audio";
 import StationControls from "./StationControls";
+import RendezvousConsole from "./RendezvousConsole";
 import { doors, shipAlerts, type WorldAction } from "./ship";
 import LaunchView from "./LaunchView";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -123,7 +124,8 @@ export default function Flight({
     [tutorial, setTutorial] = useState<string | null>(null),
     [effect, setEffect] = useState<VisualAction>(),
     [toast, setToast] = useState(true),
-    [hatchNotice,setHatchNotice] = useState("");
+    [hatchNotice,setHatchNotice] = useState(""),
+    [rendezvousOpen,setRendezvousOpen] = useState(false);
   const resumedAfterGuide = useRef(false),
     lastTutorial = useRef(""),
     lastLog = useRef("");
@@ -299,7 +301,16 @@ export default function Flight({
       ] as { action: CampaignAction; label: string }[]),
     );
   const handleWork = (target: AimTarget | null) => {
-    if (s.state.paused || s.state.sleeping || tablet || navOpen || tutorial) return;
+    if(s.state.paused){
+      // The saved game may load paused. INTERACT is not silently swallowed.
+      onTickPause(false);
+      return;
+    }
+    if (s.state.sleeping || tablet || navOpen || tutorial) return;
+    if(m.id==="mission-2"&&o?.action==="approach"&&atSite(s,"cockpit")&&
+      (!target||target.kind==="station"||target.kind==="locker")){
+      setRendezvousOpen(true);setActions(false);return;
+    }
     if(target?.kind==="airlock"){
       if(!m.eva){
         setHatchNotice("The rear pressure hatch is secured because this spacecraft is not EVA-equipped. To reach Communications, use the illuminated controls on the three interior section doors.");
@@ -357,7 +368,7 @@ export default function Flight({
           settings={preferences}
           onInteract={handleWork}
           onGraphicsError={() => onTickPause(true)}
-          locked={s.state.paused || s.state.sleeping || tablet || navOpen || !!tutorial}
+          locked={s.state.sleeping || tablet || navOpen || !!tutorial || rendezvousOpen}
           alarm={shipAlerts(s).some(
             (a) => a.level === "WARNING" || a.level === "EMERGENCY",
           )}
@@ -479,6 +490,16 @@ export default function Flight({
           </p>
         )}
         {o?.instruction !== o?.title && <p>{o?.instruction}</p>}
+        {m.id==="mission-2"&&o?.action==="approach"&&
+          <button type="button" className="campaign-direct-console"
+           onClick={()=>{
+            if(s.state.paused){onTickPause(false);return;}
+            if(atSite(s,"cockpit")){setRendezvousOpen(true);setActions(false);}
+            else setHatchNotice("Move to the Flight deck navigation console first. Use MAP to locate the Flight deck.");
+           }}>
+           {s.state.paused?"▶ Resume mission to use navigation":
+            atSite(s,"cockpit")?"◈ OPERATE RENDEZVOUS COMPUTER":"◈ Go to Flight deck · Open navigation computer"}
+          </button>}
         <div className="cmd-objective-progress">
           <span
             style={{ width: `${(s.objective / m.objectives.length) * 100}%` }}
@@ -498,13 +519,17 @@ export default function Flight({
           Mission steps <Icon name="chevron" size={12} />
         </button>
       </div>
-      {s.state.paused && !tutorial && !tablet && (
+      {s.state.paused && !tutorial && !tablet && !rendezvousOpen && (
         <div className="campaign-paused">
           <span>MISSION PAUSED</span>
           <button onClick={() => onTickPause(false)}>Resume →</button>
           <button onClick={onHome}>Save & campaign</button>
         </div>
       )}
+      {rendezvousOpen&&m.id==="mission-2"&&o?.action==="approach"&&
+        <RendezvousConsole session={s}
+          onClose={()=>setRendezvousOpen(false)}
+          onComplete={()=>{setRendezvousOpen(false);run("approach");}}/>}
       {hatchNotice&&<div className="cmd-hatch-notice" role="status">
         <strong>AIRLOCK SECURED</strong><span>{hatchNotice}</span>
         <button type="button" onClick={()=>setHatchNotice("")} aria-label="Dismiss airlock status">×</button>
@@ -547,7 +572,10 @@ export default function Flight({
               {actionable && o?.action && !o.choices && !inventoryTask && (
                 <button
                   disabled={s.state.paused}
-                  onClick={() => run(o.action!)}
+                  onClick={()=>{
+                    if(m.id==="mission-2"&&o.action==="approach"){setRendezvousOpen(true);setActions(false);}
+                    else run(o.action!);
+                  }}
                 >
                   {o.title}
                   <Icon name="chevron" size={14} />
@@ -557,7 +585,11 @@ export default function Flight({
                 <button
                   disabled={s.state.paused}
                   key={a.action}
-                  onClick={() => run(a.action)}
+                  onClick={()=>{
+                    if(m.id==="mission-2"&&o?.action==="approach"&&a.action==="approach"){
+                      setRendezvousOpen(true);setActions(false);
+                    }else run(a.action);
+                  }}
                 >
                   {a.label}
                   <Icon name="chevron" size={13} />
