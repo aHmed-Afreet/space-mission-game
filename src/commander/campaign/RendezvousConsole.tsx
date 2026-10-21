@@ -95,7 +95,7 @@ export default function RendezvousConsole({
       {blocker&&<p className="rendezvous-paused-warning" role="alert">{blocker}</p>}
       {error&&!blocker&&<p className="rendezvous-paused-warning" role="alert">{error}</p>}
       {attemptedSession&&<p role="status">Confirming objective completion with mission control…</p>}
-      {session.state.paused&&<button type="button" className="rendezvous-resume" onClick={onResume}>▶ Resume mission</button>
+      {session.state.paused&&<button type="button" className="rendezvous-resume" onClick={onResume}>▶ Resume mission</button>}
       <small className="rendezvous-disclaimer">Simplified educational navigation exercise; target vehicle and separation values are simulated, not live flight telemetry.</small>
     </div>
    </div>
