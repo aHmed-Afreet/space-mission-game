@@ -1544,3 +1544,21 @@ test("satellite reference model is lazy, attributed and has an offline fallback"
  assert.match(field,/Offline: original low-cost model remains visible/);
  assert.match(interior,/props.world!\.session.missionId/);
 });
+
+test("Mission 2 orbital rendezvous always has a discoverable touch control and a pause explanation",()=>{
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ const consoleSource=readFileSync("src/commander/campaign/RendezvousConsole.tsx","utf8");
+ assert.match(flight,/OPEN NAVIGATION COMPUTER/);
+ assert.match(flight,/setRendezvousOpen\(true\)/);
+ assert.match(flight,/Controls and mission actions are disabled while paused/);
+ assert.match(flight,/onComplete=\{\(\)=>\{setRendezvousOpen\(false\);run\("approach"\)/);
+ assert.match(consoleSource,/Confirm approach manoeuvre/);
+});
+test("Redesigned ship uses stamped panel materials and shared instanced assets",()=>{
+ const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");
+ assert.match(architecture,/CanvasTexture/);
+ assert.match(architecture,/PANEL ASSY/);
+ assert.match(architecture,/INSPECT/);
+ const interior=readFileSync("src/commander/interior.ts","utf8");
+ assert.match(interior,/installShipArchitecture/);
+});
