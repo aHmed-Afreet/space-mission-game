@@ -1,6 +1,7 @@
 import type { ShipState } from "./campaign/ship";
 import {makePlanet,planetKind,disposePlanet} from "./celestial";
 import {installShipArchitecture} from "./shipArchitecture";
+import {installCabinDetail} from "./cabinDetailPass";
 import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -560,6 +561,11 @@ export function createInterior(
   for (const z of [-4.1, 2.6])
     for (const x of [-1.2, 1.2])
       dynamic(x, 2.38, z, 0.065, 0.04, 0.06, alarmMat);
+  // Detailed cloth, machined controls, curved utility hoses and brushed PBR
+  // surfaces are applied after structural instancing; these render on iPad.
+  const disposeDetails=installCabinDetail(scene,{
+    hull:shell,panel,dark,floor,metal:silver,fabric
+  },options.graphics||"balanced");
   // Ambient fill and bounded practical lights. No real-time shadows or post-processing.
   scene.add(new T.HemisphereLight("#bed7e4", "#101821", 1.35));
   const sun = new T.DirectionalLight("#d9ecfa", 1.75);
@@ -708,6 +714,7 @@ export function createInterior(
       }
     },
     dispose() {
+      disposeDetails();
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
       textures.forEach((t) => t.dispose());
