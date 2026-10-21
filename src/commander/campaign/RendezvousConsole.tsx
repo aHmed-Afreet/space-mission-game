@@ -59,7 +59,7 @@ export default function RendezvousConsole({
         onChange={e=>{setAutopilot(false);setBearing(Number(e.target.value))}}/>
       </label>
       <label>Relative closing speed <b>{autopilot?"0.10":closing.toFixed(2)} m/s</b>
-       <input type="range" min="0.05" max="2" step=".05" value={autopilot?.1:closing}
+       <input type="range" min="0.05" max="2" step=".05" value={autopilot ? .1 : closing}
         onChange={e=>{setAutopilot(false);setClosing(Number(e.target.value))}}/>
       </label>
       <label>Separation distance <b>{autopilot?"25":range} m</b>
