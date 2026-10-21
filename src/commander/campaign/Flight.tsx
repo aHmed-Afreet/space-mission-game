@@ -307,8 +307,10 @@ export default function Flight({
       return;
     }
     if (s.state.sleeping || tablet || navOpen || tutorial) return;
-    if(m.id==="mission-2"&&o?.action==="approach"&&atSite(s,"cockpit")&&
-      (!target||target.kind==="station"||target.kind==="locker")){
+    // Rendezvous is the active flight-deck task: touch any instrument on
+    // the console or INTERACT while standing there. Never require finding
+    // an invisible point behind the numerous physical monitor bezels.
+    if(m.id==="mission-2"&&o?.action==="approach"&&atSite(s,"cockpit")){
       setRendezvousOpen(true);setActions(false);return;
     }
     if(target?.kind==="airlock"){
