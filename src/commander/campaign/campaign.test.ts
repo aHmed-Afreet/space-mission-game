@@ -1534,3 +1534,13 @@ test("Realism materials preserve performance and have an offline asset fallback"
  assert.match(file,/materials.fabric.bumpMap/);
  assert.match(interior,/disposeDetails\(\)/);
 });
+
+test("satellite reference model is lazy, attributed and has an offline fallback",()=>{
+ const field=readFileSync("src/commander/campaign/world.ts","utf8");
+ const interior=readFileSync("src/commander/Cabin.tsx","utf8");
+ assert.match(field,/missionId==="mission-2"/);
+ assert.match(field,/NASA-3D-Resources/);
+ assert.match(field,/GLTFLoader/);
+ assert.match(field,/Offline: original low-cost model remains visible/);
+ assert.match(interior,/props.world!\.session.missionId/);
+});

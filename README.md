@@ -224,3 +224,30 @@ network download of commercial stock artwork is required. These are quality
 settings, not guaranteed benchmark frame rates; test on an actual iPad.
 
 See How to Play for joystick, look and INTERACT controls.
+
+## Mission 2 rendezvous navigation and NASA visual reference
+
+Mission 2 now uses a genuinely operable, touch-friendly training navigation
+computer. When the current objective is "Match orbital approach geometry",
+reach the flight deck, tap the navigation console or the prominent button
+below the objective, set bearing, closing speed and separation, or choose
+auto-guidance, then confirm the orbital approach. If the mission is paused,
+resume it before operating instruments. Flight manoeuvre still checks actual
+simulation fuel, battery, orbit and cabin readiness. The original objectives
+and saved progress are preserved.
+
+The optional official NASA **Hubble Space Telescope (A)** GLB model, credited
+to DigitalSpace Corporation via NASA's public 3D resource repository, is used
+as *visual inspiration* for the fictional relay service satellite in Mission 2.
+The model is loaded lazily in the EVA worksite only; if unavailable, the
+original low-cost locally built satellite remains available and gameplay
+continues. NASA does not sponsor or endorse this independent game.
+
+Visual asset: https://science.nasa.gov/3d-resources/hubble-space-telescope-a/
+Original hosted asset:
+https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20%28A%29
+
+Cabin material improvement: offline-generated brushed-metal bump and roughness
+maps, textile seat harnesses, curved utility cables, mechanical gauges, and
+instrument retaining bolts add scale detail without a large texture download.
+These are still artistic approximations, not scanned spacecraft interiors.
