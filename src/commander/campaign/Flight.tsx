@@ -183,6 +183,11 @@ export default function Flight({
     setActions(false);
     setShowOther(false);
   }, [area, s.objective]);
+  // Close only after the actual campaign objective advances.
+  useEffect(() => {
+    if (rendezvousOpen && (m.id !== "mission-2" || o?.action !== "approach"))
+      setRendezvousOpen(false);
+  }, [rendezvousOpen, m.id, o?.action]);
   useEffect(() => {
     setToast(true);
     const id = setTimeout(() => setToast(false), 4500);
@@ -300,6 +305,24 @@ export default function Flight({
         { action: "pressurize", label: "Repressurize airlock" },
       ] as { action: CampaignAction; label: string }[]),
     );
+  const openRendezvous = () => {
+    if (s.state.paused) {
+      onTickPause(false);
+      setHatchNotice("Mission resumed. Press the navigation button again.");
+      return;
+    }
+    if (!atSite(s, "cockpit")) {
+      setHatchNotice("Move to the Flight deck navigation console first. Use MAP to locate the Flight deck.");
+      return;
+    }
+    if (s.state.sleeping || tablet || tutorial || navOpen) {
+      setHatchNotice("Close other panels and wake up before opening the navigation computer.");
+      return;
+    }
+    setRendezvousOpen(true);
+    setHatchNotice("");
+    setActions(false);
+  };
   const handleWork = (target: AimTarget | null) => {
     if(s.state.paused){
       // The saved game may load paused. INTERACT is not silently swallowed.
@@ -311,7 +334,7 @@ export default function Flight({
     // the console or INTERACT while standing there. Never require finding
     // an invisible point behind the numerous physical monitor bezels.
     if(m.id==="mission-2"&&o?.action==="approach"&&atSite(s,"cockpit")){
-      setRendezvousOpen(true);setActions(false);return;
+      openRendezvous();return;
     }
     if(target?.kind==="airlock"){
       if(!m.eva){
@@ -494,11 +517,7 @@ export default function Flight({
         {o?.instruction !== o?.title && <p>{o?.instruction}</p>}
         {m.id==="mission-2"&&o?.action==="approach"&&
           <button type="button" className="campaign-direct-console"
-           onClick={()=>{
-            if(s.state.paused){onTickPause(false);return;}
-            if(atSite(s,"cockpit")){setRendezvousOpen(true);setActions(false);}
-            else setHatchNotice("Move to the Flight deck navigation console first. Use MAP to locate the Flight deck.");
-           }}>
+           onClick={openRendezvous}>
            {s.state.paused?"▶ Resume mission to use navigation":
             atSite(s,"cockpit")?"◈ OPERATE RENDEZVOUS COMPUTER":"◈ Go to Flight deck · Open navigation computer"}
           </button>}
@@ -525,7 +544,7 @@ export default function Flight({
         <div className="cmd-rendezvous-shortcut" role="region" aria-label="Active rendezvous mission control">
           <strong>RENDEZVOUS COMPUTER</strong>
           <span>Objective: match the target satellite's approach geometry.</span>
-          <button type="button" onClick={()=>{setRendezvousOpen(true);setActions(false);}}>
+          <button type="button" onClick={openRendezvous}>
             OPEN NAVIGATION COMPUTER →
           </button>
         </div>}
@@ -540,9 +559,10 @@ export default function Flight({
       {rendezvousOpen&&m.id==="mission-2"&&o?.action==="approach"&&
         <RendezvousConsole session={s}
           onClose={()=>setRendezvousOpen(false)}
-          onComplete={()=>{setRendezvousOpen(false);run("approach");}}/>}
+          onResume={()=>onTickPause(false)}
+          onComplete={()=>run("approach")}/>} 
       {hatchNotice&&<div className="cmd-hatch-notice" role="status">
-        <strong>AIRLOCK SECURED</strong><span>{hatchNotice}</span>
+        <strong>MISSION GUIDANCE</strong><span>{hatchNotice}</span>
         <button type="button" onClick={()=>setHatchNotice("")} aria-label="Dismiss airlock status">×</button>
       </div>}
       {saveError && (
@@ -584,7 +604,7 @@ export default function Flight({
                 <button
                   disabled={s.state.paused}
                   onClick={()=>{
-                    if(m.id==="mission-2"&&o.action==="approach"){setRendezvousOpen(true);setActions(false);}
+                    if(m.id==="mission-2"&&o.action==="approach"){openRendezvous();}
                     else run(o.action!);
                   }}
                 >
@@ -598,7 +618,7 @@ export default function Flight({
                   key={a.action}
                   onClick={()=>{
                     if(m.id==="mission-2"&&o?.action==="approach"&&a.action==="approach"){
-                      setRendezvousOpen(true);setActions(false);
+                      openRendezvous();
                     }else run(a.action);
                   }}
                 >

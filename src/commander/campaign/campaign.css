@@ -1863,7 +1863,8 @@
 .rendezvous-buttons button{padding:13px 10px;min-height:54px;border:1px solid #90bebbb5;background:#253c48;color:#e9f4ee;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer}
 .rendezvous-buttons button.rendezvous-confirm{background:#18776b;border-color:#88e7c3}
 .rendezvous-buttons button:disabled{opacity:.45;cursor:not-allowed}
-.rendezvous-procedure .rendezvous-paused-warning{color:#ffe3a4}
+.rendezvous-procedure .rendezvous-paused-warning{color:#ffe3a4;font-size:13px}
+.rendezvous-resume{align-self:flex-start;padding:12px 18px;min-height:44px;border:1px solid #a5dfcc;border-radius:8px;background:#245849;color:#f3fff7;cursor:pointer}
 .rendezvous-disclaimer{font-size:10px;color:#849da5;line-height:1.5}
 .campaign-direct-console{display:flex;align-items:center;gap:8px;padding:11px 13px;background:#1a6658;border:1px solid #a4e6ce;color:#f1fff9;border-radius:9px;font-weight:700;font-size:12px;margin:10px 0;min-height:44px}
 .campaign-direct-console:disabled{opacity:.55}

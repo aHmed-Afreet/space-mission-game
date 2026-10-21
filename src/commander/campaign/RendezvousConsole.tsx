@@ -1,16 +1,33 @@
-import {useMemo,useState} from "react";
-import type {Session} from "./engine";
+import {useEffect,useMemo,useState} from "react";
+import {rendezvousBlocker,type Session} from "./engine";
 
 export default function RendezvousConsole({
- session,onComplete,onClose
+ session,onComplete,onClose,onResume
 }:{
- session:Session; onComplete:()=>void; onClose:()=>void;
+ session:Session; onComplete:()=>void; onClose:()=>void; onResume:()=>void;
 }){
  // Deliberately simplified training procedure, not full orbital mechanics.
  const [bearing,setBearing]=useState(24);
  const [closing,setClosing]=useState(1.6);
  const [range,setRange]=useState(240);
  const [autopilot,setAutopilot]=useState(false);
+ const [attemptedSession,setAttemptedSession]=useState<Session|null>(null);
+ const [error,setError]=useState("");
+ const blocker=rendezvousBlocker(session);
+ // A rejected action leaves the panel open and displays the actual engine response.
+ useEffect(()=>{
+  if(attemptedSession && attemptedSession !== session){
+   if(session.objective===attemptedSession.objective)
+    setError(session.notice || "Mission control did not accept the approach.");
+   setAttemptedSession(null);
+  }
+ },[attemptedSession,session]);
+ const confirm=()=>{
+  if(blocker){setError(blocker);return;}
+  setError("");
+  setAttemptedSession(session);
+  onComplete();
+ };
  const within=Math.abs(bearing)<=3&&closing<=.25&&range<=30;
  const ready=autopilot||within;
  const values=useMemo(()=>[
@@ -71,11 +88,14 @@ export default function RendezvousConsole({
       </div>
       <div className="rendezvous-buttons">
        <button type="button" onClick={()=>{setBearing(0);setClosing(.1);setRange(25);setAutopilot(true)}}>Run auto-guidance</button>
-       <button type="button" disabled={!ready||session.state.paused} className="rendezvous-confirm" onClick={onComplete}>
+       <button type="button" disabled={!ready||!!attemptedSession} className="rendezvous-confirm" onClick={confirm}>
         Confirm approach manoeuvre →
        </button>
       </div>
-      {session.state.paused&&<p className="rendezvous-paused-warning">Mission paused. Resume from the flight HUD to complete the manoeuvre.</p>}
+      {blocker&&<p className="rendezvous-paused-warning" role="alert">{blocker}</p>}
+      {error&&!blocker&&<p className="rendezvous-paused-warning" role="alert">{error}</p>}
+      {attemptedSession&&<p role="status">Confirming objective completion with mission control…</p>}
+      {session.state.paused&&<button type="button" className="rendezvous-resume" onClick={onResume}>▶ Resume mission</button>
       <small className="rendezvous-disclaimer">Simplified educational navigation exercise; target vehicle and separation values are simulated, not live flight telemetry.</small>
     </div>
    </div>

@@ -13,6 +13,7 @@ import {
   currentObjective,
   currentPhase,
   command,
+  rendezvousBlocker,
   moveSession,
   tickSession,
   sitePosition,
@@ -1518,7 +1519,7 @@ test("Mission 2 supports accessible tap-to-operate and an automatic alignment op
  const panel=readFileSync("src/commander/campaign/RendezvousConsole.tsx","utf8");
  assert.match(flight,/RendezvousConsole/);
  assert.match(flight,/OPERATE RENDEZVOUS COMPUTER/);
- assert.match(flight,/onComplete=\{\(\)=>\{setRendezvousOpen\(false\);run\("approach"\)/);
+ assert.match(flight,/onComplete=\{\(\)=>run\("approach"\)\}/);
  assert.match(cabin,/wasTap/);
  assert.match(cabin,/props.onInteract\(a\)/);
  assert.match(panel,/Run auto-guidance/);
@@ -1551,8 +1552,34 @@ test("Mission 2 orbital rendezvous always has a discoverable touch control and a
  assert.match(flight,/OPEN NAVIGATION COMPUTER/);
  assert.match(flight,/setRendezvousOpen\(true\)/);
  assert.match(flight,/Controls and mission actions are disabled while paused/);
- assert.match(flight,/onComplete=\{\(\)=>\{setRendezvousOpen\(false\);run\("approach"\)/);
+ assert.match(flight,/onComplete=\{\(\)=>run\("approach"\)\}/);
  assert.match(consoleSource,/Confirm approach manoeuvre/);
+ assert.match(consoleSource,/rendezvousBlocker\(session\)/);
+ assert.match(flight,/Close only after the actual campaign objective advances/);
+});
+test("Mission 2 confirmation advances valid objectives and explains blocked attempts",()=>{
+ const mission=missionById("mission-2");
+ const objective=mission.objectives.findIndex(o=>o.action==="approach");
+ const started=createSession(mission,design,life,mission.requiredEquipment,qualified(1));
+ const s={...started,objective,position:{x:0,z:-5.2,heading:0},
+   flight:{...started.flight,status:"orbit" as const},
+   state:{...started.state,paused:false}};
+ assert.equal(rendezvousBlocker(s),null);
+ assert.ok(command(s,"approach").objective>objective);
+ const far={...s,position:{x:2.2,z:0.45,heading:0}};
+ assert.match(rendezvousBlocker(far)!,/Flight deck/);
+ const rejected=command(far,"approach");
+ assert.equal(rejected.objective,objective);
+ assert.match(rejected.notice,/Flight deck/);
+ const paused={...s,state:{...s.state,paused:true}};
+ assert.match(rendezvousBlocker(paused)!,/paused/);
+ assert.equal(command(paused,"approach").objective,objective);
+ const noNavigation={...s,world:{...s.world,switches:{...s.world.switches,navigation:false}}};
+ assert.match(rendezvousBlocker(noNavigation)!,/navigation computer circuit/);
+ assert.equal(command(noNavigation,"approach").objective,objective);
+ const lowFuel={...s,state:{...s.state,fuel:1}};
+ assert.match(rendezvousBlocker(lowFuel)!,/2 fuel/);
+ assert.equal(command(lowFuel,"approach").objective,objective);
 });
 test("Redesigned ship uses stamped panel materials and shared instanced assets",()=>{
  const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");
