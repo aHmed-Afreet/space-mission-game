@@ -2,8 +2,8 @@ import * as T from "three";
 import {makePlanet,disposePlanet} from "../celestial";
 import { fieldSites, type Session } from "./engine";
 import { environments, type Destination } from "./environments";
-/** Only the active destination is constructed. No remote models, giant textures or other worlds. */
-export function createFieldWorld(scene: T.Scene, destination: Destination) {
+/** Mission-specific 3D environments have offline fallbacks; NASA reference models are optional lazy downloads. */
+export function createFieldWorld(scene: T.Scene, destination: Destination, missionId?: string) {
   const env = environments[destination],
     group = new T.Group();
   scene.add(group);
@@ -168,7 +168,33 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
   satellite.add(dish);
   const serviceMaterial = new T.MeshBasicMaterial({ color: "#d0a265" });
   materials.push(serviceMaterial);
-  box(-0.42, 1.2, 0.2, 0.04, 0.12, 0.12, serviceMaterial, satellite);
+  const maintenanceStatus=box(-0.42,1.2,0.2,.04,.12,.12,serviceMaterial,satellite);
+   // NASA official public 3D Hubble model (visual reference to STS-125).
+   // Mission 2's fictional relay scenario and existing simulation stay intact.
+   let disposed=false;
+   let referenceModel:T.Group|null=null;
+   if(destination==="earth" && missionId==="mission-2"){
+     const nasaUrl="https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/3D%20Models/Hubble%20Space%20Telescope%20(A)/Hubble%20Space%20Telescope%20(A).glb";
+     void import("three/examples/jsm/loaders/GLTFLoader.js").then(({GLTFLoader})=>{
+       if(disposed)return;
+       new GLTFLoader().load(nasaUrl,gltf=>{
+         if(disposed)return;
+         const model=gltf.scene;
+         const bounds=new T.Box3().setFromObject(model);
+         const size=bounds.getSize(new T.Vector3()),centre=bounds.getCenter(new T.Vector3());
+         const diagonal=Math.max(size.x,size.y,size.z);
+         if(diagonal<=0)return;
+         const scale=3.1/diagonal;
+         model.position.copy(centre).multiplyScalar(-scale);
+         model.scale.setScalar(scale);
+         const pivot=new T.Group();pivot.position.y=1.35;
+         pivot.add(model);satellite.add(pivot);
+         referenceModel=pivot;
+         for(const object of [...satellite.children])
+           if(object!==pivot && object!==maintenanceStatus)object.visible=false;
+       },undefined,()=>{/* Offline: original low-cost model remains visible. */});
+     }).catch(()=>{/* No network dependency for mission progress. */});
+   }
   const camp = new T.Group();
   camp.position.set(fieldSites.camp.x, 0, fieldSites.camp.z);
   group.add(camp);
@@ -219,6 +245,21 @@ export function createFieldWorld(scene: T.Scene, destination: Destination) {
       result.visible = s.camp.science > 0;
     },
     dispose() {
+      disposed=true;
+      if(referenceModel){
+        (referenceModel as T.Group).traverse(object=>{
+          if(object instanceof T.Mesh){
+            object.geometry.dispose();
+            const mats=Array.isArray(object.material)?object.material:[object.material];
+            mats.forEach(mat=>{
+              const pbr=mat as T.MeshStandardMaterial;
+              for(const key of ["map","normalMap","roughnessMap","metalnessMap","emissiveMap"] as const)
+                pbr[key]?.dispose();
+              mat.dispose();
+            });
+          }
+        });
+      }
       scene.remove(group);
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());

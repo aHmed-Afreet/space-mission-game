@@ -121,6 +121,7 @@ export default function Cabin(props: Props) {
             field = createFieldWorld(
               interior.scene,
               missionById(props.world!.session.missionId).destination,
+              props.world!.session.missionId,
             );
         })
         .catch(() => {
