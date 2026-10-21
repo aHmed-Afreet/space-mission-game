@@ -55,7 +55,7 @@ export default function Cabin(props: Props) {
     sprintTouch = useRef<{id:number;x:number;y:number}|null>(null),
     aim = useRef<AimTarget | null>(null),
     [aimLabel, setAimLabel] = useState(""),
-    lookPointer = useRef<{ id: number; x: number; y: number } | undefined>(
+    lookPointer = useRef<{ id: number; x: number; y: number; startX:number; startY:number; dragged:boolean } | undefined>(
       undefined,
     ),
     jump = useRef({ height: 0, velocity: 0 }),
@@ -469,12 +469,13 @@ export default function Cabin(props: Props) {
     if (props.locked || lookPointer.current) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    lookPointer.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    lookPointer.current = { id: e.pointerId, x: e.clientX, y: e.clientY, startX:e.clientX, startY:e.clientY, dragged:false };
     e.currentTarget.classList.add("using");
   };
   const moveLook = (e: ReactPointer<HTMLDivElement>) => {
     const p = lookPointer.current;
     if (!p || p.id !== e.pointerId || props.locked) return;
+    if(Math.hypot(e.clientX-p.startX,e.clientY-p.startY)>12) p.dragged=true;
     look.current.yaw -=
       (e.clientX - p.x) *
       (current.current.world?.session.position.z! > 10.4 ? 0.0028 : 0.0035) * (current.current.settings?.lookSensitivity ?? 1);
@@ -486,9 +487,19 @@ export default function Cabin(props: Props) {
     p.y = e.clientY;
   };
   const stopLook = (e: ReactPointer<HTMLDivElement>) => {
-    if (lookPointer.current?.id === e.pointerId) {
-      lookPointer.current = undefined;
+    const p=lookPointer.current;
+    if(p?.id===e.pointerId){
+      const wasTap=e.type==="pointerup" && !p.dragged &&
+        Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<12;
+      lookPointer.current=undefined;
       e.currentTarget.classList.remove("using");
+      if(wasTap && !props.locked && props.world) {
+        const a=aim.current,loc=props.world.session.position;
+        // Tapping the actual cockpit console is equivalent to pressing
+        // INTERACT. In Mission 2 this opens the rendezvous control panel.
+        if(a || Math.hypot(loc.x-deck.cockpit.x,loc.z-deck.cockpit.z)<1.7)
+          props.onInteract(a);
+      }
     }
   };
   const startSprint = (e: ReactPointer<HTMLButtonElement>) => {
