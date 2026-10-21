@@ -521,10 +521,19 @@ export default function Flight({
           Mission steps <Icon name="chevron" size={12} />
         </button>
       </div>
+      {m.id==="mission-2"&&o?.action==="approach"&&!s.state.paused&&!rendezvousOpen&&!tablet&&!tutorial&&
+        <div className="cmd-rendezvous-shortcut" role="region" aria-label="Active rendezvous mission control">
+          <strong>RENDEZVOUS COMPUTER</strong>
+          <span>Objective: match the target satellite's approach geometry.</span>
+          <button type="button" onClick={()=>{setRendezvousOpen(true);setActions(false);}}>
+            OPEN NAVIGATION COMPUTER →
+          </button>
+        </div>}
       {s.state.paused && !tutorial && !tablet && !rendezvousOpen && (
         <div className="campaign-paused">
           <span>MISSION PAUSED</span>
-          <button onClick={() => onTickPause(false)}>Resume →</button>
+          <p>Controls and mission actions are disabled while paused. Resume first.</p>
+          <button onClick={() => onTickPause(false)}>Resume mission →</button>
           <button onClick={onHome}>Save & campaign</button>
         </div>
       )}
