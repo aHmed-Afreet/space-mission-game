@@ -1499,3 +1499,38 @@ test("performance options adapt iPad image quality without removing controls",()
  assert.match(story,/pixelRatio=desired/);
  assert.match(story,/aimingAtHatch/);
 });
+
+
+test("mission 2 rendezvous objective advances when its cockpit procedure is confirmed",()=>{
+ const mission=missionById("mission-2");
+ const objective=mission.objectives.findIndex(o=>o.action==="approach");
+ assert.ok(objective>0,"rendezvous task must exist");
+ let s=createSession(mission,design,life,mission.requiredEquipment,qualified(1));
+ s={...s,objective,position:{x:0,z:-5.2,heading:0},
+     flight:{...s.flight,status:"orbit"},state:{...s.state,paused:false}};
+ const completed=command(s,"approach");
+ assert.ok(completed.objective>objective,
+   "performing the navigation manoeuvre from the cockpit must advance the mission");
+});
+test("Mission 2 supports accessible tap-to-operate and an automatic alignment option",()=>{
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+ const panel=readFileSync("src/commander/campaign/RendezvousConsole.tsx","utf8");
+ assert.match(flight,/RendezvousConsole/);
+ assert.match(flight,/OPERATE RENDEZVOUS COMPUTER/);
+ assert.match(flight,/onComplete=\{\(\)=>\{setRendezvousOpen\(false\);run\("approach"\)/);
+ assert.match(cabin,/wasTap/);
+ assert.match(cabin,/props.onInteract\(a\)/);
+ assert.match(panel,/Run auto-guidance/);
+ assert.match(panel,/Confirm approach manoeuvre/);
+ assert.match(panel,/role="dialog"/);
+});
+test("Realism materials preserve performance and have an offline asset fallback",()=>{
+ const file=readFileSync("src/commander/cabinDetailPass.ts","utf8");
+ const interior=readFileSync("src/commander/interior.ts","utf8");
+ assert.match(file,/installCabinDetail/);
+ assert.match(file,/new T.CanvasTexture/);
+ assert.match(file,/CatmullRomCurve3/);
+ assert.match(file,/materials.fabric.bumpMap/);
+ assert.match(interior,/disposeDetails\(\)/);
+});
