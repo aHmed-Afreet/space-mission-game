@@ -2167,3 +2167,12 @@ select {
 .cmd-hatch-notice strong{font-size:12px;letter-spacing:.1em;color:#f1d7a2}
 .cmd-hatch-notice span{font-size:12px;line-height:1.5}
 .cmd-hatch-notice button{position:absolute;right:9px;top:6px;background:none;border:none;color:#fff;font-size:22px}
+
+
+/* The current orbital flight operation is always reachable without pixel-perfect aiming. */
+.cmd-rendezvous-shortcut{position:absolute;z-index:15;left:50%;bottom:88px;transform:translateX(-50%);width:min(470px,70vw);padding:11px 14px;display:flex;align-items:center;flex-wrap:wrap;gap:7px 12px;background:#081e2be9;border:1px solid #74b9b9a0;border-radius:12px;box-shadow:0 12px 32px #0008;color:#e4f7f2}
+.cmd-rendezvous-shortcut strong{font:700 11px system-ui;letter-spacing:.1em;color:#94ded8}
+.cmd-rendezvous-shortcut span{font:400 11px system-ui;flex:1;min-width:165px}
+.cmd-rendezvous-shortcut button{border:1px solid #9cf2da;background:#176d6a;color:white;border-radius:8px;padding:10px 14px;font:700 12px system-ui;cursor:pointer;min-height:42px}
+.cmd-rendezvous-shortcut button:active{background:#25a9a5}
+@media(max-width:730px){.cmd-rendezvous-shortcut{bottom:86px;left:38%;width:min(350px,53vw);padding:8px}.cmd-rendezvous-shortcut span{display:none}.cmd-rendezvous-shortcut button{padding:8px;font-size:10px}}
