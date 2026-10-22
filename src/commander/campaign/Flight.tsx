@@ -194,9 +194,11 @@ export default function Flight({
     const previous = attemptedCommand.current;
     if (!previous || previous.session === s) return;
     attemptedCommand.current = null;
-    setGuideFeedback(s.objective === previous.objective
+    const blocked = s.objective === previous.objective;
+    setGuideFeedback(blocked
       ? s.notice || "The task did not advance. Check the requirements above and try again."
       : "");
+    if (blocked) setHelpOpen(true); // Explain failures instead of hiding the instructions.
   }, [s]);
   // Close only after the actual campaign objective advances.
   useEffect(() => {
@@ -548,8 +550,16 @@ export default function Flight({
           <div className="campaign-guide-actions">
             {s.state.paused
               ? <button type="button" onClick={()=>onTickPause(false)}>▶ Resume mission</button>
-              : o.site && !atSite(s,o.site)
-                ? <button type="button" onClick={()=>setNavOpen(true)}>Open MAP · Find the station</button>
+              : guide.recoveryStation && !atSite(s,guide.recoveryStation)
+                ? <button type="button" className="primary" onClick={()=>setNavOpen(true)}>
+                    Open MAP · Go to {sitePosition(guide.recoveryStation,m.destination).name} to repair
+                  </button>
+                : guide.recoveryStation && atSite(s,guide.recoveryStation)
+                  ? <button type="button" className="primary" onClick={()=>{setHelpOpen(false);setActions(true)}}>
+                      Open station controls · Follow the repair steps
+                    </button>
+                : o.site && !atSite(s,o.site)
+                  ? <button type="button" onClick={()=>setNavOpen(true)}>Open MAP · Find the station</button>
                 : <>
                   {o.event==="power" && !s.observations.powerDiagnosed &&
                     <button type="button" className="primary" onClick={()=>run("inspectPower")}>
