@@ -144,6 +144,67 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
             "Press Start the controlled return burn.",
     };
   }
+  // All lunar landings use the same flight-deck checklist, not a generic
+  // "press the action" hint. Show prerequisites before a failed attempt.
+  if (o.action === "land") {
+    const approached = mission.objectives.some(task =>
+      task.action === "approach" &&
+      (s.completed.includes(task.id) || s.observations.achieved.includes(task.id)));
+    steps.push({
+      text: "At Flight deck → Show station controls → NAVIGATION, turn Navigation computer ON.",
+      done: s.world.switches.navigation,
+    });
+    steps.push({
+      text: "In NAVIGATION, set Destination selector to Lunar approach (not Earth orbit / recovery).",
+      done: s.world.target === "moon",
+    });
+    steps.push({
+      text: "In NAVIGATION, switch Guarded manoeuvre arm to ON (not ISOLATED).",
+      done: s.world.switches.maneuver,
+    });
+    steps.push({
+      text: "Complete the lunar approach in orbit before landing.",
+      done: s.flight.status === "orbit" && approached,
+    });
+    steps.push({
+      text: "Keep at least 5 fuel units and healthy cabin power/pressure, then press Execute lunar landing.",
+      done: s.state.fuel >= 5 && s.state.battery >= 0.1 &&
+        s.state.pressure >= 90 && !s.state.malfunction,
+    });
+    return {
+      steps,
+      next: !here ? "Go to Flight deck using MAP." :
+        !s.world.switches.navigation ? "Turn ON Navigation computer." :
+        s.world.target !== "moon" ? "Set destination to Lunar approach." :
+        !s.world.switches.maneuver ? "Turn ON Guarded manoeuvre arm." :
+        s.flight.status !== "orbit" ? "Establish stable orbit before landing." :
+        !approached ? "Complete the lunar approach objective first." :
+        s.landed ? "Vehicle already landed; review mission progress." :
+        s.state.fuel < 5 ? "Landing needs at least 5 fuel units." :
+        "Press Execute lunar landing.",
+    };
+  }
+  if (o.action === "approach" && s.missionId !== "mission-2") {
+    steps.push({
+      text: "Confirm the vehicle has reached a stable operational orbit.",
+      done: s.flight.status === "orbit",
+    });
+    steps.push({
+      text: "At Flight deck → NAVIGATION, keep the Navigation computer ON.",
+      done: s.world.switches.navigation,
+    });
+    if (mission.surface) steps.push({
+      text: "For the NEXT landing step, set Destination selector to Lunar approach and Guarded manoeuvre arm to ON. These are landing settings, not requirements for the braking action.",
+      done: s.world.target === "moon" && s.world.switches.maneuver,
+    });
+    return {
+      steps,
+      next: !here ? "Go to Flight deck using MAP." :
+        s.flight.status !== "orbit" ? "Establish stable orbit first." :
+        !s.world.switches.navigation ? "Turn ON Navigation computer." :
+        "Press the approach manoeuvre action. Before the later landing, configure the Lunar approach destination and manoeuvre arm.",
+    };
+  }
   if (o.action === "repairSatellite") {
     const atWorksite = outside(s) && atSite(s, "survey");
     steps.push({

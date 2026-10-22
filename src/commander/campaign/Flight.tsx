@@ -565,6 +565,22 @@ export default function Flight({
                     <button type="button" className="primary" onClick={()=>run("inspectPower")}>
                       Inspect power and diagnose faults
                     </button>}
+                  {o.action==="land" &&
+                    (!s.world.switches.navigation ?
+                      <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"navigation"})}>
+                        Turn ON Navigation computer
+                      </button>
+                      : s.world.target!=="moon" ?
+                        <button type="button" className="primary" onClick={()=>onWorld({kind:"target",value:"moon"})}>
+                          Set destination to Lunar approach
+                        </button>
+                        : !s.world.switches.maneuver ?
+                          <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"maneuver"})}>
+                            Turn ON Guarded manoeuvre arm
+                          </button>
+                          : <button type="button" className="primary" onClick={()=>run("land")}>
+                              Execute lunar landing →
+                            </button>)}
                   {o.action==="returnBurn" &&
                     (s.world.target!=="earth" ?
                       <button type="button" className="primary" onClick={()=>onWorld({kind:"target",value:"earth"})}>Set destination to Earth orbit / recovery</button>
@@ -582,6 +598,7 @@ export default function Flight({
                     <button type="button" className="primary" onClick={openRendezvous}>Open Satellite Rendezvous Computer</button>}
                   {!launching && !!o.action && !o.choices && o.action!=="returnBurn" &&
                     !(m.id==="mission-2"&&o.action==="approach") &&
+                    o.action!=="land" &&
                     o.action!=="eat" && o.action!=="drink" && o.action!=="wake" &&
                     <button type="button" className="primary" onClick={()=>run(o.action!)}>Perform: {o.title}</button>}
                   {!launching && !!area && !actions && <button type="button" onClick={()=>setActions(true)}>Show station controls</button>}

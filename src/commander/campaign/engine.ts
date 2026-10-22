@@ -1034,7 +1034,7 @@ export function command(s: Session, action: CampaignAction): Session {
   )
     return fail("Restore the navigation computer circuit.");
   if (["land", "returnBurn"].includes(action) && !s.world.switches.maneuver)
-    return fail("Arm the guarded manoeuvre confirmation at Navigation.");
+    return fail("At Flight deck → NAVIGATION, switch Guarded manoeuvre arm to ON, then retry the manoeuvre.");
   if (baseActions.has(action)) {
     if (
       (outside(s) ||
@@ -1541,7 +1541,7 @@ export function command(s: Session, action: CampaignAction): Session {
       case "approach":
       case "land":
         if (action === "land" && s.world.target !== "moon")
-          return fail("Select the lunar landing destination at Navigation.");
+          return fail("At Flight deck → NAVIGATION, set Destination selector to Lunar approach, then retry landing.");
         if (s.flight.status !== "orbit")
           return fail("Establish orbit before approach operations.");
         if (

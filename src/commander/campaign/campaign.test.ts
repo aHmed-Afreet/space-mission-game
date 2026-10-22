@@ -1824,3 +1824,50 @@ test("Level 3 lunar approach progresses from old premature power warnings and ex
   assert.match(flightSource,/guide.recoveryStation/);
   assert.match(flightSource,/if \(blocked\) setHelpOpen\(true\)/);
 });
+
+test("every playable lunar landing teaches and operates destination and guarded arm before execution", () => {
+  const progress = emptyProgress();
+  progress.economy.balance = 100000;
+  for (const m of missions) progress.completed[m.id] = {} as any;
+  const landingMissions = missions.filter(m => m.implemented && m.objectives.some(o=>o.action==="land"));
+  assert.ok(landingMissions.length>=3,"Campaign must include several lunar landings");
+  for (const mission of landingMissions) {
+    const base=createSession(mission,design,life,mission.requiredEquipment,progress);
+    const index=mission.objectives.findIndex(o=>o.action==="land");
+    const approach=mission.objectives.find(o=>o.action==="approach");
+    assert.ok(approach,mission.title+" must require a prior approach");
+    const cockpit=sitePosition("cockpit",mission.destination);
+    let s:Session={...base,objective:index,position:{...cockpit,heading:0},
+      flight:{...base.flight,status:"orbit"},
+      observations:{...base.observations,achieved:[...base.observations.achieved,approach!.id]}};
+    const first=objectiveGuide(s);
+    const wording=first.steps.map(step=>step.text).join(" ");
+    assert.match(wording,/Destination selector to Lunar approach/);
+    assert.match(wording,/Guarded manoeuvre arm to ON/);
+    assert.equal(first.next,"Set destination to Lunar approach.");
+    assert.equal(command(s,"land").objective,index,"landing cannot skip destination selection");
+    s=worldAction(s,{kind:"target",value:"moon"});
+    assert.equal(objectiveGuide(s).next,"Turn ON Guarded manoeuvre arm.");
+    assert.equal(command(s,"land").objective,index,"landing cannot skip guarded arm");
+    s=worldAction(s,{kind:"switch",id:"maneuver"});
+    assert.equal(objectiveGuide(s).next,"Press Execute lunar landing.");
+    const result=command(s,"land");
+    assert.equal(result.landed,true,mission.title+" must land after real switches are set");
+    assert.ok(result.objective>index,mission.title+" landing objective must advance");
+  }
+});
+
+test("lunar descent guidance and cockpit action buttons share the same preflight checklist",()=>{
+  const mission=missionById("mission-3");
+  const progress=emptyProgress();
+  progress.completed["mission-2"]={} as any;
+  progress.economy.balance=100000;
+  const s=createSession(mission,design,life,mission.requiredEquipment,progress);
+  const approach=mission.objectives.findIndex(o=>o.action==="approach");
+  const before={...s,objective:approach};
+  assert.match(objectiveGuide(before).steps.map(step=>step.text).join(" "),/NEXT landing step/);
+  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+  assert.match(flight,/onWorld\(\{kind:"target",value:"moon"\}\)/);
+  assert.match(flight,/onWorld\(\{kind:"switch",id:"maneuver"\}\)/);
+  assert.match(flight,/onClick=\{\(\)=>run\("land"\)\}/);
+});
