@@ -447,47 +447,34 @@ export function currentObjective(s: Session) {
   return missionById(s.missionId).objectives[s.objective];
 }
 /**
- * An earlier build activated Mission 2's CABIN RECOVERY power failure during
- * RENDEZVOUS. Reschedule that future checklist event when loading old saves.
- * Preserve any genuine, unresolved hardware-bus fault.
+ * Old checkpoints can activate later scripted repairs before their actual
+ * checklist. Preserve genuine hardware faults and independent timed hazards.
  */
-function earlySatelliteRecoveryWarning(s: Session) {
-  if (s.missionId !== "mission-2") return null;
-  const mission = missionById(s.missionId);
-  const index = mission.objectives.findIndex(task => task.event === "power");
-  const id = mission.objectives[index]?.id;
-  return index > s.objective && id && s.eventIds.includes(id) ? id : null;
-}
-function rescheduleSatelliteRecoveryWarning(s: Session): Session {
-  const warningId = earlySatelliteRecoveryWarning(s);
-  if (!warningId) return s;
-  const hardwareBusFault = s.world.faults.some(f => f.kind === "bus" && !f.verified);
+function reschedulePrematureFaultEvents(s: Session): Session {
+  const m = missionById(s.missionId);
+  const future = m.objectives.filter((o, i) =>
+    i > s.objective && (o.event === "power" || o.event === "campPower") &&
+    s.eventIds.includes(o.id));
+  if (!future.length) return s;
+  const ids = new Set(future.map(o => o.id));
+  const power = future.some(o => o.event === "power");
+  const camp = future.some(o => o.event === "campPower");
+  const hazard = (kind: "power" | "campPower") =>
+    m.hazards.some(h => h.type === kind && s.eventIds.includes(h.type + h.at));
   return {
     ...s,
-    eventIds: s.eventIds.filter(id => id !== warningId),
-    state: { ...s.state, malfunction: hardwareBusFault },
-    observations: { ...s.observations, powerDiagnosed: false },
+    eventIds: s.eventIds.filter(id => !ids.has(id)),
+    state: power ? {
+      ...s.state,
+      malfunction: s.world.faults.some(f => f.kind === "bus" && !f.verified) || hazard("power"),
+    } : s.state,
+    camp: camp ? { ...s.camp, broken: hazard("campPower") } : s.camp,
+    observations: {
+      ...s.observations,
+      ...(power ? { powerDiagnosed: false } : {}),
+      ...(camp ? { campDiagnosed: false } : {}),
+    },
   };
-}
-/** Shared engine/UI prerequisites for Satellite Repair's rendezvous objective. */
-export function rendezvousBlocker(s: Session): string | null {
-  s = rescheduleSatelliteRecoveryWarning(s);
-  if (s.missionId !== "mission-2" || currentObjective(s)?.action !== "approach")
-    return "Satellite rendezvous is not the current mission objective.";
-  if (s.report || s.state.ended) return "This flight has already ended.";
-  if (s.state.paused) return "Mission paused. Resume to confirm the approach.";
-  if (s.state.sleeping) return "Wake up before using the navigation computer.";
-  if (!atSite(s, "cockpit"))
-    return "Move to the Flight deck navigation console before confirming the approach.";
-  if (s.flight.status !== "orbit")
-    return "Complete orbital insertion before beginning satellite rendezvous.";
-  if (!s.world.switches.navigation || s.world.faults.some(f => !f.verified && f.kind === "navigation"))
-    return "Restore the navigation computer circuit before confirming the approach.";
-  if (s.state.battery < 0.1 || s.state.pressure < 90 || s.state.malfunction)
-    return "Restore battery power, cabin pressure and any malfunction before approaching.";
-  if (s.state.fuel < 2)
-    return "At least 2 fuel units are required for the approach manoeuvre.";
-  return null;
 }
 function say(s: Session, message: string) {
   return { ...s, notice: message, state: { ...s.state, notice: message } };
@@ -586,9 +573,10 @@ function applyEvents(s: Session) {
   for (const taskEvent of scheduledMission.objectives.filter(
     (o) => o.event,
   )) {
-    // Satellite Repair: the end-of-mission bus warning must not halt rendezvous.
-    if (n.missionId === "mission-2" && taskEvent.event === "power" &&
-        n.objective < scheduledMission.objectives.indexOf(taskEvent)) continue;
+    // Scripted repairs belong at their checklist, not earlier manoeuvres.
+    const eventIndex = scheduledMission.objectives.indexOf(taskEvent);
+    if ((taskEvent.event === "power" || taskEvent.event === "campPower") &&
+        n.objective < eventIndex) continue;
     if (n.eventIds.includes(taskEvent.id) || n.completed.includes(taskEvent.id))
       continue;
     const elapsed =
@@ -596,7 +584,9 @@ function applyEvents(s: Session) {
     const ready =
       taskEvent.event === "campPower"
         ? n.camp.battery && n.camp.science >= 15
-        : n.flight.status === "orbit" && elapsed >= 8;
+        : taskEvent.event === "power"
+          ? n.flight.status === "orbit"
+          : n.flight.status === "orbit" && elapsed >= 8;
     if (!ready) continue;
     n = {
       ...n,
@@ -630,7 +620,7 @@ function applyEvents(s: Session) {
   return n;
 }
 export function tickSession(s: Session, minutes = 1): Session {
-  s = rescheduleSatelliteRecoveryWarning(withObservations(s));
+  s = reschedulePrematureFaultEvents(withObservations(s));
   if (s.state.paused || s.state.ended || s.report) return s;
   const waiting = currentObjective(s);
   if (waiting?.type === "WAIT" && waiting.condition === "minutes")
@@ -916,7 +906,7 @@ const gearFor: Partial<Record<CampaignAction, EquipmentId>> = {
   repairCamp: "repair",
 };
 export function command(s: Session, action: CampaignAction): Session {
-  s = rescheduleSatelliteRecoveryWarning(withObservations(s));
+  s = reschedulePrematureFaultEvents(withObservations(s));
   if (s.report || s.state.paused || s.state.ended) return s;
   if (s.state.sleeping && action !== "wake")
     return say(s, "Wake up before using equipment.");
@@ -1545,14 +1535,12 @@ export function command(s: Session, action: CampaignAction): Session {
           );
         if (action === "land" && s.landed)
           return fail("The vehicle is already landed.");
-        if (
-          s.state.battery < 0.1 ||
-          s.state.pressure < 90 ||
-          s.state.malfunction
-        )
-          return fail(
-            "Check and restore power and cabin pressure before the manoeuvre.",
-          );
+        if (s.state.malfunction)
+          return fail("Power bus unstable. Open MAP, go to Power & life support, inspect and repair or bypass the diagnosed fault.");
+        if (s.state.battery < 0.1)
+          return fail("Battery below 0.10 kWh. At Power & life support turn Solar input ON, shed optional loads, and recharge.");
+        if (s.state.pressure < 90)
+          return fail("Cabin pressure below 90 kPa. At Power & life support restore the life-support circuits, then wait for pressure to recover.");
         if (!atSite(s, "cockpit")) return fail("Go to the navigation console.");
         if (s.state.fuel < (action === "land" ? 5 : 2))
           return fail("Not enough fuel for this manoeuvre.");
