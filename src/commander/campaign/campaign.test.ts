@@ -520,7 +520,7 @@ test("Mission 2 connector replacement identifies every missing requirement and f
 test("Orbital EVA collisions prevent walking through the satellite core or leaving work platform",()=>{
  const mission=missions[1];
  const initial=createSession(mission,design,life,mission.requiredEquipment,qualified());
- const s={...initial,flight:{...initial.flight,status:"orbit"},
+ const s={...initial,flight:{...initial.flight,status:"orbit" as const},
    suit:{...initial.suit,equipped:true},
    airlock:{...initial.airlock,outer:true,pressure:0}};
  assert.equal(campaignWalkable(1.8,14,s),true,"service panel approach must remain accessible");
