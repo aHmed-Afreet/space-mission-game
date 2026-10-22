@@ -1678,7 +1678,7 @@ test("New task guide buttons and instructions are available from HUD and Mission
  assert.match(flight,/onClick=\{\(\)=>run\("returnBurn"\)\}/);
  assert.match(flight,/campaign-guide-feedback/);
  assert.match(tablet,/campaign-tablet-help/);
- assert.match(css,/max-height: min\(76dvh, 690px\)/);
+ assert.match(css,/max-height: min\(40dvh, 300px\)/);
 });
 test("Redesigned ship uses stamped panel materials and shared instanced assets",()=>{
  const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");
