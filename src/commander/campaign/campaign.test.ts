@@ -1650,7 +1650,7 @@ test("Task guide explains power choices, required diagnosis, guarded return burn
  const elsewhere={...armed,position:{x:0,z:0,heading:0}};
  assert.match(objectiveGuide(elsewhere).next,/Go to Flight deck/);
  const m2=missionById("mission-2");
- const satellite=createSession(m2,design,life,m2.requiredEquipment,emptyProgress());
+ const satellite=createSession(m2,design,life,m2.requiredEquipment,qualified(1));
  const rendezvous=m2.objectives.findIndex(o=>o.action==="approach");
  const aligned={...satellite,objective:rendezvous};
  assert.match(objectiveGuide(aligned).steps.map(x=>x.text).join(" "),/Run auto-guidance/);
