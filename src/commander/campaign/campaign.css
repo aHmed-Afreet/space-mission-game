@@ -1871,13 +1871,47 @@
 .campaign-paused{padding:11px 15px;background:#102630ec;border:1px solid #e2ca9770;border-radius:10px;box-shadow:0 10px 28px #0007}
 @media(max-width:680px){.rendezvous-main{grid-template-columns:1fr;padding:14px;gap:10px}.rendezvous-head{padding:15px}.rendezvous-scope svg{max-height:190px}.rendezvous-readings>div{padding:8px 4px}.rendezvous-buttons{grid-template-columns:1fr}.rendezvous-console{max-height:90dvh}.rendezvous-procedure{gap:8px}}
 
-/* Always-visible, touch-operable task procedures for new players. */
+/* Compact objective card: keep the iPad movement zone unobstructed unless help is opened. */
 .campaign-flight .campaign-guidance {
   z-index: 18;
-  max-height: min(76dvh, 690px);
+  max-height: min(40dvh, 300px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
+}
+.campaign-flight .campaign-guidance.help-expanded {
+  max-height: min(70dvh, 650px);
+}
+.campaign-task-guide .campaign-guide-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  min-height: 38px;
+  padding: 7px 0;
+  color: #b4e7d4;
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.campaign-task-guide .campaign-guide-hide {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 9px;
+  border: 1px solid #a6c7bb88;
+  border-radius: 7px;
+  background: #17313a;
+  color: #def1e7;
+  cursor: pointer;
+}
+.campaign-guidance.help-collapsed .campaign-task-guide {
+  padding: 3px 0;
+  margin: 5px 0 7px;
+  border-top: 1px solid #a5cbbc48;
+  border-bottom: 1px solid #a5cbbc30;
 }
 .campaign-task-guide {
   padding: 11px 0 6px;
@@ -1969,5 +2003,6 @@
 .campaign-tablet-help li { font-size: 12px; line-height: 1.7; color: #bad0ce; }
 .campaign-tablet-help li.done { color: #98d5b2; }
 @media (max-height: 700px) {
-  .campaign-flight .campaign-guidance { max-height: calc(100dvh - 125px); }
+  .campaign-flight .campaign-guidance.help-collapsed { max-height: min(36dvh, 245px); }
+  .campaign-flight .campaign-guidance.help-expanded { max-height: calc(100dvh - 155px); }
 }

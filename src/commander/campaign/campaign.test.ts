@@ -1655,6 +1655,18 @@ test("Task guide explains power choices, required diagnosis, guarded return burn
  const aligned={...satellite,objective:rendezvous};
  assert.match(objectiveGuide(aligned).steps.map(x=>x.text).join(" "),/Run auto-guidance/);
 });
+test("Movement remains available while mission hints start collapsed on iPad",()=>{
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ const css=readFileSync("src/commander/campaign/campaign.css","utf8");
+ assert.match(flight,/\[helpOpen,setHelpOpen\] = useState\(false\)/);
+ assert.match(flight,/helpOpen && <div id="campaign-objective-help"/);
+ assert.match(flight,/aria-expanded=\{helpOpen\}/);
+ assert.match(flight,/setHelpOpen\(false\); \/\/ Free the movement area/);
+ assert.match(flight,/Hide help and move freely/);
+ assert.match(css,/max-height: min\(40dvh, 300px\)/);
+ assert.match(css,/\.campaign-flight \.campaign-guidance\.help-expanded/);
+ assert.match(css,/\.campaign-task-guide \.campaign-guide-toggle/);
+});
 test("New task guide buttons and instructions are available from HUD and Mission Tablet",()=>{
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  const tablet=readFileSync("src/commander/campaign/CampaignTablet.tsx","utf8");

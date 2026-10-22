@@ -127,6 +127,7 @@ export default function Flight({
     [toast, setToast] = useState(true),
     [hatchNotice,setHatchNotice] = useState(""),
     [rendezvousOpen,setRendezvousOpen] = useState(false),
+    [helpOpen,setHelpOpen] = useState(false),
     [guideFeedback,setGuideFeedback] = useState("");
   const attemptedCommand = useRef<{ objective: number; session: Session } | null>(null);
   const resumedAfterGuide = useRef(false),
@@ -187,6 +188,7 @@ export default function Flight({
     setActions(false);
     setShowOther(false);
     setGuideFeedback("");
+    setHelpOpen(false); // Free the movement area whenever the player moves to another station or objective.
   }, [area, s.objective]);
   useEffect(() => {
     const previous = attemptedCommand.current;
@@ -505,7 +507,7 @@ export default function Flight({
           </select>
         </label>
       </div>
-      <div className="campaign-guidance">
+      <div className={`campaign-guidance ${helpOpen ? "help-expanded" : "help-collapsed"}`}>
         <small>
           {m.title.toUpperCase()} / MISSION {m.level}
         </small>
@@ -520,7 +522,7 @@ export default function Flight({
             {m.objectives.length}
           </b>
         </span>
-        {m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
+        {helpOpen && m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
         <h2>{o?.title}</h2>
         {o?.site && (
           <p>
@@ -528,9 +530,14 @@ export default function Flight({
             MAP above.
           </p>
         )}
-        {o?.instruction !== o?.title && <p>{o?.instruction}</p>}
+        {helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>}
         {o && <section className="campaign-task-guide" aria-label="How to complete this objective">
-          <strong>HOW TO COMPLETE</strong>
+          <button type="button" className="campaign-guide-toggle"
+            aria-expanded={helpOpen} aria-controls="campaign-objective-help"
+            onClick={()=>setHelpOpen(open=>!open)}>
+            {helpOpen ? "▲ Hide instructions · Return to moving" : "ⓘ HOW TO COMPLETE · Show instructions ▼"}
+          </button>
+          {helpOpen && <div id="campaign-objective-help" className="campaign-task-guide-content">
           <p className="campaign-guide-next">{guide.next}</p>
           <ol>
             {guide.steps.map((step,i)=>
@@ -571,6 +578,10 @@ export default function Flight({
                 </>}
           </div>
           {guideFeedback && <p className="campaign-guide-feedback" role="alert">{guideFeedback}</p>}
+          <button type="button" className="campaign-guide-hide" onClick={()=>setHelpOpen(false)}>
+            ▲ Hide help and move freely
+          </button>
+          </div>}
         </section>}
         {m.id==="mission-2"&&o?.action==="approach"&&
           <button type="button" className="campaign-direct-console"
@@ -588,14 +599,15 @@ export default function Flight({
             {s.repetitions} / {o.count} complete
           </p>
         )}
-        <button
+        {helpOpen && <button
           onClick={() => {
+            setHelpOpen(false);
             setTab("MISSION");
             setTablet(true);
           }}
         >
           Mission steps <Icon name="chevron" size={12} />
-        </button>
+        </button>}
       </div>
       {m.id==="mission-2"&&o?.action==="approach"&&!s.state.paused&&!rendezvousOpen&&!tablet&&!tutorial&&
         <div className="cmd-rendezvous-shortcut" role="region" aria-label="Active rendezvous mission control">
