@@ -476,6 +476,27 @@ function reschedulePrematureFaultEvents(s: Session): Session {
     },
   };
 }
+/** Shared engine/UI prerequisites for Satellite Repair's rendezvous objective. */
+export function rendezvousBlocker(s: Session): string | null {
+  s = reschedulePrematureFaultEvents(s);
+  if (s.missionId !== "mission-2" || currentObjective(s)?.action !== "approach")
+    return "Satellite rendezvous is not the current mission objective.";
+  if (s.report || s.state.ended) return "This flight has already ended.";
+  if (s.state.paused) return "Mission paused. Resume to confirm the approach.";
+  if (s.state.sleeping) return "Wake up before using the navigation computer.";
+  if (!atSite(s, "cockpit"))
+    return "Move to the Flight deck navigation console before confirming the approach.";
+  if (s.flight.status !== "orbit")
+    return "Complete orbital insertion before beginning satellite rendezvous.";
+  if (!s.world.switches.navigation ||
+      s.world.faults.some(f => !f.verified && f.kind === "navigation"))
+    return "Restore the navigation computer circuit before confirming the approach.";
+  if (s.state.battery < 0.1 || s.state.pressure < 90 || s.state.malfunction)
+    return "Restore battery power, cabin pressure and any malfunction before approaching.";
+  if (s.state.fuel < 2)
+    return "At least 2 fuel units are required for the approach manoeuvre.";
+  return null;
+}
 function say(s: Session, message: string) {
   return { ...s, notice: message, state: { ...s.state, notice: message } };
 }
