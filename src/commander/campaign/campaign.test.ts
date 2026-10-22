@@ -528,6 +528,16 @@ test("Orbital EVA collisions prevent walking through the satellite core or leavi
  assert.equal(campaignWalkable(3.2,14,s),false,"work platform has a tether boundary");
  assert.equal(campaignWalkable(0,18,s),false,"cannot walk off the end of the platform");
  assert.equal(campaignWalkable(0,12,s),true,"airlock exit lane must remain traversable");
+ const previousOuter={...s,position:{x:3.5,z:14,heading:0}};
+ assert.equal(campaignWalkable(3.48,14,previousOuter),true,
+   "older saves outside new rail boundary can move inward");
+ assert.equal(campaignWalkable(3.52,14,previousOuter),false,
+   "cannot move farther off the orbital platform");
+ const previousCore={...s,position:{x:2.4,z:15.08,heading:0}};
+ assert.equal(campaignWalkable(2.4,15.04,previousCore),true,
+   "older saves inside satellite core can escape");
+ assert.equal(campaignWalkable(2.4,15.08,previousCore),false,
+   "satellite body cannot be traversed farther inward");
 });
 test("Orbital EVA backdrop and exterior details remain available offline",()=>{
  const world=readFileSync("src/commander/campaign/world.ts","utf8");

@@ -863,9 +863,25 @@ export function campaignWalkable(x: number, z: number, s: Session) {
     // The EVA suit stays on the physical hull work-platform. The service
     // satellite's central body is solid; approach its forward service face.
     const platform = Math.abs(x) < 2.96 && z < 17.35;
-    const satelliteBody = ((x - 2.4) / 0.67) ** 2 +
-      ((z - 15.08) / 0.78) ** 2 < 1;
-    return platform && !satelliteBody;
+    const bodyDistance = ((x - 2.4) / 0.67) ** 2 +
+      ((z - 15.08) / 0.78) ** 2;
+    const savedPosition = s.position;
+    // Saved checkpoints made before this collision upgrade can start outside
+    // the tether area or inside the old non-solid satellite. Allow movement
+    // toward safety only; do not strand the astronaut or permit new clipping.
+    if (!platform) {
+      const overflow = (p:{x:number;z:number}) =>
+        Math.max(0,Math.abs(p.x)-2.96)+Math.max(0,p.z-17.35);
+      return overflow(savedPosition)>0 &&
+        overflow({x,z}) < overflow(savedPosition) &&
+        bodyDistance >= 1;
+    }
+    if (bodyDistance < 1) {
+      const oldDistance = ((savedPosition.x - 2.4) / 0.67) ** 2 +
+        ((savedPosition.z - 15.08) / 0.78) ** 2;
+      return oldDistance < 1 && bodyDistance > oldDistance;
+    }
+    return true;
   }
   return Math.abs(x) < 18 && z < 40;
 }
