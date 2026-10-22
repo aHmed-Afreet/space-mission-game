@@ -507,7 +507,7 @@ export default function Flight({
           </select>
         </label>
       </div>
-      <div className={`campaign-guidance ${helpOpen ? "help-expanded" : "help-collapsed"}`}>
+      {!s.state.paused && <div className={`campaign-guidance ${helpOpen ? "help-expanded" : "help-collapsed"}`}>
         <small>
           {m.title.toUpperCase()} / MISSION {m.level}
         </small>
@@ -608,7 +608,7 @@ export default function Flight({
         >
           Mission steps <Icon name="chevron" size={12} />
         </button>}
-      </div>
+      </div>}
       {m.id==="mission-2"&&o?.action==="approach"&&!s.state.paused&&!rendezvousOpen&&!tablet&&!tutorial&&
         <div className="cmd-rendezvous-shortcut" role="region" aria-label="Active rendezvous mission control">
           <strong>RENDEZVOUS COMPUTER</strong>
@@ -618,7 +618,7 @@ export default function Flight({
           </button>
         </div>}
       {s.state.paused && !tutorial && !tablet && !rendezvousOpen && (
-        <div className="campaign-paused">
+        <div className="campaign-paused" role="region" aria-label="Mission paused">
           <span>MISSION PAUSED</span>
           <p>Controls and mission actions are disabled while paused. Resume first.</p>
           <button onClick={() => onTickPause(false)}>Resume mission →</button>

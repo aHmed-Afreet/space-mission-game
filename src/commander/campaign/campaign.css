@@ -1868,7 +1868,7 @@
 .rendezvous-disclaimer{font-size:10px;color:#849da5;line-height:1.5}
 .campaign-direct-console{display:flex;align-items:center;gap:8px;padding:11px 13px;background:#1a6658;border:1px solid #a4e6ce;color:#f1fff9;border-radius:9px;font-weight:700;font-size:12px;margin:10px 0;min-height:44px}
 .campaign-direct-console:disabled{opacity:.55}
-.campaign-paused{padding:11px 15px;background:#102630ec;border:1px solid #e2ca9770;border-radius:10px;box-shadow:0 10px 28px #0007}
+.campaign-paused{z-index:30;padding:11px 15px;background:#102630ec;border:1px solid #e2ca9770;border-radius:10px;box-shadow:0 10px 28px #0007}
 @media(max-width:680px){.rendezvous-main{grid-template-columns:1fr;padding:14px;gap:10px}.rendezvous-head{padding:15px}.rendezvous-scope svg{max-height:190px}.rendezvous-readings>div{padding:8px 4px}.rendezvous-buttons{grid-template-columns:1fr}.rendezvous-console{max-height:90dvh}.rendezvous-procedure{gap:8px}}
 
 /* Compact objective card: keep the iPad movement zone unobstructed unless help is opened. */

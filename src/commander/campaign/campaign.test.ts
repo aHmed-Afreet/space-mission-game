@@ -1655,6 +1655,17 @@ test("Task guide explains power choices, required diagnosis, guarded return burn
  const aligned={...satellite,objective:rendezvous};
  assert.match(objectiveGuide(aligned).steps.map(x=>x.text).join(" "),/Run auto-guidance/);
 });
+test("Paused mission keeps Resume and Save accessible without overlapping objective help",()=>{
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ const css=readFileSync("src/commander/campaign/campaign.css","utf8");
+ assert.ok(flight.includes('!s.state.paused && <div className={`campaign-guidance'),"hide HUD objective card while paused");
+ assert.ok(flight.includes('      </div>}\n      {m.id==="mission-2"'),"close the pause condition before other overlays");
+ assert.match(flight,/s.state.paused && !tutorial && !tablet && !rendezvousOpen/);
+ assert.match(flight,/role="region" aria-label="Mission paused"/);
+ assert.match(flight,/onClick=\{\(\) => onTickPause\(false\)\}>Resume mission/);
+ assert.match(flight,/onClick=\{onHome\}>Save & campaign/);
+ assert.match(css,/\.campaign-paused\{z-index:30;/);
+});
 test("Movement remains available while mission hints start collapsed on iPad",()=>{
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  const css=readFileSync("src/commander/campaign/campaign.css","utf8");
