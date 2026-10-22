@@ -1038,21 +1038,23 @@ test("sealed EVA helmet prevents meals and drinks in a vacuum airlock", () => {
   assert.equal(s.state.bottle, before);
   assert.equal(s.state.meals, 1);
 });
-test("orbital faults develop with mission time while another goal is active, and reduce acceleration", () => {
+test("scripted recovery waits for its objective while real orbital hardware faults slow acceleration", () => {
   let s = createSession(missions[0], design, life, [], emptyProgress());
   s.flight.status = "orbit";
   s.observations.orbitMinute = 0;
   s.simRate = 20;
   const goal = s.objective;
+  const powerTask = missions[0].objectives.find(o => o.event === "power")!;
   s = tickSession(s, 9);
   assert.equal(s.objective, goal);
-  assert.equal(s.state.malfunction, true);
-  assert.equal(s.simRate, 1);
-  assert.ok(
-    s.eventIds.includes(
-      missions[0].objectives.find((o) => o.event === "power")!.id,
-    ),
-  );
+  assert.equal(s.state.malfunction, false);
+  assert.equal(s.eventIds.includes(powerTask.id), false,
+    "scripted warning cannot interrupt unrelated early orbital tasks");
+  s.world.faults.push({id:"physical-fault",kind:"navigation",
+    diagnosed:false,repaired:false,verified:false,at:s.state.minutes});
+  s.simRate = 20;
+  s = tickSession(s, 0.25);
+  assert.equal(s.simRate, 1,"real hardware faults still slow the simulation");
 });
 test("field instruments remain usable at another valid site while a specific survey is the current goal", () => {
   let s = createSession(
