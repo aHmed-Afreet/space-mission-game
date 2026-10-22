@@ -1,6 +1,7 @@
 import { sound } from "./audio";
 import StationControls from "./StationControls";
 import RendezvousConsole from "./RendezvousConsole";
+import { objectiveGuide } from "./objectiveGuide";
 import { doors, shipAlerts, type WorldAction } from "./ship";
 import LaunchView from "./LaunchView";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -125,12 +126,15 @@ export default function Flight({
     [effect, setEffect] = useState<VisualAction>(),
     [toast, setToast] = useState(true),
     [hatchNotice,setHatchNotice] = useState(""),
-    [rendezvousOpen,setRendezvousOpen] = useState(false);
+    [rendezvousOpen,setRendezvousOpen] = useState(false),
+    [guideFeedback,setGuideFeedback] = useState("");
+  const attemptedCommand = useRef<{ objective: number; session: Session } | null>(null);
   const resumedAfterGuide = useRef(false),
     lastTutorial = useRef(""),
     lastLog = useRef("");
   const m = missionById(s.missionId),
     o = currentObjective(s),
+    guide = objectiveGuide(s),
     area = nearby(s.position.x, s.position.z);
   const audioPosition = useRef(s.position),
     audioDoors = useRef(""),
@@ -182,7 +186,16 @@ export default function Flight({
   useEffect(() => {
     setActions(false);
     setShowOther(false);
+    setGuideFeedback("");
   }, [area, s.objective]);
+  useEffect(() => {
+    const previous = attemptedCommand.current;
+    if (!previous || previous.session === s) return;
+    attemptedCommand.current = null;
+    setGuideFeedback(s.objective === previous.objective
+      ? s.notice || "The task did not advance. Check the requirements above and try again."
+      : "");
+  }, [s]);
   // Close only after the actual campaign objective advances.
   useEffect(() => {
     if (rendezvousOpen && (m.id !== "mission-2" || o?.action !== "approach"))
@@ -227,6 +240,7 @@ export default function Flight({
   const run = (a: CampaignAction) => {
     void sound.unlock();
     sound.play(a === "comms" ? "radio" : a === "science" ? "science" : "click");
+    attemptedCommand.current = { objective: s.objective, session: s };
     onCommand(a);
     setActions(false);
     if (["eat", "drink", "fill", "takeMeal", "repair"].includes(a))
@@ -515,6 +529,49 @@ export default function Flight({
           </p>
         )}
         {o?.instruction !== o?.title && <p>{o?.instruction}</p>}
+        {o && <section className="campaign-task-guide" aria-label="How to complete this objective">
+          <strong>HOW TO COMPLETE</strong>
+          <p className="campaign-guide-next">{guide.next}</p>
+          <ol>
+            {guide.steps.map((step,i)=>
+              <li className={step.done?"done":""} key={i}>
+                <span aria-hidden="true">{step.done?"✓":i+1}</span>{step.text}
+              </li>)}
+          </ol>
+          <div className="campaign-guide-actions">
+            {s.state.paused
+              ? <button type="button" onClick={()=>onTickPause(false)}>▶ Resume mission</button>
+              : o.site && !atSite(s,o.site)
+                ? <button type="button" onClick={()=>setNavOpen(true)}>Open MAP · Find the station</button>
+                : <>
+                  {o.event==="power" && !s.observations.powerDiagnosed &&
+                    <button type="button" className="primary" onClick={()=>run("inspectPower")}>
+                      Inspect power and diagnose faults
+                    </button>}
+                  {o.action==="returnBurn" &&
+                    (s.world.target!=="earth" ?
+                      <button type="button" className="primary" onClick={()=>onWorld({kind:"target",value:"earth"})}>Set destination to Earth orbit / recovery</button>
+                      : !s.world.switches.maneuver ?
+                        <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"maneuver"})}>Turn ON guarded manoeuvre arm</button>
+                        : <button type="button" className="primary" onClick={()=>run("returnBurn")}>Start controlled return burn →</button>)}
+                  {o.choices?.map(choice=>
+                    <button type="button" key={choice.action}
+                      disabled={o.event==="power" && !s.observations.powerDiagnosed}
+                      className={choice.action==="eventReroute"||choice.action==="powerSafe"?"primary":""}
+                      onClick={()=>run(choice.action)}>
+                      {choice.title}<small>{choice.detail}</small>
+                    </button>)}
+                  {m.id==="mission-2"&&o.action==="approach" &&
+                    <button type="button" className="primary" onClick={openRendezvous}>Open Satellite Rendezvous Computer</button>}
+                  {!launching && !!o.action && !o.choices && o.action!=="returnBurn" &&
+                    !(m.id==="mission-2"&&o.action==="approach") &&
+                    o.action!=="eat" && o.action!=="drink" && o.action!=="wake" &&
+                    <button type="button" className="primary" onClick={()=>run(o.action!)}>Perform: {o.title}</button>}
+                  {!launching && !!area && !actions && <button type="button" onClick={()=>setActions(true)}>Show station controls</button>}
+                </>}
+          </div>
+          {guideFeedback && <p className="campaign-guide-feedback" role="alert">{guideFeedback}</p>}
+        </section>}
         {m.id==="mission-2"&&o?.action==="approach"&&
           <button type="button" className="campaign-direct-console"
            onClick={openRendezvous}>

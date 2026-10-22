@@ -35,6 +35,7 @@ import { bookLaunch, technologies } from "./economy";
 import { decodeStore, newStore, persist, loadStore, SAVE_KEY } from "./save";
 import { joystickVector } from "../controls";
 import { NavigationContent } from "./NavigationMap";
+import { objectiveGuide } from "./objectiveGuide";
 import { readPreferences, writePreferences } from "./preferences";
 import { historyMissions } from "../../history/missionHistory";
 import {planetKind} from "../celestial";
@@ -1615,6 +1616,57 @@ test("Mission 2 does not trigger its recovery fault during rendezvous and restor
  }]}};
  assert.match(rendezvousBlocker(hardware)!,/malfunction/);
  assert.equal(command(hardware,"approach").objective,rendezvous);
+});
+test("Task guide explains power choices, required diagnosis, guarded return burn and rendezvous",()=>{
+ const m=missionById("mission-1");
+ const initial=createSession(m,design,life,[],emptyProgress());
+ const power=sitePosition("power",m.destination);
+ const atPower={...initial,position:{...power,heading:0}};
+ const planIndex=m.objectives.findIndex(o=>o.title==="Choose the orbital power plan.");
+ assert.ok(planIndex>=0);
+ const plan={...atPower,objective:planIndex};
+ const planInstructions=objectiveGuide(plan);
+ assert.match(planInstructions.next,/Tap one of the power-plan choices/);
+ assert.match(planInstructions.steps.map(x=>x.text).join(" "),/Conserve power saves 0.10 kWh/);
+ const warningIndex=m.objectives.findIndex(o=>o.title==="Resolve the power-bus warning.");
+ const warning={...atPower,objective:warningIndex,
+   state:{...atPower.state,malfunction:true},
+   observations:{...atPower.observations,powerDiagnosed:false}};
+ const before=structuredClone(warning);
+ const instruction=objectiveGuide(warning);
+ assert.match(instruction.next,/Inspect power and diagnose faults/);
+ assert.match(instruction.steps.map(x=>x.text).join(" "),/Bypass the failed branch/);
+ assert.match(instruction.steps.map(x=>x.text).join(" "),/maintenance access, isolate Bus B/);
+ assert.deepEqual(warning,before,"Showing instructions must not change the saved session");
+ const diagnosed={...warning,observations:{...warning.observations,powerDiagnosed:true}};
+ assert.match(objectiveGuide(diagnosed).next,/Choose Bypass/);
+ const returnIndex=m.objectives.findIndex(o=>o.action==="returnBurn");
+ const cockpit=sitePosition("cockpit",m.destination);
+ const burn={...initial,objective:returnIndex,position:{...cockpit,heading:0},
+   world:{...initial.world,target:"earth" as const,switches:{...initial.world.switches,maneuver:false}}};
+ assert.match(objectiveGuide(burn).next,/Turn ON Guarded manoeuvre arm/);
+ const armed={...burn,world:{...burn.world,switches:{...burn.world.switches,maneuver:true}}};
+ assert.match(objectiveGuide(armed).next,/Start the controlled return burn/);
+ const elsewhere={...armed,position:{x:0,z:0,heading:0}};
+ assert.match(objectiveGuide(elsewhere).next,/Go to Flight deck/);
+ const m2=missionById("mission-2");
+ const satellite=createSession(m2,design,life,m2.requiredEquipment,emptyProgress());
+ const rendezvous=m2.objectives.findIndex(o=>o.action==="approach");
+ const aligned={...satellite,objective:rendezvous};
+ assert.match(objectiveGuide(aligned).steps.map(x=>x.text).join(" "),/Run auto-guidance/);
+});
+test("New task guide buttons and instructions are available from HUD and Mission Tablet",()=>{
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ const tablet=readFileSync("src/commander/campaign/CampaignTablet.tsx","utf8");
+ const css=readFileSync("src/commander/campaign/campaign.css","utf8");
+ assert.match(flight,/HOW TO COMPLETE/);
+ assert.match(flight,/o\.choices\?\.map\(choice/);
+ assert.match(flight,/onClick=\{\(\)=>run\("inspectPower"\)\}/);
+ assert.match(flight,/onClick=\{\(\)=>onWorld\(\{kind:"switch",id:"maneuver"\}\)\}/);
+ assert.match(flight,/onClick=\{\(\)=>run\("returnBurn"\)\}/);
+ assert.match(flight,/campaign-guide-feedback/);
+ assert.match(tablet,/campaign-tablet-help/);
+ assert.match(css,/max-height: min\(76dvh, 690px\)/);
 });
 test("Redesigned ship uses stamped panel materials and shared instanced assets",()=>{
  const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");

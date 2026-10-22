@@ -1870,3 +1870,104 @@
 .campaign-direct-console:disabled{opacity:.55}
 .campaign-paused{padding:11px 15px;background:#102630ec;border:1px solid #e2ca9770;border-radius:10px;box-shadow:0 10px 28px #0007}
 @media(max-width:680px){.rendezvous-main{grid-template-columns:1fr;padding:14px;gap:10px}.rendezvous-head{padding:15px}.rendezvous-scope svg{max-height:190px}.rendezvous-readings>div{padding:8px 4px}.rendezvous-buttons{grid-template-columns:1fr}.rendezvous-console{max-height:90dvh}.rendezvous-procedure{gap:8px}}
+
+/* Always-visible, touch-operable task procedures for new players. */
+.campaign-flight .campaign-guidance {
+  z-index: 18;
+  max-height: min(76dvh, 690px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.campaign-task-guide {
+  padding: 11px 0 6px;
+  margin: 13px 0 10px;
+  border-top: 1px solid #a5cbbc48;
+  border-bottom: 1px solid #a5cbbc30;
+}
+.campaign-task-guide > strong {
+  display: block;
+  letter-spacing: 1.4px;
+  color: #aee0ca;
+  font-size: 10px;
+}
+.campaign-guidance .campaign-guide-next {
+  margin: 8px 0 11px;
+  color: #e1f2e8;
+  font-weight: 600;
+  font-size: 12px;
+}
+.campaign-task-guide ol,
+.campaign-tablet-help {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 9px;
+}
+.campaign-task-guide li {
+  display: flex;
+  align-items: start;
+  gap: 9px;
+  color: #bfd0d0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.campaign-task-guide li span {
+  border-radius: 50%;
+  color: #cee9df;
+  background: #31544e;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.campaign-task-guide li.done {
+  color: #8dc2a7;
+}
+.campaign-task-guide li.done span { background: #1f5e46; }
+.campaign-guide-actions { display: grid; gap: 7px; }
+.campaign-task-guide .campaign-guide-actions button {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #97bdb65e;
+  border-radius: 7px;
+  color: #e0f0e9;
+  background: #1b3541;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.campaign-task-guide .campaign-guide-actions button.primary {
+  background: #205c53;
+  border-color: #83c8b7;
+  color: #f0fff7;
+}
+.campaign-task-guide .campaign-guide-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.campaign-task-guide .campaign-guide-actions button small {
+  display: block;
+  margin-top: 5px;
+  color: #c2d1c9;
+  font-size: 10px;
+  font-weight: 400;
+}
+.campaign-guidance .campaign-guide-feedback {
+  margin: 10px 0 2px;
+  background: #6545226b;
+  border: 1px solid #dab67f7a;
+  border-radius: 6px;
+  padding: 9px;
+  color: #ffe3af;
+  font-size: 11px;
+}
+.campaign-tablet-help li { font-size: 12px; line-height: 1.7; color: #bad0ce; }
+.campaign-tablet-help li.done { color: #98d5b2; }
+@media (max-height: 700px) {
+  .campaign-flight .campaign-guidance { max-height: calc(100dvh - 125px); }
+}

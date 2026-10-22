@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon, { type IconName } from "../Icons";
 import { missionTime } from "../MissionTablet";
 import { NavigationContent } from "./NavigationMap";
+import { objectiveGuide } from "./objectiveGuide";
 
 import { lifeOptions, alerts } from "../simulation";
 import { components } from "../../game";
@@ -97,6 +98,7 @@ export default function CampaignTablet({
 }) {
   const m = missionById(s.missionId),
     o = currentObjective(s),
+    guide = objectiveGuide(s),
     env = environments[m.destination],
     state = s.state,
     [details, setDetails] = useState(false);
@@ -212,6 +214,13 @@ export default function CampaignTablet({
                       ? "Use the carried item in INVENTORY."
                       : "Follow the current instruction."}
                 </p>
+                <strong>HOW TO COMPLETE</strong>
+                <ol className="campaign-tablet-help">
+                  {guide.steps.map((step,i)=><li key={i} className={step.done?"done":""}>
+                    {step.done?"✓":i+1}. {step.text}
+                  </li>)}
+                </ol>
+                <p><strong>NEXT: {guide.next}</strong></p>
                 {o?.count && (
                   <strong>
                     {s.repetitions} / {o.count} operations complete
