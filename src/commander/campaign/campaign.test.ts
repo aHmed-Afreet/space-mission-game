@@ -1764,3 +1764,61 @@ test("Redesigned ship uses stamped panel materials and shared instanced assets",
  const interior=readFileSync("src/commander/interior.ts","utf8");
  assert.match(interior,/installShipArchitecture/);
 });
+
+
+test("all implemented Commander missions trigger scripted repairs at their own checklist, not earlier", () => {
+  const progress = emptyProgress();
+  progress.economy.balance = 100000;
+  for (const m of missions) progress.completed[m.id] = {} as any;
+  for (const m of missions.filter(m => m.implemented)) {
+    const warningTasks = m.objectives.map((o,i)=>({o,i}))
+      .filter(({o,i})=>i>0 && (o.event==="power" || o.event==="campPower"));
+    for (const {o:warning,i} of warningTasks) {
+      const base = createSession(m,design,life,m.requiredEquipment,progress);
+      const early:Session={...base,objective:0,
+        state:{...base.state,minutes:120},
+        flight:{...base.flight,status:"orbit"},
+        observations:{...base.observations,orbitMinute:90},
+        camp:{...base.camp,battery:true,science:25}};
+      const before=tickSession(early,0.25);
+      assert.equal(before.eventIds.includes(warning.id),false,m.title+" activated "+warning.event+" too early");
+      const stuck:Session={...before,
+        eventIds:[...before.eventIds,warning.id],
+        state:{...before.state,malfunction:warning.event==="power"},
+        camp:{...before.camp,broken:warning.event==="campPower"}};
+      const recovered=tickSession(stuck,0.25);
+      assert.equal(recovered.eventIds.includes(warning.id),false,m.title+" could not restore older save");
+      if(warning.event==="power") assert.equal(recovered.state.malfunction,false);
+      if(warning.event==="campPower") assert.equal(recovered.camp.broken,false);
+      const now=tickSession({...recovered,objective:i},0.25);
+      assert.ok(now.eventIds.includes(warning.id),m.title+" did not trigger at correct task");
+    }
+  }
+});
+test("Level 3 lunar approach progresses from old premature power warnings and explains real faults",()=>{
+  const m=missionById("mission-3"),progress=emptyProgress();
+  progress.completed["mission-2"]={} as any;
+  progress.economy.balance=100000;
+  const base=createSession(m,design,life,m.requiredEquipment,progress);
+  const at=m.objectives.findIndex(o=>o.action==="approach");
+  const warning=m.objectives.find(o=>o.event==="power")!;
+  const cockpit=sitePosition("cockpit",m.destination);
+  const stale:Session={...base,objective:at,position:{...cockpit,heading:0},
+    state:{...base.state,malfunction:true,minutes:120},
+    flight:{...base.flight,status:"orbit"},eventIds:[warning.id],
+    observations:{...base.observations,orbitMinute:90}};
+  const corrected=command(stale,"approach");
+  assert.ok(corrected.objective>at,"future power warnings cannot block lunar approach");
+  assert.equal(corrected.state.malfunction,false);
+  assert.equal(corrected.eventIds.includes(warning.id),false);
+  const physical:Session={...stale,world:{...stale.world,faults:[
+    {id:"real-fault",kind:"bus",diagnosed:false,repaired:false,verified:false,at:120}]}};
+  assert.equal(command(physical,"approach").objective,at,"real hardware faults still require repair");
+  const guide=objectiveGuide(physical);
+  assert.equal(guide.recoveryStation,"power");
+  assert.match(guide.steps.map(step=>step.text).join(" "),/Repair cabinet/);
+  assert.match(guide.next,/Power & life support/);
+  const flightSource=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+  assert.match(flightSource,/guide.recoveryStation/);
+  assert.match(flightSource,/if \(blocked\) setHelpOpen\(true\)/);
+});
