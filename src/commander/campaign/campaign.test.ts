@@ -14,6 +14,7 @@ import {
   currentPhase,
   command,
   rendezvousBlocker,
+  satelliteRepairBlocker,
   moveSession,
   tickSession,
   sitePosition,
@@ -482,6 +483,60 @@ test("EVA repair consumes real parts and optional gear is not magically availabl
   assert.ok(s.systems.satelliteRepaired);
   s.pack = [];
   assert.equal(optionalCommand(s, "secondary").optionalDone.length, 0);
+});
+test("Mission 2 connector replacement identifies every missing requirement and finishes when equipped",()=>{
+ const mission=missions[1];
+ let s=createSession(mission,design,life,mission.requiredEquipment,qualified());
+ s={...s,
+   flight:{...s.flight,status:"orbit"},
+   position:{x:1.8,z:14,heading:0},
+   airlock:{...s.airlock,outer:true,pressure:0},
+   suit:{...s.suit,equipped:true,oxygen:.3,power:.6},
+   objective:mission.objectives.findIndex(o=>o.action==="repairSatellite"),
+   pack:[],systems:{...s.systems,satelliteDiagnosed:false},
+   state:{...s.state,paused:false,parts:1},
+ };
+ assert.ok(s.objective>0);
+ assert.match(satelliteRepairBlocker(s)!,/Inspect the satellite service panel/);
+ s={...s,systems:{...s.systems,satelliteDiagnosed:true}};
+ assert.match(satelliteRepairBlocker(s)!,/Repair toolkit not carried/);
+ const missingToolkit=command(s,"repairSatellite");
+ assert.equal(missingToolkit.objective,s.objective);
+ assert.match(missingToolkit.notice,/TAKE the repair toolkit/);
+ s={...s,pack:["repair"],state:{...s.state,parts:0}};
+ assert.match(satelliteRepairBlocker(s)!,/No spare connector part carried/);
+ s={...s,state:{...s.state,parts:1},suit:{...s.suit,power:.02}};
+ assert.match(satelliteRepairBlocker(s)!,/Suit battery below 5%/);
+ s={...s,suit:{...s.suit,power:.7}};
+ assert.equal(satelliteRepairBlocker(s),null);
+ const repaired=command(s,"repairSatellite");
+ assert.equal(repaired.state.parts,0);
+ assert.ok(repaired.objective>s.objective,"repair must advance from step 31 to 32");
+ assert.equal(repaired.systems.satelliteRepaired,true);
+ const guide=objectiveGuide(s);
+ assert.match(guide.steps.map(x=>x.text).join(" "),/Repair cabinet and TAKE the toolkit/);
+ assert.match(guide.next,/Ready: tap Replace satellite connector/);
+});
+test("Orbital EVA collisions prevent walking through the satellite core or leaving work platform",()=>{
+ const mission=missions[1];
+ const initial=createSession(mission,design,life,mission.requiredEquipment,qualified());
+ const s={...initial,flight:{...initial.flight,status:"orbit"},
+   suit:{...initial.suit,equipped:true},
+   airlock:{...initial.airlock,outer:true,pressure:0}};
+ assert.equal(campaignWalkable(1.8,14,s),true,"service panel approach must remain accessible");
+ assert.equal(campaignWalkable(2.4,15.08,s),false,"satellite central hull is solid");
+ assert.equal(campaignWalkable(3.2,14,s),false,"work platform has a tether boundary");
+ assert.equal(campaignWalkable(0,18,s),false,"cannot walk off the end of the platform");
+ assert.equal(campaignWalkable(0,12,s),true,"airlock exit lane must remain traversable");
+});
+test("Orbital EVA backdrop and exterior details remain available offline",()=>{
+ const world=readFileSync("src/commander/campaign/world.ts","utf8");
+ const inside=readFileSync("src/commander/interior.ts","utf8");
+ assert.match(world,/skyCanvas.width=1024/);
+ assert.match(world,/SphereGeometry\(56,36,24\)/);
+ assert.match(world,/texture[s]?.forEach/);
+ assert.match(world,/photovoltaic cells/);
+ assert.match(inside,/Integrated equipment conduits/);
 });
 test("branching fault responses trade parts against power and science", () => {
   const p = emptyProgress(),

@@ -238,6 +238,27 @@ export function atSite(s: Session, site: Site) {
   );
 }
 export const outside = (s: Session) => s.position.z > 10.4;
+/** Exact on-screen prerequisites for Mission 2's exterior connector replacement. */
+export function satelliteRepairBlocker(s: Session): string | null {
+  const m = missionById(s.missionId);
+  if (!m.eva || m.surface)
+    return "Satellite connector replacement is only available during orbital EVA.";
+  if (!s.suit.equipped)
+    return "Put on the EVA suit at Equipment storage first.";
+  if (!outside(s))
+    return "Go through the airlock to the orbital work platform before replacing the connector.";
+  if (!atSite(s, "survey"))
+    return "Move to the satellite service panel at the Orbital work platform (MAP).";
+  if (!s.systems.satelliteDiagnosed)
+    return "Inspect the satellite service panel first using Inspect satellite service panel.";
+  if (!s.pack.includes("repair"))
+    return "Repair toolkit not carried. Return inside to Equipment storage, open the Repair cabinet and TAKE the repair toolkit; then return to the satellite.";
+  if (s.state.parts < 1)
+    return "No spare connector part carried. Return inside to Equipment storage, open the Repair cabinet and choose Take spare part; then return to the satellite.";
+  if (s.suit.power < 0.05)
+    return "Suit battery below 5%: return to recharge your EVA suit before connector replacement.";
+  return null;
+}
 export function canStart(m: MissionDefinition, p: Progress) {
   return (
     missions.some((candidate) => candidate.id === m.id) &&
@@ -838,9 +859,15 @@ export function campaignWalkable(x: number, z: number, s: Session) {
   if (!s.suit.equipped || (s.airlock.pressure > 1 && s.airlock.outer))
     return false;
   const dest = missionById(s.missionId).destination;
-  return dest === "earth"
-    ? Math.abs(x) < 3.8 && z < 18.5
-    : Math.abs(x) < 18 && z < 40;
+  if (dest === "earth") {
+    // The EVA suit stays on the physical hull work-platform. The service
+    // satellite's central body is solid; approach its forward service face.
+    const platform = Math.abs(x) < 2.96 && z < 17.35;
+    const satelliteBody = ((x - 2.4) / 0.67) ** 2 +
+      ((z - 15.08) / 0.78) ** 2 < 1;
+    return platform && !satelliteBody;
+  }
+  return Math.abs(x) < 18 && z < 40;
 }
 const baseActions = new Set<string>([
   "takeMeal",
@@ -1363,21 +1390,14 @@ export function command(s: Session, action: CampaignAction): Session {
           );
         n.systems.satelliteDiagnosed = true;
         break;
-      case "repairSatellite":
-        if (
-          !outside(s) ||
-          !atSite(s, "survey") ||
-          !s.pack.includes("repair") ||
-          !s.systems.satelliteDiagnosed ||
-          s.state.parts < 1
-        )
-          return fail(
-            "Inspect the satellite outside with a toolkit and spare part.",
-          );
+      case "repairSatellite": {
+        const problem = satelliteRepairBlocker(s);
+        if (problem) return fail(problem);
         n.state.parts--;
         n.suit.power = Math.max(0, n.suit.power - 0.05);
         n.systems.satelliteRepaired = true;
         break;
+      }
       case "testSatellite":
         if (
           !outside(s) ||

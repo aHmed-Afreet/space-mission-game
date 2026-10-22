@@ -8,7 +8,8 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     group = new T.Group();
   scene.add(group);
   const geometries: T.BufferGeometry[] = [],
-    materials: T.Material[] = [];
+    materials: T.Material[] = [],
+    textures: T.Texture[] = [];
   const cube = new T.BoxGeometry(1, 1, 1),
     cylinder = new T.CylinderGeometry(1, 1, 1, 10),
     rock = new T.IcosahedronGeometry(1, 0);
@@ -89,9 +90,65 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     }
   for (let z = -6; z < 7; z += 2)
     for (const x of [-3.48, 3.48]) box(x, 1.4, z, 0.06, 2.5, 0.08, alloy);
+  // Reinforced external pressure-shell ribs, hatch-flange screws, radiator pipes.
+  // Shallow surface details are outside the walkable hull, not solid walls.
+  const gasket=material("#18242c",.22,.84),
+    rivet=material("#d0d8d5",.78,.27),
+    suitLight=material("#65c1c4",.2,.42);
+  for(let z=-6.2;z<7;z+=1.65){
+    for(const x of [-3.49,3.49]){
+      box(x,2.61,z,.11,.16,1.48,gasket);
+      box(x,.26,z,.11,.12,1.48,alloy);
+      for(const y of [.53,1.15,1.77,2.39]){
+        box(x+(x>0?.08:-.08),y,z,.035,.075,.075,rivet);
+      }
+    }
+    box(0,3.13,z,6.35,.07,.11,alloy);
+  }
   const orbitEarth=destination==="earth"?makePlanet("earth",17):null;
   if(orbitEarth){orbitEarth.position.set(-20,-12,43);group.add(orbitEarth);}
   if (destination === "earth") {
+    // Procedural high-contrast celestial dome: offline, iPad-friendly, and
+    // visible in EVERY direction during orbital EVA (not just from cockpit).
+    const skyCanvas=document.createElement("canvas");
+    skyCanvas.width=1024;skyCanvas.height=512;
+    const ctx=skyCanvas.getContext("2d");
+    if(ctx){
+      const base=ctx.createLinearGradient(0,0,0,512);
+      base.addColorStop(0,"#050912");base.addColorStop(.52,"#03070f");
+      base.addColorStop(1,"#090d19");
+      ctx.fillStyle=base;ctx.fillRect(0,0,1024,512);
+      const haze=ctx.createRadialGradient(730,235,10,730,235,380);
+      haze.addColorStop(0,"rgba(64,91,137,.25)");
+      haze.addColorStop(.45,"rgba(35,55,94,.11)");
+      haze.addColorStop(1,"rgba(12,23,49,0)");
+      ctx.fillStyle=haze;ctx.fillRect(0,0,1024,512);
+      for(let i=0;i<1450;i++){
+        const hash=(n:number)=>{const q=Math.sin(n*127.1+78.23)*43758.5453;return q-Math.floor(q);};
+        const x=hash(i*3+1)*1024,y=hash(i*3+2)*512;
+        const size=i%37===0?1.6:i%11===0?.93:.55;
+        const alpha=.4+hash(i*3+3)*.55;
+        ctx.fillStyle=i%13===0?`rgba(186,211,255,${alpha})`:`rgba(242,247,255,${alpha})`;
+        ctx.beginPath();ctx.arc(x,y,size,0,Math.PI*2);ctx.fill();
+      }
+    }
+    const skyTexture=new T.CanvasTexture(skyCanvas);
+    skyTexture.colorSpace=T.SRGBColorSpace;
+    textures.push(skyTexture);
+    const skyMaterial=new T.MeshBasicMaterial({
+      map:skyTexture,side:T.BackSide,depthWrite:false,fog:false,
+    });
+    materials.push(skyMaterial);
+    const skyGeometry=new T.SphereGeometry(56,36,24);
+    geometries.push(skyGeometry);
+    const stars=new T.Mesh(skyGeometry,skyMaterial);
+    stars.position.set(0,3,9);
+    stars.renderOrder=-3;
+    group.add(stars);
+    // Orbital sunlight and Earth fill reveal surface relief without bloom.
+    const exteriorSun=new T.DirectionalLight("#f4f8ff",1.25);
+    exteriorSun.position.set(-7,12,17);
+    group.add(exteriorSun);
     // Zero-ground orbital EVA scene: worksite and tether points on the hull,
     // not an impossible runway floating in Earth's orbit.
     for(const x of [-2.7,2.7]){
@@ -103,6 +160,26 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
       box(0,2.82,z,5.5,.07,.07,alloy);
     box(0,1.3,18,2.1,1.8,.58,white);
     for(let x=-.8;x<=.8;x+=.4)box(x,1.9,17.65,.18,.22,.08,solar);
+    // Raised tether reels, handrails and magnetic foot restraints; all remain
+    // within the original EVA walkable footprint.
+    for(const x of [-2.78,2.78]){
+      for(let z=11.2;z<=17.1;z+=.85){
+        box(x,1.4,z,.1,.07,.21,gasket);
+        box(x,1.48,z,.11,.025,.13,suitLight);
+      }
+      box(x,2.17,14.1,.045,.045,5.8,rivet);
+    }
+    for(let z=11.8;z<17.3;z+=1.1){
+      for(const x of [-1.4,0,1.4]){
+        box(x,-.025,z,.18,.035,.24,gasket);
+        box(x,.002,z,.09,.012,.15,alloy);
+      }
+    }
+    // Access target: illuminated hatch and fasteners on the near satellite face.
+    box(1.8,1.15,13.75,.8,.08,.26,dark);
+    for(const x of [1.54,1.8,2.06])
+      box(x,1.22,13.75,.075,.025,.095,suitLight);
+    box(1.8,.83,13.78,.4,.04,.12,gold);
   } else {
     // Low-amplitude relief avoids empty flat-colour maps while preserving a clear walking path.
     const terrain = new T.PlaneGeometry(64, 64, 38, 38);
@@ -169,6 +246,24 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   const serviceMaterial = new T.MeshBasicMaterial({ color: "#d0a265" });
   materials.push(serviceMaterial);
   const maintenanceStatus=box(-0.42,1.2,0.2,.04,.12,.12,serviceMaterial,satellite);
+  // Solar arrays are made of segmented photovoltaic cells rather than
+  // untextured rectangles, with a radiator, connector panel and edge rails.
+  const cellMat=material("#1c536f",.5,.28),
+    borderMat=material("#9aaebb",.78,.32);
+  for(const wing of [-1,1]){
+    for(let i=0;i<5;i++)for(let j=0;j<3;j++){
+      box(wing*(.58+i*.285),1.24,-.28+j*.28,.25,.02,.235,cellMat,satellite);
+    }
+    for(const z of [-.42,.42])
+      box(wing*1.22,1.26,z,1.5,.035,.026,borderMat,satellite);
+  }
+  box(0,1.15,.53,.56,.64,.08,white,satellite);
+  box(0,1.13,.59,.37,.42,.035,gasket,satellite);
+  for(const x of [-.19,.19])for(const y of [.94,1.32]){
+    box(x,y,.62,.055,.055,.033,rivet,satellite);
+  }
+  for(const y of [.85,1.58])box(0,y,.5,.83,.035,.035,borderMat,satellite);
+  box(0,1.21,-.46,.75,.14,.09,gold,satellite);
    // NASA official public 3D Hubble model (visual reference to STS-125).
    // Mission 2's fictional relay scenario and existing simulation stay intact.
    let disposed=false;
@@ -263,6 +358,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
       scene.remove(group);
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
+      textures.forEach((t) => t.dispose());
       if(orbitEarth)disposePlanet(orbitEarth);
     },
   };

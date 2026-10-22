@@ -229,6 +229,24 @@ export function createInterior(
         part(side * 3.075, 2.04, z - 0.35 + v * 0.12, 0.025, 0.16, 0.06, dark);
     }
   }
+  // Integrated equipment conduits, recessed downlights and low-profile
+  // EVA handholds: surface-mounted so they do not obstruct player collision.
+  const conduit=mat("#435562",.63,.38),redPipe=mat("#704e4d",.43,.54);
+  for(const side of [-1,1]){
+    for(let z=-6.7;z<=6.9;z+=1.25){
+      part(side*2.94,2.39,z,.075,.075,1.15,conduit);
+      part(side*2.88,2.5,z,.06,.06,1.13,redPipe);
+      part(side*2.94,1.17,z,.055,.035,1.12,silver);
+      part(side*2.89,1.17,z-.52,.09,.12,.055,dark);
+      for(let j=0;j<3;j++)
+        part(side*2.97,.58+j*.27,z,.038,.062,.18,dark);
+    }
+  }
+  for(let z=-6.5;z<=6.4;z+=1.9){
+    part(0,2.74,z,1.02,.035,.29,dark);
+    for(const x of [-.37,0,.37])
+      part(x,2.716,z,.18,.024,.21,light);
+  }
   for (let z = -7.5; z <= 7.5; z += 1.9) {
     part(0, 2.71, z, 5.8, 0.08, 0.1, silver);
     for (const side of [-1, 1]) {
@@ -356,11 +374,17 @@ export function createInterior(
   scene.add(planet);
   const starGeo = new T.BufferGeometry();
   const pts: number[] = [];
-  for (let i = 0; i < 180; i++)
-    pts.push(Math.sin(i * 14.35) * 12, Math.cos(i * 4.8) * 8, -16.5);
+  for (let i = 0; i < 580; i++) {
+    // Fixed, deterministic panoramic stars outside the forward windows.
+    const x=Math.sin(i*78.233)*11.5;
+    const y=Math.cos(i*41.71)*7.8;
+    pts.push(x,y,-16.5);
+  }
   starGeo.setAttribute("position", new T.Float32BufferAttribute(pts, 3));
   geometries.push(starGeo);
-  const starMat = new T.PointsMaterial({ color: "#c5d6e7", size: 0.018 });
+  const starMat = new T.PointsMaterial({
+    color: "#dae6f6", size: 0.065, sizeAttenuation: true,
+  });
   materials.push(starMat);
   scene.add(new T.Points(starGeo, starMat));
   // Cockpit exterior changes with mission phase. Orbital flight shows the

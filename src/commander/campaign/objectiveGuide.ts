@@ -1,4 +1,4 @@
-import { atSite, currentObjective, sitePosition, type Session } from "./engine";
+import { atSite, currentObjective, outside, satelliteRepairBlocker, sitePosition, type Session } from "./engine";
 import { missionById } from "./definitions";
 
 /** Context-aware, player-facing instructions. No mission state is changed here. */
@@ -75,6 +75,31 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
           !s.world.switches.maneuver ? "Turn ON Guarded manoeuvre arm." :
             "Press Start the controlled return burn.",
     };
+  }
+  if (o.action === "repairSatellite") {
+    const atWorksite = outside(s) && atSite(s, "survey");
+    steps.push({
+      text: "Wear your EVA suit, return through the airlock, and stand beside the satellite service connector (MAP).",
+      done: atWorksite && s.suit.equipped,
+    });
+    steps.push({
+      text: "Inspect the satellite service panel first. If already diagnosed, this step is complete.",
+      done: s.systems.satelliteDiagnosed,
+    });
+    steps.push({
+      text: "Carry the Repair toolkit in your EVA pack. If missing, return inside to Equipment storage, open Repair cabinet and TAKE the toolkit.",
+      done: s.pack.includes("repair"),
+    });
+    steps.push({
+      text: "Carry one spare part. If missing, return inside and choose Take spare part at the Repair cabinet.",
+      done: s.state.parts >= 1,
+    });
+    steps.push({
+      text: "Keep at least 5% EVA suit battery. Then tap Replace satellite connector to complete the objective.",
+      done: s.suit.power >= 0.05,
+    });
+    const blocker = satelliteRepairBlocker(s);
+    return { steps, next: blocker ?? "Ready: tap Replace satellite connector." };
   }
   if (o.action === "approach" && s.missionId === "mission-2") {
     steps.push({ text: "Open the Satellite Rendezvous Computer from the button below.", done: false });
