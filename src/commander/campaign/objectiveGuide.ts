@@ -1,9 +1,75 @@
 import { atSite, currentObjective, outside, satelliteRepairBlocker, sitePosition, type Session } from "./engine";
-import { missionById } from "./definitions";
+import { missionById, type Site } from "./definitions";
+import { faultCatalog } from "./ship";
 
 /** Context-aware, player-facing instructions. No mission state is changed here. */
 export type GuideStep = { text: string; done: boolean };
-export type ObjectiveGuide = { steps: GuideStep[]; next: string };
+export type ObjectiveGuide = { steps: GuideStep[]; next: string; recoveryStation?: Site };
+
+/** Shared, state-aware recovery instructions for all campaign missions. */
+function systemRecoveryGuide(s: Session): ObjectiveGuide | null {
+  const action = currentObjective(s)?.action;
+  if (!action || !["approach","land","course","science","powerScience"].includes(action)) return null;
+  const name = (site: Site) => sitePosition(site, missionById(s.missionId).destination).name;
+  const live = s.world.faults.filter(f=>!f.verified);
+  const navigation = ["approach","land","course"].includes(action);
+  const fault = live.find(f=>
+    (f.kind==="bus" && s.state.malfunction) ||
+    (f.kind==="navigation" && navigation) ||
+    (f.kind==="sensor" && ["science","powerScience"].includes(action)));
+  if (fault) {
+    const c=faultCatalog[fault.kind];
+    const station:Site=c.system==="navigation"?"cockpit":c.system==="science"?"science":"power";
+    const tools=s.state.tools || s.pack.includes("repair");
+    const isolated=!s.world.switches[c.isolation];
+    const steps:GuideStep[]=[
+      {text:`Go to ${name(station)}, open station controls and diagnose ${c.name}.`,done:fault.diagnosed},
+      {text:"At Power & life support open the Power maintenance panel.",done:s.world.lockers.maintenance},
+      {text:`At ${name(station)}, set ${c.isolation} to ISOLATED before repair.`,done:isolated || fault.repaired},
+      {text:"At Equipment storage open Repair cabinet and take the repair toolkit.",done:tools},
+      {text:"Bring one spare part (initial missions include spares; stored spares can be collected from Repair cabinet).",done:s.state.parts>0 || fault.repaired},
+      {text:`Return to ${name(station)} and press Replace failed hardware.`,done:fault.repaired},
+      {text:`Turn ${c.isolation} back ON, then press Verify operation at ${name(station)}.`,done:fault.verified},
+    ];
+    const recoveryStation:Site=!fault.diagnosed?station:
+      !s.world.lockers.maintenance?"power":
+      !fault.repaired && !isolated?station:
+      !fault.repaired && (!tools || s.state.parts<1)?"equipment":station;
+    const next=!atSite(s,recoveryStation)?`Open MAP and go to ${name(recoveryStation)} for fault recovery.`:
+      !fault.diagnosed?`Open station controls and press Diagnose for ${c.name}.`:
+      !s.world.lockers.maintenance?"Open the Power maintenance panel.":
+      !fault.repaired && !isolated?`Set ${c.isolation} to ISOLATED.`:
+      !fault.repaired && (!tools || s.state.parts<1)?"Collect repair toolkit and a spare part.":
+      !fault.repaired?"Press Replace failed hardware.":
+      !s.world.switches[c.isolation]?`Turn ${c.isolation} back ON.`:"Press Verify operation.";
+    return {steps,next,recoveryStation};
+  }
+  if (s.state.malfunction) {
+    const steps:GuideStep[]=[
+      {text:"At Power & life support open station controls and press Inspect power and diagnose faults.",done:s.observations.powerDiagnosed},
+      {text:"After diagnosis choose Bypass diagnosed power fault (requires 0.12 kWh and costs 8 science points).",done:false},
+      {text:"Alternatively, at Equipment storage take the repair toolkit and a spare part. At Power & life support open the maintenance panel, isolate Bus B, press Repair diagnosed power fault, and switch Bus B back ON.",done:false},
+    ];
+    const recoveryStation:Site=s.observations.powerDiagnosed && s.state.battery<0.12 &&
+      !s.state.tools && !s.pack.includes("repair")?"equipment":"power";
+    const next=!atSite(s,recoveryStation)?`Open MAP and go to ${name(recoveryStation)}.`:
+      !s.observations.powerDiagnosed?"Press Inspect power and diagnose faults.":
+      recoveryStation==="equipment"?"Open Repair cabinet and take toolkit.":
+      s.state.battery>=0.12?"Press Bypass diagnosed power fault.":
+      "Open maintenance panel, isolate Bus B, and repair the diagnosed fault.";
+    return {steps,next,recoveryStation};
+  }
+  if (navigation && !s.world.switches.navigation) return {
+    recoveryStation:"cockpit",steps:[{text:"At the Flight deck open station controls and turn Navigation computer ON.",done:false}],
+    next:"Turn ON Navigation computer at the Flight deck."};
+  if (["approach","land"].includes(action) && s.state.battery<0.1) return {
+    recoveryStation:"power",steps:[{text:"At Power & life support turn Solar input ON, shed optional loads, and let battery recharge to 0.10 kWh.",done:false}],
+    next:"Recharge the battery to at least 0.10 kWh."};
+  if (["approach","land"].includes(action) && s.state.pressure<90) return {
+    recoveryStation:"power",steps:[{text:"At Power & life support restore oxygen recycling and cabin cooling, repair any subsystem fault, then let cabin pressure recover to at least 90 kPa.",done:false}],
+    next:"Restore cabin pressure to at least 90 kPa."};
+  return null;
+}
 export function objectiveGuide(s: Session): ObjectiveGuide {
   const o = currentObjective(s);
   if (!o) return { steps: [], next: "Review your mission report." };
@@ -22,6 +88,8 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
     steps: [{ text: "Wake up before operating equipment.", done: false }, ...steps],
     next: "Wake up to continue.",
   };
+  const recovery = systemRecoveryGuide(s);
+  if (recovery) return recovery;
   if (o.choices?.some(choice => choice.action === "powerSafe")) {
     steps.push({
       text: "At Power & life support, choose one of the two operating plans below. No separate INTERACT press is required.",
