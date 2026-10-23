@@ -9,10 +9,10 @@ const HowToPlay = lazy(() => import("./HowToPlay"));
 type GameMode = "strategy" | "commander" | "history" | "guide";
 
 const experiences: { id: GameMode; number: string; label: string; title: string; detail: string; meta: string }[] = [
-  { id: "commander", number: "01", label: "FIRST-PERSON SIMULATION", title: "Fly as an Astronaut", detail: "Walk through a spacecraft, run flight systems, repair satellites and explore lunar terrain. Choose your destination after entering.", meta: "EARTH ORBIT · MOON · MORE PLANNED" },
-  { id: "strategy", number: "02", label: "MISSION DESIGN", title: "Build & Launch Missions", detail: "Engineer a robotic Mars explorer, choose equipment and rockets, manage your budget and complete 20 sequential challenges.", meta: "20 STRATEGY LEVELS" },
-  { id: "history", number: "03", label: "SPACE EXPLORATION ARCHIVE", title: "Explore Space History", detail: "Discover 55 historic space missions, then enter first-person training scenes inspired by the real events.", meta: "55 HISTORICAL MISSIONS" },
-  { id: "guide", number: "04", label: "START HERE", title: "Controls & How to Play", detail: "Learn the controls, mission stages, astronaut tools and how to save progress before your first flight.", meta: "IPAD · IPHONE · LAPTOP" },
+  { id: "commander", number: "01", label: "FIRST-PERSON SIMULATION", title: "Fly as an Astronaut", detail: "Pilot a spacecraft, repair satellites and explore the Moon. Choose your destination inside.", meta: "EARTH ORBIT · MOON · MORE PLANNED" },
+  { id: "strategy", number: "02", label: "MISSION DESIGN", title: "Build & Launch Missions", detail: "Design a Mars probe, manage your budget and complete 20 challenges.", meta: "20 STRATEGY LEVELS" },
+  { id: "history", number: "03", label: "SPACE EXPLORATION ARCHIVE", title: "Explore Space History", detail: "Explore 55 historic missions and play their inspired training scenes.", meta: "55 HISTORICAL MISSIONS" },
+  { id: "guide", number: "04", label: "START HERE", title: "Controls & How to Play", detail: "Learn controls, mission steps and how to save progress.", meta: "IPAD · IPHONE · LAPTOP" },
 ];
 
 export default function ModeSelect() {
@@ -40,7 +40,7 @@ export default function ModeSelect() {
         <div className="orbital-section-head">
           <span className="orbital-small-label">MISSION SELECTION / 4 EXPERIENCES</span>
           <h2 id="orbital-mode-heading">How will you <em>explore?</em></h2>
-          <p>Pick how you want to play. Each mode is a different experience — all within the same space mission simulator.</p>
+          <p>Choose a mode to begin your space adventure.</p>
         </div>
         <div className="orbital-mode-grid">
           {experiences.map(item => <button type="button" className={"orbital-mode-tile orbital-mode-"+item.id} key={item.id} onClick={() => setMode(item.id)}>

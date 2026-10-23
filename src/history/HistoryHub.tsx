@@ -83,7 +83,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       <section className="history-hero">
         <small>HUMANITY'S JOURNEY BEYOND EARTH</small>
         <h1>Real missions. <em>Remarkable stories.</em></h1>
-        <p>Explore {historyMissions.length} significant milestones in space exploration, from the first satellite to modern lunar and planetary science. Learn what happened and why it mattered. Then enter a first-person 3D training scene with a spacecraft inspired by the actual mission.</p>
+        <p>Discover {historyMissions.length} real space milestones, then explore historically inspired 3D training scenes.</p>
         <div className="history-tabs" role="group" aria-label="Space history experience">
           <button type="button" aria-pressed={view==="archive"} onClick={()=>setView("archive")}>READ HISTORY</button>
           <button type="button" aria-pressed={view==="live"} onClick={()=>setView("live")}>LIVE THE STORY</button>
@@ -91,7 +91,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       </section>
       {view==="live"&&<section className="history-callout">
         <strong>Become the mission specialist</strong>
-        <p>Choose a real mission and explore a first-person 3D training scene with mission-specific spacecraft hardware and interactive tasks. Crewed missions use astronaut training; uncrewed missions use remote-operations perspectives. These are <b>simplified, historically inspired models</b>, not exact reproductions of spacecraft interiors or flight procedures.</p>
+        <p>Choose a mission and try its <b>simplified 3D training scene</b>. Crewed and robotic missions use different perspectives; equipment is historically inspired.</p>
       </section>}
       <div className="history-filters">
         <label>SEARCH MISSIONS<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Apollo, Mars, telescope, ISS…"/></label>

@@ -41,18 +41,18 @@ export default function CampaignHome({
   const [browseBy, setBrowseBy] = useState<"destination" | "mission">("destination");
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const destinations = [
-    { id:"earth", name:"Earth orbit", detail:"Spacecraft training and satellite operations", state:"PLAYABLE" },
-    { id:"moon", name:"The Moon", detail:"Lunar landings, science and research camps", state:"PLAYABLE" },
-    { id:"mars", name:"Mars", detail:"Future exploration missions", state:"COMING LATER" },
-    { id:"asteroid", name:"Deep space", detail:"Future asteroid and deep-space missions", state:"COMING LATER" },
-    { id:"all", name:"All destinations", detail:"Browse the full Commander campaign", state:"VIEW ALL" },
+    { id:"earth", name:"Earth orbit", detail:"Spaceflight and satellite work", state:"PLAYABLE" },
+    { id:"moon", name:"The Moon", detail:"Landing and lunar science", state:"PLAYABLE" },
+    { id:"mars", name:"Mars", detail:"Future Mars missions", state:"COMING LATER" },
+    { id:"asteroid", name:"Deep space", detail:"Future deep-space missions", state:"COMING LATER" },
+    { id:"all", name:"All destinations", detail:"See all missions", state:"VIEW ALL" },
   ] as const;
   const missionTypes = [
-    { id:"orbit", name:"Orbital training", detail:"Flight qualification and spacecraft systems", state:"PLAYABLE" },
-    { id:"satellite", name:"Satellite repair & EVA", detail:"Work outside the spacecraft in orbit", state:"PLAYABLE" },
-    { id:"surface", name:"Lunar landings", detail:"Land and explore the lunar surface", state:"PLAYABLE" },
-    { id:"research", name:"Science & research camps", detail:"Collect samples and build lunar experiments", state:"PLAYABLE" },
-    { id:"all", name:"All mission types", detail:"See every mission in sequence", state:"VIEW ALL" },
+    { id:"orbit", name:"Orbital training", detail:"Flight and spacecraft training", state:"PLAYABLE" },
+    { id:"satellite", name:"Satellite repair & EVA", detail:"Orbital repair operations", state:"PLAYABLE" },
+    { id:"surface", name:"Lunar landings", detail:"Moon landings and exploration", state:"PLAYABLE" },
+    { id:"research", name:"Science & research camps", detail:"Moon science and research", state:"PLAYABLE" },
+    { id:"all", name:"All mission types", detail:"View the full campaign", state:"VIEW ALL" },
   ] as const;
   const matches = (m: MissionDefinition) => {
     if (!selectedRoute) return false;
@@ -84,7 +84,7 @@ export default function CampaignHome({
         <div className="campaign-picker-intro">
           <small>COMMANDER / MISSION SELECTION</small>
           <h1 id="campaign-pick-title">Choose your <em>next frontier.</em></h1>
-          <p>Choose a planet or browse by mission type. Your completed missions, unlocked levels and saved flight stay exactly as they were.</p>
+          <p>Choose a destination or mission type. Your progress is preserved.</p>
         </div>
         <div className="campaign-picker-tabs" role="group" aria-label="Browse Commander missions">
           <button type="button" aria-pressed={browseBy==="destination"} onClick={()=>{setBrowseBy("destination");setSelectedRoute(null)}}>Choose a destination</button>
@@ -101,16 +101,16 @@ export default function CampaignHome({
             </button>
           )}
         </div>
-        {!selectedRoute && <p className="campaign-picker-help">↑ Select a destination or mission type to display its missions below. You can change the selection anytime.</p>}
+        {!selectedRoute && <p className="campaign-picker-help">Select a card to view its missions.</p>}
       </section>
       <section className="campaign-hero">
         <span className="eyebrow">COMMANDER CAMPAIGN</span>
         <h1>Mission Control.</h1>
         <p>
-          Learn the spacecraft. Walk on the Moon. Build a working science camp.
+          Fly, explore the Moon and conduct research.
           <br />
-          Plan a complete flight. Bring the crew and science home. Unlock the
-          next mission.
+          Complete flights to unlock the
+          next challenge.
         </p>
         <div className="campaign-totals">
           <span>

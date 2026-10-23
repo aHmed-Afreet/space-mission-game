@@ -33,8 +33,8 @@ export default function App(){
  if(stage===-1)return <div className="strategy-mission-board">
    <header><span className="brand">✦ ORBITAL <small>STRATEGY COMMAND</small></span><strong>{Object.keys(campaign).length} / {strategyChallenges.length} LEVELS COMPLETE</strong></header>
    <section className="strategy-board-hero"><small>MISSION PLANNING CAMPAIGN</small><h1>20 missions. <em>One spacecraft at a time.</em></h1>
-    <p>Choose a challenge. Build a viable uncrewed Mars explorer, meet its specific technical requirements, complete mission events and deliver the results. New levels unlock as you succeed.</p>
-    <p>Each level uses different engineering targets, instrument requirements, routes or resource limits. Replay previous missions to improve your score.</p>
+    <p>Design a Mars explorer, meet each mission's requirements and unlock new levels.</p>
+    <p>Upgrade your design, manage resources and improve your score.</p>
    </section>
    <div className="strategy-level-grid">
      {strategyChallenges.map((m,i)=>{
