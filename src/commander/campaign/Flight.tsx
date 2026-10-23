@@ -546,7 +546,7 @@ export default function Flight({
          {!recovery && helpOpen && m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
          <h2>{recovery?.title ?? o?.title}</h2>
          {(recovery?.station || o?.site) && <p>Location: {sitePosition((recovery?.station ?? o!.site!)!,m.destination).name}. Refer to MAP.</p>}
-         {!recovery && helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>
+         {!recovery && helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>}
         {o && <section className="campaign-task-guide" aria-label="How to complete this objective">
           <button type="button" className="campaign-guide-toggle"
             aria-expanded={helpOpen} aria-controls="campaign-objective-help"
