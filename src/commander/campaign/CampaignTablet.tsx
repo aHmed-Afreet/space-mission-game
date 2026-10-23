@@ -6,6 +6,7 @@ import Icon, { type IconName } from "../Icons";
 import { missionTime } from "../MissionTablet";
 import { NavigationContent } from "./NavigationMap";
 import { objectiveGuide } from "./objectiveGuide";
+import { recoveryMission } from "./recovery";
 
 import { lifeOptions, alerts } from "../simulation";
 import { components } from "../../game";
@@ -99,6 +100,7 @@ export default function CampaignTablet({
   const m = missionById(s.missionId),
     o = currentObjective(s),
     guide = objectiveGuide(s),
+    recovery = recoveryMission(s),
     env = environments[m.destination],
     state = s.state,
     [details, setDetails] = useState(false);
@@ -204,16 +206,20 @@ export default function CampaignTablet({
                   {s.objective} / {m.objectives.length}
                 </span>
               </div>
-              <div className="campaign-current-card">
-                <small>CURRENT TASK</small>
-                <h3>{o?.title || "Mission complete."}</h3>
-                <p>
+              <div className={"campaign-current-card "+(recovery?"recovery-active":"")}>
+                <small>{recovery ? "⚠ TEMPORARY RECOVERY MISSION" : "CURRENT TASK"}</small>
+                <h3>{recovery?.title ?? o?.title ?? "Mission complete."}</h3>
+                {recovery ? <>
+                  <p>{recovery.cause}</p>
+                  <p><strong>ORIGINAL OBJECTIVE ON HOLD:</strong> {o?.title}</p>
+                  <p>The original mission resumes automatically once the problem is fixed.</p>
+                </> : <p>
                   {o?.site
                     ? "Go to " + sitePosition(o.site, m.destination).name + "."
                     : o?.action === "eat" || o?.action === "drink"
                       ? "Use the carried item in INVENTORY."
                       : "Follow the current instruction."}
-                </p>
+                </p>}
                 <strong>HOW TO COMPLETE</strong>
                 <ol className="campaign-tablet-help">
                   {guide.steps.map((step,i)=><li key={i} className={step.done?"done":""}>
@@ -226,7 +232,7 @@ export default function CampaignTablet({
                     {s.repetitions} / {o.count} operations complete
                   </strong>
                 )}
-                <button onClick={onClose}>Return to mission →</button>
+                <button onClick={onClose}>{recovery ? "Return to recovery mission →" : "Return to mission →"}</button>
               </div>
               <div className="cmd-objective-progress">
                 <span
