@@ -1,6 +1,7 @@
 import { atSite, currentObjective, outside, satelliteRepairBlocker, sitePosition, type Session } from "./engine";
 import { missionById, type Site } from "./definitions";
 import { faultCatalog } from "./ship";
+import { recoveryMission } from "./recovery";
 
 /** Context-aware, player-facing instructions. No mission state is changed here. */
 export type GuideStep = { text: string; done: boolean };
@@ -87,6 +88,12 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
   if (s.state.sleeping && o.action !== "wake") return {
     steps: [{ text: "Wake up before operating equipment.", done: false }, ...steps],
     next: "Wake up to continue.",
+  };
+  const interruption = recoveryMission(s);
+  if (interruption) return {
+    steps: interruption.steps,
+    next: interruption.next,
+    recoveryStation: interruption.station,
   };
   const recovery = systemRecoveryGuide(s);
   if (recovery) return recovery;
