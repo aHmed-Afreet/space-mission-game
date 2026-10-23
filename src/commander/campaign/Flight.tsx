@@ -2,6 +2,7 @@ import { sound } from "./audio";
 import StationControls from "./StationControls";
 import RendezvousConsole from "./RendezvousConsole";
 import { objectiveGuide } from "./objectiveGuide";
+import { recoveryMission } from "./recovery";
 import { doors, shipAlerts, type WorldAction } from "./ship";
 import LaunchView from "./LaunchView";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -136,6 +137,7 @@ export default function Flight({
   const m = missionById(s.missionId),
     o = currentObjective(s),
     guide = objectiveGuide(s),
+    recovery = recoveryMission(s),
     area = nearby(s.position.x, s.position.z);
   const audioPosition = useRef(s.position),
     audioDoors = useRef(""),
@@ -188,8 +190,20 @@ export default function Flight({
     setActions(false);
     setShowOther(false);
     setGuideFeedback("");
-    setHelpOpen(false); // Free the movement area whenever the player moves to another station or objective.
+    setHelpOpen(false);
   }, [area, s.objective]);
+  const lastRecovery = useRef<string | null>(null);
+  useEffect(() => {
+    if (recovery && lastRecovery.current !== recovery.id) {
+      setHelpOpen(true);
+      setGuideFeedback("");
+    }
+    if (!recovery && lastRecovery.current) {
+      setGuideFeedback("Recovery complete ✓ Original mission objective resumed.");
+      setHelpOpen(false);
+    }
+    lastRecovery.current = recovery?.id ?? null;
+  }, [recovery?.id]);
   useEffect(() => {
     const previous = attemptedCommand.current;
     if (!previous || previous.session === s) return;
@@ -509,7 +523,7 @@ export default function Flight({
           </select>
         </label>
       </div>
-      {!s.state.paused && <div className={`campaign-guidance ${helpOpen ? "help-expanded" : "help-collapsed"}`}>
+      {!s.state.paused && <div className={`campaign-guidance ${helpOpen ? "help-expanded" : "help-collapsed"} ${recovery ? "recovery-active" : ""}`}>
         <small>
           {m.title.toUpperCase()} / MISSION {m.level}
         </small>
@@ -524,15 +538,15 @@ export default function Flight({
             {m.objectives.length}
           </b>
         </span>
-        {helpOpen && m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
-        <h2>{o?.title}</h2>
-        {o?.site && (
-          <p>
-            Location: {sitePosition(o.site, m.destination).name}. Refer to the
-            MAP above.
-          </p>
-        )}
-        {helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>}
+         {recovery && <div className="campaign-recovery-status" role="status" aria-live="polite">
+           <strong>⚠ RECOVERY MISSION ACTIVE</strong>
+           <span>Original task suspended: {o?.title}</span>
+           <p>{recovery.cause}</p>
+         </div>}
+         {!recovery && helpOpen && m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
+         <h2>{recovery?.title ?? o?.title}</h2>
+         {(recovery?.station || o?.site) && <p>Location: {sitePosition((recovery?.station ?? o!.site!)!,m.destination).name}. Refer to MAP.</p>}
+         {!recovery && helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>
         {o && <section className="campaign-task-guide" aria-label="How to complete this objective">
           <button type="button" className="campaign-guide-toggle"
             aria-expanded={helpOpen} aria-controls="campaign-objective-help"
