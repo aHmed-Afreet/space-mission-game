@@ -2047,3 +2047,26 @@
 .campaign-home .campaign-pick-card.pick-moon,.campaign-home .campaign-pick-card.pick-surface{background:linear-gradient(140deg,rgba(39,63,76,.93),rgba(8,28,44,.9))}
 .campaign-home .campaign-picker-intro small,.campaign-home .campaign-pick-card-top,.campaign-home .campaign-chapter-heading h2{color:#d3f5ff}
 .campaign-home .campaign-pick-card strong{color:#fff}
+
+
+/* Dynamic recovery missions: visible without obstructing flight controls. */
+.campaign-flight .campaign-guidance.recovery-active {
+ border:1px solid rgba(244,191,111,.9);
+ background:rgba(14,25,38,.95);
+ box-shadow:0 0 22px rgba(245,160,76,.13);
+}
+.campaign-recovery-status {
+ display:grid;gap:7px;margin:10px 0 12px;
+ padding:12px;border-left:3px solid #edb66d;
+ background:rgba(115,75,31,.21);border-radius:5px;
+}
+.campaign-recovery-status strong {font-size:11px;color:#ffe3ac;letter-spacing:.08em}
+.campaign-recovery-status span {font-size:12px;color:#f5f5e9;line-height:1.5}
+.campaign-recovery-status p {font-size:12px!important;color:#fff1dc!important;line-height:1.6;margin:0}
+.campaign-guidance.recovery-active h2 {color:#fff5df;font-weight:650}
+.campaign-tablet .campaign-current-card.recovery-active {
+ border:1px solid rgba(241,180,102,.88);
+ background:rgba(43,35,29,.9);
+}
+.campaign-tablet .campaign-current-card.recovery-active h3 {color:#ffe9c4}
+.campaign-guidance.recovery-active .campaign-guide-next {color:#fff5e8;font-size:13px}
