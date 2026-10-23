@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { equipment, type EquipmentId } from "./equipment";
 import {
   categories,
@@ -37,9 +38,41 @@ export default function CampaignHome({
   onExit: () => void;
   onSettings?: () => void;
 }) {
+  const [browseBy, setBrowseBy] = useState<"destination" | "mission">("destination");
+  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const destinations = [
+    { id:"earth", name:"Earth orbit", detail:"Spacecraft training and satellite operations", state:"PLAYABLE" },
+    { id:"moon", name:"The Moon", detail:"Lunar landings, science and research camps", state:"PLAYABLE" },
+    { id:"mars", name:"Mars", detail:"Future exploration missions", state:"COMING LATER" },
+    { id:"asteroid", name:"Deep space", detail:"Future asteroid and deep-space missions", state:"COMING LATER" },
+    { id:"all", name:"All destinations", detail:"Browse the full Commander campaign", state:"VIEW ALL" },
+  ] as const;
+  const missionTypes = [
+    { id:"orbit", name:"Orbital training", detail:"Flight qualification and spacecraft systems", state:"PLAYABLE" },
+    { id:"satellite", name:"Satellite repair & EVA", detail:"Work outside the spacecraft in orbit", state:"PLAYABLE" },
+    { id:"surface", name:"Lunar landings", detail:"Land and explore the lunar surface", state:"PLAYABLE" },
+    { id:"research", name:"Science & research camps", detail:"Collect samples and build lunar experiments", state:"PLAYABLE" },
+    { id:"all", name:"All mission types", detail:"See every mission in sequence", state:"VIEW ALL" },
+  ] as const;
+  const matches = (m: MissionDefinition) => {
+    if (!selectedRoute) return false;
+    if (selectedRoute === "all") return true;
+    if (browseBy === "destination") return m.destination === selectedRoute ||
+      (selectedRoute === "asteroid" && m.chapter === "deep");
+    if (selectedRoute === "orbit") return m.destination === "earth" && !m.eva;
+    if (selectedRoute === "satellite") return m.destination === "earth" && m.eva;
+    if (selectedRoute === "surface") return m.destination === "moon" && m.surface;
+    if (selectedRoute === "research") return m.destination === "moon" &&
+      (m.majorObjective.toLowerCase().includes("science") ||
+       m.title.toLowerCase().includes("camp") ||
+       m.title.toLowerCase().includes("experiment") ||
+       m.title.toLowerCase().includes("expedition"));
+    return true;
+  };
   const next = missions.find(
     (m) => !progress.completed[m.id] && canStart(m, progress),
   );
+  const visible = missions.filter(matches);
   return (
     <div className="campaign-home">
       <div className="campaign-nav">
@@ -47,6 +80,29 @@ export default function CampaignHome({
         <span>ORBITAL / MISSION LAB</span>
         <button type="button" className="campaign-open-settings" onClick={onSettings}><Icon name="settings" size={16}/> Settings</button>
       </div>
+      <section className="campaign-destination-picker" aria-labelledby="campaign-pick-title">
+        <div className="campaign-picker-intro">
+          <small>COMMANDER / MISSION SELECTION</small>
+          <h1 id="campaign-pick-title">Choose your <em>next frontier.</em></h1>
+          <p>Choose a planet or browse by mission type. Your completed missions, unlocked levels and saved flight stay exactly as they were.</p>
+        </div>
+        <div className="campaign-picker-tabs" role="group" aria-label="Browse Commander missions">
+          <button type="button" aria-pressed={browseBy==="destination"} onClick={()=>{setBrowseBy("destination");setSelectedRoute(null)}}>Choose a destination</button>
+          <button type="button" aria-pressed={browseBy==="mission"} onClick={()=>{setBrowseBy("mission");setSelectedRoute(null)}}>Choose a mission type</button>
+        </div>
+        <div className="campaign-picker-grid">
+          {(browseBy==="destination" ? destinations : missionTypes).map(item=>
+            <button key={item.id} type="button" className={"campaign-pick-card pick-"+item.id}
+              aria-pressed={selectedRoute===item.id} onClick={()=>setSelectedRoute(item.id)}>
+              <span className="campaign-pick-card-top">{item.state}</span>
+              <strong>{item.name}</strong>
+              <span>{item.detail}</span>
+              <b>{selectedRoute===item.id?"✓ SELECTED":"VIEW MISSIONS ↗"}</b>
+            </button>
+          )}
+        </div>
+        {!selectedRoute && <p className="campaign-picker-help">↑ Select a destination or mission type to display its missions below. You can change the selection anytime.</p>}
+      </section>
       <section className="campaign-hero">
         <span className="eyebrow">COMMANDER CAMPAIGN</span>
         <h1>Mission Control.</h1>
@@ -229,7 +285,13 @@ export default function CampaignHome({
           <button onClick={onResume}>Resume mission →</button>
         </section>
       )}
-      {chapters.map((ch, i) => (
+      {selectedRoute && <>
+      <div className="campaign-filter-summary">
+        <span>{visible.filter(m=>m.implemented).length} playable mission{visible.filter(m=>m.implemented).length===1?"":"s"} in this selection</span>
+        <button type="button" onClick={()=>setSelectedRoute("all")}>Show all missions ↗</button>
+      </div>
+      {visible.length===0 && <p className="campaign-picker-help">No missions match this category yet. Try another destination or mission type.</p>}
+      {chapters.filter(ch=>visible.some(m=>m.chapter===ch.id)).map((ch, i) => (
         <section className="campaign-chapter" key={ch.id}>
           <div className="campaign-chapter-heading">
             <span>0{i + 1}</span>
@@ -242,7 +304,7 @@ export default function CampaignHome({
             )}
           </div>
           <div className="campaign-missions">
-            {missions
+            {visible
               .filter((m) => m.chapter === ch.id)
               .map((m) => {
                 const completed = progress.completed[m.id],
@@ -300,6 +362,7 @@ export default function CampaignHome({
           </div>
         </section>
       ))}
+      </>}
       {legacy && (
         <section className="campaign-legacy">
           <h3>Previous readiness sortie</h3>

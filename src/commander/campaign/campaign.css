@@ -2006,3 +2006,30 @@
   .campaign-flight .campaign-guidance.help-collapsed { max-height: min(36dvh, 245px); }
   .campaign-flight .campaign-guidance.help-expanded { max-height: calc(100dvh - 155px); }
 }
+
+/* Destination/mission-type browser — cosmetic and filtering only; progression remains in canStart(). */
+.campaign-destination-picker{position:relative;isolation:isolate;border:1px solid #92c8de55;border-radius:16px;margin:24px 0 10px;padding:clamp(22px,4vw,46px);background:linear-gradient(95deg,#07111eeb,#071726da),url("https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1600&q=80") center/cover;box-shadow:0 24px 60px #0007}
+.campaign-picker-intro small{font-size:10px;letter-spacing:.25em;color:#99eaf4;font-weight:750}
+.campaign-picker-intro h1{font-size:clamp(33px,5vw,65px);line-height:1.03;letter-spacing:-.04em;margin:15px 0;text-shadow:0 0 30px #1eddfb44}
+.campaign-picker-intro h1 em{font-style:normal;color:#9ce8ed}
+.campaign-picker-intro p{max-width:700px;color:#d1e5f1;font-size:14px;line-height:1.75}
+.campaign-picker-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0 20px}
+.campaign-picker-tabs button{padding:12px 17px;border-radius:6px;border:1px solid #8faabd8c;background:#071522d9;color:#cfe7ef;font-size:12px;font-weight:700}
+.campaign-picker-tabs button[aria-pressed="true"]{background:#b5eef3;color:#0b2330;border-color:#ccf5ff}
+.campaign-picker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(188px,1fr));gap:12px}
+.campaign-pick-card{min-height:186px;position:relative;text-align:left;border:1px solid #c2dae155;border-radius:10px;background:linear-gradient(155deg,#183a53d9,#081b29f0);color:#f2faff;padding:17px;display:flex;flex-direction:column;align-items:stretch;gap:9px}
+.campaign-pick-card:hover{border-color:#b4edf5}
+.campaign-pick-card[aria-pressed="true"]{border-color:#b3f6ff;box-shadow:0 0 0 2px #76e2f844,0 0 30px #26e3fc38}
+.campaign-pick-card.pick-moon,.campaign-pick-card.pick-surface{background:radial-gradient(circle at 90% 15%,#b6c6d170,transparent 35%),linear-gradient(130deg,#1c3448,#081523)}
+.campaign-pick-card.pick-mars{background:radial-gradient(circle at 88% 10%,#e17e566e,transparent 42%),linear-gradient(130deg,#402e31,#0b141f)}
+.campaign-pick-card.pick-asteroid{background:radial-gradient(circle at 85% 10%,#64778b66,transparent 38%),linear-gradient(130deg,#2d344a,#0b141f)}
+.campaign-pick-card-top{font:750 9px/1.4 system-ui;letter-spacing:.14em;color:#b4f1f1}
+.campaign-pick-card.pick-mars .campaign-pick-card-top,.campaign-pick-card.pick-asteroid .campaign-pick-card-top{color:#ffcea6}
+.campaign-pick-card strong{font-size:21px;line-height:1.25;font-weight:740}
+.campaign-pick-card>span:not(.campaign-pick-card-top){font-size:11px;line-height:1.6;color:#b5cad7}
+.campaign-pick-card b{margin-top:auto;border-top:1px solid #afc7d255;padding-top:12px;font-size:10px;color:#a2eff7;letter-spacing:.1em}
+.campaign-picker-help{margin:18px 0 8px;color:#bfd6e1;font-size:12px;line-height:1.7}
+.campaign-filter-summary{margin:35px 0 10px;display:flex;gap:15px;align-items:center;justify-content:space-between;flex-wrap:wrap;color:#a9dbe3;font-size:12px}
+.campaign-filter-summary button{border:1px solid #9fd1d76e;background:#0e2935;border-radius:6px;color:#d1f4f3;padding:10px 14px;font-size:11px}
+@media(max-width:750px){.campaign-destination-picker{margin:12px 0;padding:22px 16px}.campaign-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.campaign-pick-card{min-height:173px;padding:13px}.campaign-pick-card strong{font-size:18px}.campaign-pick-card-top{font-size:8px}}
+@media(max-width:440px){.campaign-picker-grid{grid-template-columns:1fr}.campaign-pick-card{min-height:140px}.campaign-picker-intro h1{font-size:35px}}

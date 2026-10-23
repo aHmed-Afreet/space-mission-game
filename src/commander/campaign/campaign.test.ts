@@ -1871,3 +1871,24 @@ test("lunar descent guidance and cockpit action buttons share the same preflight
   assert.match(flight,/onWorld\(\{kind:"switch",id:"maneuver"\}\)/);
   assert.match(flight,/onClick=\{\(\)=>run\("land"\)\}/);
 });
+
+test("Commander mission selection preserves existing saves and sequential unlock gates", () => {
+  const commander=readFileSync("src/commander/Commander.tsx","utf8");
+  const home=readFileSync("src/commander/campaign/CampaignHome.tsx","utf8");
+  const portal=readFileSync("src/ModeSelect.tsx","utf8");
+  const css=readFileSync("src/home.css","utf8");
+  assert.match(home,/Choose your next frontier|Choose your/);
+  assert.match(home,/Choose a destination/);
+  assert.match(home,/Choose a mission type/);
+  assert.match(home,/setSelectedRoute/);
+  assert.match(home,/m\.destination === selectedRoute/);
+  assert.match(home,/canStart\(m, progress\)/);
+  assert.match(home,/session && \(/);
+  assert.match(home,/disabled=\{!ready \|\| readOnly\}/);
+  assert.match(commander,/onResume=\{\(\) => setMode\("flight"\)\}/);
+  assert.match(portal,/ENTER COMMANDER/);
+  assert.match(portal,/Fly as an Astronaut/);
+  assert.match(portal,/Build & Launch Missions/);
+  assert.match(portal,/Explore Space History/);
+  assert.match(css,/orbital-landing-hero/);
+});

@@ -1,0 +1,50 @@
+/* Photographic mission portal inspired by the user's Lost Beyond Earth reference.
+   All selectors are isolated so the existing simulation HUD is untouched. */
+.orbital-landing{background:#030711;color:#f6fbff;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.orbital-landing button{font-family:inherit}
+.orbital-landing-nav{height:72px;position:absolute;inset:0 0 auto;z-index:3;border-bottom:1px solid #cfedff24;background:#03081168;backdrop-filter:blur(12px);padding:0 clamp(18px,4vw,66px);display:flex;align-items:center;justify-content:space-between;gap:15px}
+.orbital-mark{display:flex;align-items:baseline;gap:8px;font-size:16px;color:#e0fbff;letter-spacing:.16em}
+.orbital-mark b{font-size:18px;letter-spacing:.21em}
+.orbital-mark small{border-left:1px solid #9abac588;padding-left:10px;font-size:9px;letter-spacing:.22em;color:#b4c8d7}
+.orbital-landing-nav button{border:1px solid #c4e6ff6b;border-radius:5px;background:#081827af;color:#e7faff;padding:10px 14px;font-size:10px;letter-spacing:.15em;font-weight:700}
+.orbital-landing-nav button span{margin-left:10px;color:#5fdfff}
+.orbital-landing-hero{position:relative;isolation:isolate;min-height:max(680px,92svh);display:flex;align-items:center;overflow:hidden;padding:125px clamp(24px,8vw,130px) 110px;background:#071527}
+.orbital-hero-picture{position:absolute;z-index:-2;inset:0;background-image:url("https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=2200&q=85");background-position:center 54%;background-size:cover;background-repeat:no-repeat;transform:scale(1.015);filter:saturate(1.12) contrast(1.06)}
+.orbital-landing-hero:before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,#030811ed 0%,#041021c6 37%,#06111a50 75%,#04081292 100%),linear-gradient(0deg,#020710eb 0%,transparent 33%,#03081362 100%)}
+.orbital-hero-content{max-width:790px}
+.orbital-hero-overline{font:700 11px/1.4 system-ui;letter-spacing:.28em;color:#cdebf9;display:flex;align-items:center;gap:10px}
+.orbital-hero-overline i{height:7px;width:7px;background:#80e7ef;border-radius:50%;box-shadow:0 0 15px #6cf4ff}
+.orbital-hero-content h1{font-size:clamp(72px,12vw,174px);line-height:.83;font-weight:700;letter-spacing:-.065em;margin:28px 0 36px;color:#fff;text-shadow:0 1px 12px #f7fcff91,0 0 36px #00d9ff78,0 0 95px #0db4fc2c}
+.orbital-hero-content h1 em{font-style:normal;color:#bdefff;text-shadow:0 0 15px #f4faff,0 0 65px #08c5ffba}
+.orbital-hero-content p{max-width:570px;font-size:clamp(15px,1.8vw,21px);line-height:1.7;color:#e4edf8;text-shadow:0 2px 12px #000b}
+.orbital-hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:13px;margin-top:30px}
+.orbital-hero-primary,.orbital-hero-secondary{border-radius:5px;padding:16px 23px;min-height:55px;font-size:12px;font-weight:800;letter-spacing:.13em}
+.orbital-hero-primary{background:#a0f1fa;color:#051726;border:1px solid #b9f3ff;box-shadow:0 0 28px #22cafb4a}
+.orbital-hero-primary span{margin-left:18px}
+.orbital-hero-secondary{background:#030a13b5;color:#e7f6ff;border:1px solid #a6cddc80}
+.orbital-hero-bottom{position:absolute;bottom:33px;left:clamp(24px,8vw,130px);right:clamp(24px,8vw,130px);display:flex;justify-content:space-between;gap:15px;font-size:10px;letter-spacing:.24em;color:#bcd7e4}
+.orbital-experiences{padding:clamp(65px,8vw,120px) clamp(20px,5vw,80px) clamp(60px,7vw,110px);max-width:1590px;margin:auto;scroll-margin-top:16px}
+.orbital-section-head{text-align:center;margin:0 auto 45px;max-width:730px}
+.orbital-small-label{font-size:10px;font-weight:750;letter-spacing:.27em;color:#8ddbe7}
+.orbital-section-head h2{font-size:clamp(32px,5vw,62px);letter-spacing:-.04em;margin:16px 0}
+.orbital-section-head h2 em{font-style:normal;color:#a1e7ed}
+.orbital-section-head p{color:#a9becd;font-size:15px;line-height:1.8}
+.orbital-mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px}
+.orbital-landing .orbital-mode-tile{min-width:0;min-height:300px;border:1px solid #5273816b;border-radius:11px;padding:24px 27px;background:radial-gradient(circle at 85% 20%,#17486599,transparent 43%),linear-gradient(150deg,#132638,#07101f 74%);text-align:left;color:#eefaff;display:flex;flex-direction:column;position:relative;overflow:hidden;box-shadow:0 16px 40px #0005}
+.orbital-landing .orbital-mode-tile:hover{border-color:#a2e6f0;box-shadow:0 14px 55px #00a0ed25;transform:translateY(-3px)}
+.orbital-mode-top,.orbital-mode-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:9px;font-weight:800;letter-spacing:.18em;color:#a3cbdb}
+.orbital-mode-top{position:relative;z-index:1}
+.orbital-mode-art{height:104px;position:relative;display:flex;justify-content:end;align-items:center;overflow:hidden}
+.orbital-mode-art i{display:block;width:112px;height:112px;border-radius:50%;border:1px solid #d7f4ff35;background:radial-gradient(circle at 32% 26%,#c3eafa,#5898c4 30%,#164869 65%,#040c18 86%);box-shadow:0 0 34px #3ccfff4b;transform:translate(12px,22px)}
+.orbital-mode-art b{position:absolute;right:18px;top:20px;width:24px;height:24px;border:2px solid #a5cadd;border-radius:50%;box-shadow:0 0 20px #6beaff}
+.orbital-mode-strategy .orbital-mode-art i{background:radial-gradient(circle at 30% 25%,#e9bb91,#a45a42 45%,#39202a 78%,#100b11)}
+.orbital-mode-history .orbital-mode-art i{background:radial-gradient(circle at 30% 25%,#e9e8e1,#959da5 40%,#4c5868 67%,#15202b 86%)}
+.orbital-mode-guide .orbital-mode-art i{background:radial-gradient(circle at 33% 26%,#a4f5f2,#437a80 39%,#10252e 74%)}
+.orbital-mode-tile>strong{font-size:clamp(21px,2.7vw,33px);font-weight:740;letter-spacing:-.035em;margin:0 0 12px}
+.orbital-mode-detail{display:block;font-size:14px;line-height:1.65;color:#b4c9d9;max-width:550px;margin-bottom:25px}
+.orbital-mode-bottom{border-top:1px solid #9dbfda32;padding-top:17px;margin-top:auto;font-size:9px}
+.orbital-mode-bottom b{color:#9cf4fc;white-space:nowrap}
+.orbital-site-footer{border-top:1px solid #668ca241;padding:24px clamp(22px,5vw,80px);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:#89a4b8;font-size:10px;letter-spacing:.07em}
+.orbital-site-footer a{color:#b5eaf3;text-decoration:none}
+@media(max-width:730px){.orbital-landing-nav{height:62px}.orbital-mark small{display:none}.orbital-landing-hero{padding:110px 24px 105px;min-height:690px;align-items:end}.orbital-hero-picture{background-position:59% center}.orbital-landing-hero:before{background:linear-gradient(0deg,#030811f7,#06111da8 45%,#03101a45 90%)}.orbital-hero-content h1{font-size:clamp(59px,14vw,110px)}.orbital-hero-content p{font-size:15px}.orbital-hero-bottom{bottom:22px;left:24px;right:24px;font-size:8px}.orbital-mode-grid{grid-template-columns:1fr}.orbital-landing .orbital-mode-tile{padding:22px;min-height:265px}.orbital-mode-art{height:76px}.orbital-section-head{margin-bottom:32px}}
+@media(prefers-reduced-motion:reduce){.orbital-landing *{scroll-behavior:auto!important;animation:none!important}}
