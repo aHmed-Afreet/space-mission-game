@@ -1893,3 +1893,21 @@ test("Commander mission selection preserves existing saves and sequential unlock
   assert.match(portal,/Explore Space History/);
   assert.match(css,/orbital-landing-hero/);
 });
+
+
+test("a fixed Earth background and legible text cover the five non-flight views", () => {
+  const global=readFileSync("src/style.css","utf8");
+  const home=readFileSync("src/home.css","utf8");
+  const campaign=readFileSync("src/commander/campaign/campaign.css","utf8");
+  const history=readFileSync("src/history/history.css","utf8");
+  const help=readFileSync("src/howTo.css","utf8");
+  assert.match(global,/#root::before\s*\{/);
+  assert.match(global,/position:fixed/);
+  assert.match(global,/\.strategy-mission-board,\.app,\.history-hub,\.help-page,\.campaign-home/);
+  assert.match(home,/\.orbital-hero-picture\{display:none\}/);
+  assert.match(campaign,/campaign-home \.campaign-destination-picker/);
+  assert.match(history,/history-hub \.history-card p/);
+  assert.match(help,/help-page \.help-steps p/);
+  assert.match(readFileSync("src/HowToPlay.tsx","utf8"),/Monitor food, water, oxygen/);
+  assert.match(readFileSync("src/commander/campaign/Flight.tsx","utf8"),/className="campaign-flight/);
+});
