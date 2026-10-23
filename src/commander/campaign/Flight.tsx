@@ -190,7 +190,7 @@ export default function Flight({
     setActions(false);
     setShowOther(false);
     setGuideFeedback("");
-    setHelpOpen(false);
+    setHelpOpen(false); // Free the movement area while the player changes stations.
   }, [area, s.objective]);
   const lastRecovery = useRef<string | null>(null);
   useEffect(() => {

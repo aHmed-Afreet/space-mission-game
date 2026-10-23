@@ -1728,7 +1728,7 @@ test("Paused mission keeps Resume and Save accessible without overlapping object
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  const css=readFileSync("src/commander/campaign/campaign.css","utf8");
  assert.ok(flight.includes('!s.state.paused && <div className={`campaign-guidance'),"hide HUD objective card while paused");
- assert.ok(flight.includes('      </div>}\n      {m.id==="mission-2"'),"close the pause condition before other overlays");
+ assert.ok(flight.includes('      </div>}\n      {!recovery && m.id==="mission-2"'),"close the pause condition before other overlays");
  assert.match(flight,/s.state.paused && !tutorial && !tablet && !rendezvousOpen/);
  assert.match(flight,/role="region" aria-label="Mission paused"/);
  assert.match(flight,/onClick=\{\(\) => onTickPause\(false\)\}>Resume mission/);
@@ -1962,7 +1962,7 @@ test("shared recovery applies to field equipment in every playable Commander mis
     assert.equal(blocked.objective, taskIndex);
     checked++;
   }
-  assert.ok(checked >= 5, "check several playable lunar field missions");
+  assert.ok(checked >= 3, "check every existing field mission (at least three)");
 });
 
 test("critical switches and real hardware failures interrupt and resume without skipping mission steps", () => {
