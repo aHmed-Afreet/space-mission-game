@@ -1380,8 +1380,9 @@ test("published privacy page and release disclaimer exist", () => {
 test("main menu contains exactly four commands with a combined history and story entry", () => {
   const menu = readFileSync("src/ModeSelect.tsx", "utf8");
   const history = readFileSync("src/history/HistoryHub.tsx", "utf8");
-  assert.equal((menu.match(/<button onClick=\{\(\) => setMode\("/g) || []).length, 4);
-  assert.match(menu, /Space History &amp; Stories/);
+  assert.equal((menu.match(/id: "(?:commander|strategy|history|guide)", number:/g) || []).length, 4);
+  assert.match(menu, /title: "Explore Space History"/);
+  assert.match(menu, /experiences\.map\(item => <button/);
   assert.doesNotMatch(menu, /setMode\("stories"\)/);
   assert.match(history, />READ HISTORY<\/button>/);
   assert.match(history, />LIVE THE STORY<\/button>/);
