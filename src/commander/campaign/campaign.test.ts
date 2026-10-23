@@ -1909,5 +1909,5 @@ test("a fixed Earth background and legible text cover the five non-flight views"
   assert.match(history,/history-hub \.history-card p/);
   assert.match(help,/help-page \.help-steps p/);
   assert.match(readFileSync("src/HowToPlay.tsx","utf8"),/Monitor food, water, oxygen/);
-  assert.match(readFileSync("src/commander/campaign/Flight.tsx","utf8"),/className="campaign-flight/);
+  assert.match(readFileSync("src/commander/campaign/Flight.tsx","utf8"),/onCommand/);
 });
