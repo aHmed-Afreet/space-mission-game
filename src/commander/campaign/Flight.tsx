@@ -564,7 +564,15 @@ export default function Flight({
           <div className="campaign-guide-actions">
             {s.state.paused
               ? <button type="button" onClick={()=>onTickPause(false)}>▶ Resume mission</button>
-              : guide.recoveryStation && !atSite(s,guide.recoveryStation)
+              : recovery?.retry
+                ? <button type="button" className="primary" onClick={onHome}>Save & campaign · Review / retry flight</button>
+                : recovery && guide.recoveryStation && !atSite(s,guide.recoveryStation)
+                  ? <button type="button" className="primary" onClick={()=>setNavOpen(true)}>Open MAP · Go to recovery location</button>
+                : recovery && guide.recoveryStation && atSite(s,guide.recoveryStation)
+                  ? <button type="button" className="primary" onClick={()=>{setHelpOpen(false);setActions(true)}}>Open station controls · Resolve problem</button>
+                : recovery
+                  ? <button type="button" onClick={()=>setNavOpen(true)}>Open MAP · Follow recovery steps</button>
+                : guide.recoveryStation && !atSite(s,guide.recoveryStation)
                 ? <button type="button" className="primary" onClick={()=>setNavOpen(true)}>
                     Open MAP · Go to {sitePosition(guide.recoveryStation,m.destination).name} to repair
                   </button>
@@ -579,7 +587,7 @@ export default function Flight({
                     <button type="button" className="primary" onClick={()=>run("inspectPower")}>
                       Inspect power and diagnose faults
                     </button>}
-                  {o.action==="land" &&
+                  {!recovery && o.action==="land" &&
                     (!s.world.switches.navigation ?
                       <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"navigation"})}>
                         Turn ON Navigation computer
@@ -595,22 +603,22 @@ export default function Flight({
                           : <button type="button" className="primary" onClick={()=>run("land")}>
                               Execute lunar landing →
                             </button>)}
-                  {o.action==="returnBurn" &&
+                  {!recovery && o.action==="returnBurn" &&
                     (s.world.target!=="earth" ?
                       <button type="button" className="primary" onClick={()=>onWorld({kind:"target",value:"earth"})}>Set destination to Earth orbit / recovery</button>
                       : !s.world.switches.maneuver ?
                         <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"maneuver"})}>Turn ON guarded manoeuvre arm</button>
                         : <button type="button" className="primary" onClick={()=>run("returnBurn")}>Start controlled return burn →</button>)}
-                  {o.choices?.map(choice=>
+                  {!recovery && o.choices?.map(choice=>
                     <button type="button" key={choice.action}
                       disabled={o.event==="power" && !s.observations.powerDiagnosed}
                       className={choice.action==="eventReroute"||choice.action==="powerSafe"?"primary":""}
                       onClick={()=>run(choice.action)}>
                       {choice.title}<small>{choice.detail}</small>
                     </button>)}
-                  {m.id==="mission-2"&&o.action==="approach" &&
+                  {!recovery && m.id==="mission-2"&&o.action==="approach" &&
                     <button type="button" className="primary" onClick={openRendezvous}>Open Satellite Rendezvous Computer</button>}
-                  {!launching && !!o.action && !o.choices && o.action!=="returnBurn" &&
+                  {!recovery && !launching && !!o.action && !o.choices && o.action!=="returnBurn" &&
                     !(m.id==="mission-2"&&o.action==="approach") &&
                     o.action!=="land" &&
                     o.action!=="eat" && o.action!=="drink" && o.action!=="wake" &&
@@ -624,7 +632,7 @@ export default function Flight({
           </button>
           </div>}
         </section>}
-        {m.id==="mission-2"&&o?.action==="approach"&&
+        {!recovery && m.id==="mission-2"&&o?.action==="approach"&&
           <button type="button" className="campaign-direct-console"
            onClick={openRendezvous}>
            {s.state.paused?"▶ Resume mission to use navigation":
@@ -650,7 +658,7 @@ export default function Flight({
           Mission steps <Icon name="chevron" size={12} />
         </button>}
       </div>}
-      {m.id==="mission-2"&&o?.action==="approach"&&!s.state.paused&&!rendezvousOpen&&!tablet&&!tutorial&&
+      {!recovery && m.id==="mission-2"&&o?.action==="approach"&&!s.state.paused&&!rendezvousOpen&&!tablet&&!tutorial&&
         <div className="cmd-rendezvous-shortcut" role="region" aria-label="Active rendezvous mission control">
           <strong>RENDEZVOUS COMPUTER</strong>
           <span>Objective: match the target satellite's approach geometry.</span>
@@ -710,7 +718,7 @@ export default function Flight({
                     <Icon name="chevron" size={13} />
                   </button>
                 ))}
-              {actionable && o?.action && !o.choices && !inventoryTask && (
+              {!recovery && actionable && o?.action && !o.choices && !inventoryTask && (
                 <button
                   disabled={s.state.paused}
                   onClick={()=>{
