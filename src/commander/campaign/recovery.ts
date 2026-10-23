@@ -175,24 +175,28 @@ export function recoveryMission(s: Session): RecoveryMission | null {
         step("Go to Power & life support and check oxygen recycling, cooling and active faults."),
         step("Restore cabin pressure above 90 kPa before retrying."),
       ],fromStation(s,"power","Restore oxygen and cooling, then allow pressure to recover."));
-  if (["land","returnBurn"].includes(action) && !s.world.switches.maneuver)
-    return rescue(s,"maneuver-arm","Arm guarded manoeuvre",
-      "The guarded manoeuvre safety switch is OFF.","cockpit",[
-        step("Go to Flight deck and open NAVIGATION controls.",atSite(s,"cockpit")),
-        step("Switch Guarded manoeuvre arm to ON."),
-      ],fromStation(s,"cockpit","Switch Guarded manoeuvre arm ON."));
+  // Select the destination first, then arm the manoeuvre: same order as
+  // the working preflight console and existing lunar landing checklist.
   if (action==="land" && s.world.target!=="moon")
     return rescue(s,"destination-moon","Set lunar landing destination",
       "Navigation is targeting Earth, not the Moon.","cockpit",[
         step("Go to Flight deck and open NAVIGATION.",atSite(s,"cockpit")),
-        step("Set Destination selector to Lunar approach."),
-      ],fromStation(s,"cockpit","Select Lunar approach in Navigation."));
+        step("In NAVIGATION set Destination selector to Lunar approach."),
+        step("Then switch Guarded manoeuvre arm to ON before executing the landing."),
+      ],atSite(s,"cockpit")?"Set destination to Lunar approach.":fromStation(s,"cockpit","Set destination to Lunar approach."));
   if (action==="returnBurn" && s.world.target!=="earth")
     return rescue(s,"destination-earth","Set Earth recovery destination",
       "The return manoeuvre requires an Earth orbit / recovery target.","cockpit",[
         step("Go to Flight deck and open NAVIGATION.",atSite(s,"cockpit")),
         step("Set Destination selector to Earth orbit / recovery."),
-      ],fromStation(s,"cockpit","Select Earth orbit / recovery."));
+        step("Then switch Guarded manoeuvre arm to ON."),
+      ],atSite(s,"cockpit")?"Set Earth orbit / recovery.":fromStation(s,"cockpit","Set Earth orbit / recovery."));
+  if (["land","returnBurn"].includes(action) && !s.world.switches.maneuver)
+    return rescue(s,"maneuver-arm","Arm guarded manoeuvre",
+      "The guarded manoeuvre safety switch is OFF.","cockpit",[
+        step("Go to Flight deck and open NAVIGATION controls.",atSite(s,"cockpit")),
+        step("Turn ON Guarded manoeuvre arm."),
+      ],fromStation(s,"cockpit","Turn ON Guarded manoeuvre arm."));
   if (["science","powerScience"].includes(action) && !s.world.switches.science)
     return rescue(s,"science-switch","Restore science circuit",
       "Science instruments are disconnected.","power",[
