@@ -37,6 +37,7 @@ import { decodeStore, newStore, persist, loadStore, SAVE_KEY } from "./save";
 import { joystickVector } from "../controls";
 import { NavigationContent } from "./NavigationMap";
 import { objectiveGuide } from "./objectiveGuide";
+import { recoveryMission } from "./recovery";
 import { readPreferences, writePreferences } from "./preferences";
 import { historyMissions } from "../../history/missionHistory";
 import {planetKind} from "../celestial";
@@ -1910,4 +1911,90 @@ test("a fixed Earth background and legible text cover the five non-flight views"
   assert.match(help,/help-page \.help-steps p/);
   assert.match(readFileSync("src/HowToPlay.tsx","utf8"),/Monitor food, water, oxygen/);
   assert.match(readFileSync("src/commander/campaign/Flight.tsx","utf8"),/onCommand/);
+});
+
+test("Level 3 scanner blockade becomes recovery, then automatically restores the exact original task", () => {
+  const m = missionById("mission-3");
+  const base = createSession(m, design, life, m.requiredEquipment, qualified(2));
+  const objective = m.objectives.findIndex(task => task.action === "scan");
+  assert.ok(objective > 0);
+  const marker = sitePosition("survey", m.destination);
+  const stalled: Session = {
+    ...base, objective,
+    position: { ...marker, heading: 0 },
+    flight: { ...base.flight, status: "orbit" },
+    landed: true,
+    suit: { ...base.suit, equipped: true, power: 1 },
+  };
+  const recovery = recoveryMission(stalled);
+  assert.equal(recovery?.id, "gear-scanner");
+  assert.equal(recovery?.title, "Retrieve Geological scanner");
+  assert.equal(recovery?.station, "science");
+  assert.match(objectiveGuide(stalled).next, /Science/);
+  assert.equal(currentObjective(stalled)?.id, m.objectives[objective].id);
+  assert.equal(stalled.completed.length, 0);
+
+  const science = sitePosition("science", m.destination);
+  const atLocker: Session = {
+    ...stalled, position: { ...science, heading: 0 },
+    world: { ...stalled.world, lockers: { ...stalled.world.lockers, science: true } },
+  };
+  const loaded = worldAction(atLocker, { kind: "take", id: "scanner" }, 0);
+  assert.ok(loaded.pack.includes("scanner"));
+  assert.equal(recoveryMission(loaded), null, "recovery automatically clears after taking the scanner");
+  assert.equal(currentObjective(loaded)?.id, m.objectives[objective].id);
+  assert.deepEqual(loaded.completed, stalled.completed);
+  assert.equal(loaded.objective, stalled.objective);
+});
+
+test("shared recovery applies to field equipment in every playable Commander mission", () => {
+  const p = qualified(11);
+  let checked = 0;
+  for (const m of missions.filter(m => m.implemented)) {
+    const taskIndex = m.objectives.findIndex(task =>
+      ["scan", "sample", "drill", "photo", "measureRadiation", "measureTemperature"].includes(task.action || ""));
+    if (taskIndex < 0) continue;
+    const base = createSession(m, design, life, m.requiredEquipment, p);
+    const blocked: Session = { ...base, objective: taskIndex, pack: [] };
+    const recovery = recoveryMission(blocked);
+    assert.ok(recovery, m.title + " should explain missing field gear");
+    assert.match(recovery!.title, /Retrieve|Equipment unavailable/);
+    assert.equal(blocked.objective, taskIndex);
+    checked++;
+  }
+  assert.ok(checked >= 5, "check several playable lunar field missions");
+});
+
+test("critical switches and real hardware failures interrupt and resume without skipping mission steps", () => {
+  const m = missionById("mission-3");
+  const base = createSession(m, design, life, m.requiredEquipment, qualified(2));
+  const landingIndex = m.objectives.findIndex(task => task.action === "land");
+  const cockpit = sitePosition("cockpit", m.destination);
+  let s: Session = { ...base, objective: landingIndex,
+    position: { ...cockpit, heading: 0 },
+    flight: { ...base.flight, status: "orbit" },
+    world: { ...base.world, target: "moon" } };
+  assert.equal(recoveryMission(s)?.id, "maneuver-arm");
+  s = worldAction(s, { kind: "switch", id: "maneuver" }, 0);
+  assert.equal(recoveryMission(s), null);
+  assert.equal(s.objective, landingIndex);
+  assert.deepEqual(s.completed, []);
+  const broken: Session = { ...s,
+    world: { ...s.world, faults: [{ id: "hardware", kind: "navigation",
+      diagnosed: false, repaired: false, verified: false, at: 0 }],
+      partsStored: 1 } };
+  assert.equal(recoveryMission(broken)?.id, "fault-navigation");
+  assert.match(objectiveGuide(broken).next, /Diagnose|Navigation/);
+  assert.equal(broken.objective, landingIndex);
+});
+
+test("recovery is reflected in HUD and tablet but never replaces persisted mission indexes", () => {
+  const hud = readFileSync("src/commander/campaign/Flight.tsx", "utf8");
+  const tablet = readFileSync("src/commander/campaign/CampaignTablet.tsx", "utf8");
+  const model = readFileSync("src/commander/campaign/recovery.ts", "utf8");
+  assert.match(hud, /RECOVERY MISSION ACTIVE/);
+  assert.match(hud, /Original task suspended/);
+  assert.match(tablet, /TEMPORARY RECOVERY MISSION/);
+  assert.match(tablet, /original mission resumes automatically/);
+  assert.doesNotMatch(model, /objective:\s*s\.objective\s*\+/);
 });
