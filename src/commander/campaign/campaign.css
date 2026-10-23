@@ -2033,3 +2033,17 @@
 .campaign-filter-summary button{border:1px solid #9fd1d76e;background:#0e2935;border-radius:6px;color:#d1f4f3;padding:10px 14px;font-size:11px}
 @media(max-width:750px){.campaign-destination-picker{margin:12px 0;padding:22px 16px}.campaign-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.campaign-pick-card{min-height:173px;padding:13px}.campaign-pick-card strong{font-size:18px}.campaign-pick-card-top{font-size:8px}}
 @media(max-width:440px){.campaign-picker-grid{grid-template-columns:1fr}.campaign-pick-card{min-height:140px}.campaign-picker-intro h1{font-size:35px}}
+
+/* High-contrast readable Commander cards over shared Earth background. */
+.campaign-home .campaign-hero,.campaign-home .mission-control-dashboard article,.campaign-home .campaign-missions article,.campaign-home .campaign-resume,.campaign-home .panel,.campaign-home .campaign-legacy{background:rgba(5,19,35,.88);border-color:rgba(167,211,228,.58);backdrop-filter:blur(8px)}
+.campaign-home .campaign-destination-picker{background:linear-gradient(95deg,rgba(5,17,30,.84),rgba(5,24,42,.66));border-color:rgba(174,225,241,.63)}
+.campaign-home .campaign-hero{padding:30px 24px}
+.campaign-home .campaign-hero p,.campaign-home .campaign-missions article p,.campaign-home .campaign-missions article footer span,.campaign-home .mission-control-dashboard article p,.campaign-home .campaign-chapter-heading p,.campaign-home .panel p,.campaign-home .campaign-resume p{color:#edf7ff;font-size:13px;line-height:1.7}
+.campaign-home .campaign-missions article p{font-size:14px}
+.campaign-home .campaign-missions article small,.campaign-home .campaign-missions article footer span,.campaign-home .campaign-totals span,.campaign-home .campaign-pick-card>span:not(.campaign-pick-card-top){font-size:11px;color:#d3e8f5}
+.campaign-home .campaign-picker-intro p,.campaign-home .campaign-picker-help,.campaign-home .campaign-chapter-heading>small,.campaign-home .campaign-nav span,.campaign-home .campaign-nav button{color:#e4f6ff;font-size:12px}
+.campaign-home .campaign-pick-card{background:linear-gradient(150deg,rgba(10,38,58,.93),rgba(4,20,37,.89));border-color:#a7cfdc9f}
+.campaign-home .campaign-pick-card.pick-mars{background:linear-gradient(140deg,rgba(64,38,42,.94),rgba(12,23,36,.90))}
+.campaign-home .campaign-pick-card.pick-moon,.campaign-home .campaign-pick-card.pick-surface{background:linear-gradient(140deg,rgba(39,63,76,.93),rgba(8,28,44,.9))}
+.campaign-home .campaign-picker-intro small,.campaign-home .campaign-pick-card-top,.campaign-home .campaign-chapter-heading h2{color:#d3f5ff}
+.campaign-home .campaign-pick-card strong{color:#fff}

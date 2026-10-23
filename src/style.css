@@ -32,3 +32,20 @@
 .strategy-result.success{background:#153f37;border-color:#5aab94}
 .strategy-result strong{font-size:16px}
 .strategy-result p{font-size:13px;line-height:1.7}
+
+/* Shared fixed Earth scene across home, Commander selection, Strategy, History and Help.
+   The fixed layer also works in mobile Safari (unlike background-attachment:fixed). */
+#root{position:relative;min-height:100vh;isolation:isolate}
+#root::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(3,10,22,.12),rgba(3,12,27,.23)),url("https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=2200&q=90") center/cover no-repeat}
+.strategy-mission-board,.app,.history-hub,.help-page,.campaign-home{background:transparent}
+.strategy-board-hero{background:linear-gradient(120deg,rgba(7,22,40,.87),rgba(8,29,48,.72));border-color:#9bcce67a}
+.strategy-level{background:rgba(5,20,37,.88);border-color:#9bc3d48f}
+.strategy-mission-board .strategy-level.locked{opacity:.74}
+.strategy-mission-board .strategy-level p,.strategy-mission-board .strategy-board-hero p{color:#e3f2ff;font-size:14px;line-height:1.7}
+.strategy-disclaimer{color:#d4e5f3;font-size:13px}
+.app .panel,.app .resource,.app .selection,.app .event-choice{background:rgba(6,19,36,.92);border-color:#82a9c179}
+.app .panel p,.app .resource label,.app .resource small,.app .selection-spec,.app .step,.app .intro{color:#e0edfa;line-height:1.6}
+.app .muted{color:#d0e1f0!important;font-size:12px!important}
+.app .resource small,.app .specs span,.app .feedback ul,.app .log p{font-size:12px;color:#dae9f5}
+.app .page-top,.app .stage-count,.app .version{color:#dce9f5}
+@media print{#root::before{display:none}}

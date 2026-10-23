@@ -48,3 +48,15 @@
 .orbital-site-footer a{color:#b5eaf3;text-decoration:none}
 @media(max-width:730px){.orbital-landing-nav{height:62px}.orbital-mark small{display:none}.orbital-landing-hero{padding:110px 24px 105px;min-height:690px;align-items:end}.orbital-hero-picture{background-position:59% center}.orbital-landing-hero:before{background:linear-gradient(0deg,#030811f7,#06111da8 45%,#03101a45 90%)}.orbital-hero-content h1{font-size:clamp(59px,14vw,110px)}.orbital-hero-content p{font-size:15px}.orbital-hero-bottom{bottom:22px;left:24px;right:24px;font-size:8px}.orbital-mode-grid{grid-template-columns:1fr}.orbital-landing .orbital-mode-tile{padding:22px;min-height:265px}.orbital-mode-art{height:76px}.orbital-section-head{margin-bottom:32px}}
 @media(prefers-reduced-motion:reduce){.orbital-landing *{scroll-behavior:auto!important;animation:none!important}}
+
+/* Maintain the same fixed scenery when scrolling from home into other menus. */
+.orbital-landing,.orbital-landing-hero{background:transparent}
+.orbital-hero-picture{display:none}
+.orbital-landing-hero:before{background:linear-gradient(90deg,rgba(2,9,21,.75),rgba(3,11,25,.54) 46%,rgba(2,9,19,.12)),linear-gradient(0deg,rgba(3,9,20,.47),transparent 36%)}
+.orbital-experiences{background:rgba(3,13,27,.53);border-radius:18px}
+.orbital-landing .orbital-mode-tile{background:linear-gradient(150deg,rgba(6,27,47,.91),rgba(4,16,32,.89) 74%);border-color:#a0c6d78f}
+.orbital-mode-detail,.orbital-section-head p{color:#ecf6ff;font-size:15px;line-height:1.7}
+.orbital-mode-top,.orbital-mode-bottom{color:#d5f3ff}
+.orbital-hero-content p{color:#fff;text-shadow:0 2px 14px #021023;font-weight:500}
+.orbital-site-footer{background:rgba(3,12,24,.78);color:#c7e6f5}
+@media(max-width:730px){.orbital-landing-hero:before{background:linear-gradient(0deg,rgba(2,9,21,.87),rgba(2,10,22,.57) 45%,rgba(3,12,24,.08))}.orbital-experiences{border-radius:0}}

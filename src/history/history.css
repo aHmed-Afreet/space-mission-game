@@ -76,3 +76,11 @@
 .help-grid p{font-size:13px;line-height:1.85;color:#b9c9cf}
 .help-note{margin-top:25px;border-top:1px solid #789e9b45;padding:20px 0}
 @media(max-width:720px){.cmd-mode-select>div,.help-grid{grid-template-columns:1fr}}
+
+/* Full story detail remains available; short previews are easy to scan. */
+.history-hub .history-hero,.history-hub .history-card,.history-hub .history-story-lead,.history-hub .history-story-panels article,.history-hub .history-live,.history-hub .history-callout{background:rgba(5,20,37,.90);border-color:#9cc7d48c;backdrop-filter:blur(7px)}
+.history-hub .history-hero p,.history-hub .history-card p,.history-hub .history-story-panels p,.history-hub .history-live p,.history-hub .history-live blockquote,.history-hub .history-callout p,.history-hub .history-story-lead p{color:#edf7ff;font-size:14px;line-height:1.75}
+.history-hub .history-card p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.history-hub .history-result-count,.history-hub .history-training-note,.history-hub .history-footer,.history-hub .history-card-date small,.history-hub .history-filters label,.history-hub .history-completions{color:#d0e6f5!important;font-size:12px!important}
+.history-hub .history-choice{background:rgba(24,61,78,.91);color:#f0faff;font-size:14px}
+.history-hub .history-tabs button,.history-hub .history-back{color:#f5fbff}
