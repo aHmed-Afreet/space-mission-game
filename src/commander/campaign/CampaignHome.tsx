@@ -8,6 +8,7 @@ import {
 } from "./ship";
 import { technologies, money } from "./economy";
 import { chapters, missions, type MissionDefinition } from "./definitions";
+import { campaigns, campaignById, campaignForMission, campaignLevel, type CampaignId } from "./campaignTypes";
 import { canStart, type Progress, type Session } from "./engine";
 import { environments } from "./environments";
 import Icon from "../Icons";
@@ -38,71 +39,56 @@ export default function CampaignHome({
   onExit: () => void;
   onSettings?: () => void;
 }) {
-  const [browseBy, setBrowseBy] = useState<"destination" | "mission">("destination");
-  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
-  const destinations = [
-    { id:"earth", name:"Earth orbit", detail:"Spaceflight and satellite work", state:"PLAYABLE" },
-    { id:"moon", name:"The Moon", detail:"Landing and lunar science", state:"PLAYABLE" },
-    { id:"mars", name:"Mars", detail:"Future Mars missions", state:"COMING LATER" },
-    { id:"asteroid", name:"Deep space", detail:"Future deep-space missions", state:"COMING LATER" },
-    { id:"all", name:"All destinations", detail:"See all missions", state:"VIEW ALL" },
-  ] as const;
-  const missionTypes = [
-    { id:"orbit", name:"Orbital training", detail:"Flight and spacecraft training", state:"PLAYABLE" },
-    { id:"satellite", name:"Satellite repair & EVA", detail:"Orbital repair operations", state:"PLAYABLE" },
-    { id:"surface", name:"Lunar landings", detail:"Moon landings and exploration", state:"PLAYABLE" },
-    { id:"research", name:"Science & research camps", detail:"Moon science and research", state:"PLAYABLE" },
-    { id:"all", name:"All mission types", detail:"View the full campaign", state:"VIEW ALL" },
-  ] as const;
-  const matches = (m: MissionDefinition) => {
-    if (!selectedRoute) return false;
-    if (selectedRoute === "all") return true;
-    if (browseBy === "destination") return m.destination === selectedRoute ||
-      (selectedRoute === "asteroid" && m.chapter === "deep");
-    if (selectedRoute === "orbit") return m.destination === "earth" && !m.eva;
-    if (selectedRoute === "satellite") return m.destination === "earth" && m.eva;
-    if (selectedRoute === "surface") return m.destination === "moon" && m.surface;
-    if (selectedRoute === "research") return m.destination === "moon" &&
-      (m.majorObjective.toLowerCase().includes("science") ||
-       m.title.toLowerCase().includes("camp") ||
-       m.title.toLowerCase().includes("experiment") ||
-       m.title.toLowerCase().includes("expedition"));
-    return true;
-  };
-  const next = missions.find(
-    (m) => !progress.completed[m.id] && canStart(m, progress),
-  );
-  const visible = missions.filter(matches);
+  const [selectedRoute, setSelectedRoute] = useState<CampaignId | null>(null);
+  const selectedCampaign = selectedRoute ? campaignById(selectedRoute) : null;
+  const visible = selectedCampaign
+    ? missions.filter(m => (selectedCampaign.missionIds as readonly string[]).includes(m.id))
+    : [];
+  const next = missions.find(m => !progress.completed[m.id] && canStart(m,progress));
+  const routeCompleted = visible.filter(m=>progress.completed[m.id]).length;
+  const routeNext = visible.find(m=>!progress.completed[m.id] && canStart(m,progress));
   return (
     <div className="campaign-home">
       <div className="campaign-nav">
-        <button onClick={onExit}>← Choose mode</button>
+        <button onClick={selectedRoute ? ()=>setSelectedRoute(null) : onExit}>{selectedRoute ? "← All mission types" : "← Choose mode"}</button>
         <span>ORBITAL / MISSION LAB</span>
         <button type="button" className="campaign-open-settings" onClick={onSettings}><Icon name="settings" size={16}/> Settings</button>
       </div>
-      <section className="campaign-destination-picker" aria-labelledby="campaign-pick-title">
+      {!selectedRoute && <section className="campaign-destination-picker campaign-type-hub" aria-labelledby="campaign-pick-title">
         <div className="campaign-picker-intro">
-          <small>COMMANDER / MISSION SELECTION</small>
-          <h1 id="campaign-pick-title">Choose your <em>next frontier.</em></h1>
-          <p>Choose a destination or mission type. Your progress is preserved.</p>
-        </div>
-        <div className="campaign-picker-tabs" role="group" aria-label="Browse Commander missions">
-          <button type="button" aria-pressed={browseBy==="destination"} onClick={()=>{setBrowseBy("destination");setSelectedRoute(null)}}>Choose a destination</button>
-          <button type="button" aria-pressed={browseBy==="mission"} onClick={()=>{setBrowseBy("mission");setSelectedRoute(null)}}>Choose a mission type</button>
+          <small>COMMANDER / INDEPENDENT CAMPAIGNS</small>
+          <h1 id="campaign-pick-title">Choose your <em>mission type.</em></h1>
+          <p>Each type opens its own page, starts at Level 1 and unlocks levels independently.</p>
         </div>
         <div className="campaign-picker-grid">
-          {(browseBy==="destination" ? destinations : missionTypes).map(item=>
-            <button key={item.id} type="button" className={"campaign-pick-card pick-"+item.id}
-              aria-pressed={selectedRoute===item.id} onClick={()=>setSelectedRoute(item.id)}>
-              <span className="campaign-pick-card-top">{item.state}</span>
-              <strong>{item.name}</strong>
-              <span>{item.detail}</span>
-              <b>{selectedRoute===item.id?"✓ SELECTED":"VIEW MISSIONS ↗"}</b>
-            </button>
-          )}
+          {campaigns.map(c=>{
+            const groupMissions=missions.filter(m=>(c.missionIds as readonly string[]).includes(m.id));
+            const complete=groupMissions.filter(m=>progress.completed[m.id]).length;
+            return <button key={c.id} type="button"
+              className={"campaign-pick-card pick-"+c.destination+" campaign-route-card"}
+              onClick={()=>setSelectedRoute(c.id)}
+              aria-label={"Open "+c.name+" campaign levels"}>
+              <span className="campaign-pick-card-top">{c.eyebrow}</span>
+              <span className="campaign-card-planet" aria-hidden="true">{c.icon}</span>
+              <strong>{c.name}</strong>
+              <span>{c.description}</span>
+              <b>{complete} / {groupMissions.length} COMPLETED · OPEN CAMPAIGN ↗</b>
+            </button>;
+          })}
         </div>
-        {!selectedRoute && <p className="campaign-picker-help">Select a card to view its missions.</p>}
-      </section>
+      </section>}
+      {selectedCampaign && <section className={"campaign-route-hero campaign-route-"+selectedCampaign.destination} aria-labelledby="campaign-route-title">
+        <small>{selectedCampaign.eyebrow}</small>
+        <span className="campaign-route-planet" aria-hidden="true">{selectedCampaign.icon}</span>
+        <h1 id="campaign-route-title">{selectedCampaign.name}</h1>
+        <p>{selectedCampaign.description}</p>
+        <div className="campaign-route-stats">
+          <span><strong>{routeCompleted}</strong> / {visible.length} completed</span>
+          <span><strong>{routeNext ? "LEVEL "+campaignLevel(routeNext.id) : "COMPLETE"}</strong> next</span>
+        </div>
+        <button type="button" onClick={()=>setSelectedRoute(null)}>← Back to all mission types</button>
+      </section>}
+      {!selectedRoute && <>
       <section className="campaign-hero">
         <span className="eyebrow">COMMANDER CAMPAIGN</span>
         <h1>Mission Control.</h1>
@@ -270,6 +256,7 @@ export default function CampaignHome({
           ),
         )}
       </details>
+      </>}
       {warning && <p className="cmd-alert caution">{warning}</p>}
       {session && (
         <section className="campaign-resume">
@@ -285,84 +272,43 @@ export default function CampaignHome({
           <button onClick={onResume}>Resume mission →</button>
         </section>
       )}
-      {selectedRoute && <>
-      <div className="campaign-filter-summary">
-        <span>{visible.filter(m=>m.implemented).length} playable mission{visible.filter(m=>m.implemented).length===1?"":"s"} in this selection</span>
-        <button type="button" onClick={()=>setSelectedRoute("all")}>Show all missions ↗</button>
-      </div>
-      {visible.length===0 && <p className="campaign-picker-help">No missions match this category yet. Try another destination or mission type.</p>}
-      {chapters.filter(ch=>visible.some(m=>m.chapter===ch.id)).map((ch, i) => (
-        <section className="campaign-chapter" key={ch.id}>
-          <div className="campaign-chapter-heading">
-            <span>0{i + 1}</span>
-            <div>
-              <h2>{ch.title}</h2>
-              <p>{ch.subtitle}</p>
-            </div>
-            {!missions.some((m) => m.chapter === ch.id && m.implemented) && (
-              <small>IN DEVELOPMENT / NOT PLAYABLE</small>
-            )}
+      {selectedCampaign && <section className="campaign-route-levels" aria-labelledby="route-levels-title">
+        <div className="campaign-chapter-heading">
+          <span>★</span>
+          <div>
+            <h2 id="route-levels-title">Your {selectedCampaign.name} levels</h2>
+            <p>Finish a level to unlock the next level in this campaign only.</p>
           </div>
-          <div className="campaign-missions">
-            {visible
-              .filter((m) => m.chapter === ch.id)
-              .map((m) => {
-                const completed = progress.completed[m.id],
-                  ready = canStart(m, progress);
-                return (
-                  <article
-                    key={m.id}
-                    className={`${completed ? "complete" : ready ? "ready" : "locked"} ${session?.missionId === m.id ? "current" : ""}`}
-                  >
-                    <div>
-                      <small>MISSION {String(m.level).padStart(2, "0")}</small>
-                      <span>
-                        {completed
-                          ? "✓ COMPLETE"
-                          : !m.implemented
-                            ? "PLANNED"
-                            : ready
-                              ? "AVAILABLE"
-                              : "🔒 LOCKED"}
-                      </span>
-                    </div>
-                    <h3>{m.title}</h3>
-                    {m.historical && <div className="campaign-story-tag">HISTORICAL INSPIRATION · {m.historical.inspiration} ({m.historical.year})</div>}
-                    <span className="campaign-destination">
-                      <Icon name="target" size={13} />
-                      {environments[m.destination].name}
-                    </span>
-                    <p>{m.majorObjective}</p>
-                    <small>
-                      {m.implemented
-                        ? `${m.phases.length} phases · ${m.expectedMinutes} · allocation +${money(m.funding || 0)}`
-                        : "Future mission · unavailable"}
-                    </small>
-                    <footer>
-                      <span>
-                        {completed
-                          ? `BEST ${completed.score} / 100 · RANK ${completed.rank}`
-                          : !m.implemented
-                            ? "Not implemented in this release."
-                            : ready
-                              ? "Ready for preparation."
-                              : `Complete Mission ${m.level - 1} first.`}
-                      </span>
-                      <button
-                        disabled={!ready || readOnly}
-                        onClick={() => onSelect(m)}
-                      >
-                        {completed ? "Replay" : ready ? "Prepare" : "Locked"}
-                        <Icon name="chevron" size={13} />
-                      </button>
-                    </footer>
-                  </article>
-                );
-              })}
-          </div>
-        </section>
-      ))}
-      </>}
+        </div>
+        <div className="campaign-missions">
+          {visible.map(m=>{
+            const level=campaignLevel(m.id);
+            const completed=progress.completed[m.id];
+            const ready=canStart(m,progress);
+            return <article key={m.id}
+              className={`${completed?"complete":ready?"ready":"locked"} ${session?.missionId===m.id?"current":""}`}>
+              <div>
+                <small>LEVEL {String(level).padStart(2,"0")} · {selectedCampaign.name.toUpperCase()}</small>
+                <span>{completed?"✓ COMPLETE":ready?"AVAILABLE":"🔒 LOCKED"}</span>
+              </div>
+              <h3>{m.title}</h3>
+              {m.historical && <div className="campaign-story-tag">INSPIRED BY · {m.historical.inspiration} ({m.historical.year})</div>}
+              <span className="campaign-destination"><Icon name="target" size={13}/>{environments[m.destination].name}</span>
+              <p>{m.majorObjective}</p>
+              <small>{m.phases.length} phases · {m.expectedMinutes} · +{money(m.funding||0)} mission allocation</small>
+              <footer>
+                <span>{completed?`BEST ${completed.score} / 100 · RANK ${completed.rank}`:
+                  ready?"Ready to prepare and launch.":
+                    `Complete ${selectedCampaign.name} Level ${level-1} first.`}</span>
+                <button disabled={!ready || readOnly} onClick={()=>onSelect(m)}>
+                  {completed?"Replay":ready?"Prepare Level "+level:"Locked"}
+                  <Icon name="chevron" size={13}/>
+                </button>
+              </footer>
+            </article>;
+          })}
+        </div>
+      </section>}
       {legacy && (
         <section className="campaign-legacy">
           <h3>Previous readiness sortie</h3>
@@ -373,10 +319,7 @@ export default function CampaignHome({
           <button onClick={onLegacy}>Continue previous sortie</button>
         </section>
       )}
-      <p className="cmd-footnote">
-        Earth-orbit and lunar missions are playable. Mars and deep-space
-        chapters are definitions for future updates, not playable simulations.
-      </p>
+      <p className="cmd-footnote">Mars and asteroid sorties are orbital/cruise training simulations; surface landings there are not yet modeled. Existing mission saves remain compatible.</p>
     </div>
   );
 }
