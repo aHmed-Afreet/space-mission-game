@@ -1,5 +1,6 @@
 import { missions as oldMissions } from "./legacyDefinitions";
 import type { Destination } from "./environments";
+import { campaignForMission } from "./campaignTypes";
 import type { EquipmentId } from "./equipment";
 import type { Area, Action } from "../simulation";
 export type Site =
@@ -1052,17 +1053,71 @@ for(const [index,entry] of added.entries()){
     },
   }));
 }
-const future: [string,string,Destination][]=[
- ["Mars Cargo Preparation","mars","mars"],
- ["Mars Transfer Mission","mars","mars"],
- ["Mars Surface Expedition","mars","mars"],
- ["Asteroid Survey","deep","asteroid"],
+// The first Commander sorties for Mars and the asteroid belt are authentic
+// playable cruise/orbit training scenarios. Surface landings are NOT simulated.
+const distant: {
+  name:string;destination:Destination;chapter:string;activity:string;
+  goal:string;funding:number;reward:number;science:string;second:string;
+}[]=[
+  {name:"Mars Cruise Qualification",destination:"mars",chapter:"mars",
+   activity:"MARS TRANSFER SYSTEMS",goal:"Certify navigation, deep-space telemetry and science during a Mars-bound cruise.",
+   funding:150,reward:160,science:"Calibrate Mars-bound navigation-star observations.",
+   second:"Inspect radiation shielding and cabin power on the transfer leg."},
+  {name:"Mars Approach Navigation",destination:"mars",chapter:"mars",
+   activity:"MARS ORBIT APPROACH",goal:"Align orbital observations and return Mars approach telemetry.",
+   funding:155,reward:166,science:"Observe the Mars limb and chart orbital approach geometry.",
+   second:"Complete a new transfer-course correction using distant navigation references."},
+  {name:"Mars Orbital Survey",destination:"mars",chapter:"mars",
+   activity:"MARS REMOTE SCIENCE",goal:"Gather spectrometer data and return an orbital science survey of Mars.",
+   funding:160,reward:170,science:"Acquire an orbital spectrometer survey of the Martian surface.",
+   second:"Verify spacecraft thermal and electrical health during orbital science."},
+  {name:"Asteroid Cruise Qualification",destination:"asteroid",chapter:"deep",
+   activity:"ASTEROID CRUISE",goal:"Validate independent spacecraft operation during a distant asteroid approach.",
+   funding:165,reward:180,science:"Take a first optical navigation fix toward the asteroid.",
+   second:"Inspect battery and thermal systems under reduced sunlight."},
+  {name:"Asteroid Spectral Survey",destination:"asteroid",chapter:"deep",
+   activity:"ASTEROID REMOTE SCIENCE",goal:"Measure the asteroid from a safe standoff distance and return the data.",
+   funding:170,reward:185,science:"Record a spectroscopic observation of the asteroid surface.",
+   second:"Update spacecraft attitude to maintain a stable asteroid viewing angle."},
+  {name:"Deep-Space Communications Trial",destination:"asteroid",chapter:"deep",
+   activity:"DELAYED-COMMS OPERATIONS",goal:"Transmit instrument data and manage delayed radio contact far from Earth.",
+   funding:175,reward:190,science:"Record a second long-range science observation.",
+   second:"Inspect life support and energy during the long communication interval."},
 ];
-future.forEach(([title,chapter,destination],i)=> missions.push(full(i+13,chapter,title,destination,
- [task("INTERACT","Mission operations under development.")],{
- implemented:false,description:"Planned mission — full gameplay and destination assets not implemented.",
- majorObjective:title,phases:["PLANNED"],expectedMinutes:"Not playable",
-})));
+distant.forEach((entry,i)=>{
+  const level=i+13;
+  const tasks:Objective[]=[
+    ...launch(),
+    ...travel(),
+    ...phase(entry.activity,[
+      use("science",entry.science,"science"),
+      use(i===1||i===4?"cockpit":"power",entry.second,i===1||i===4?"course":"inspectPower"),
+      use("communications","Send a deep-space radio health check.","verifyRadio"),
+      wait("Hold observation attitude while telemetry is verified.",8,"cockpit"),
+      use("science","Acquire a second science calibration dataset.","science"),
+    ]),
+    ...phase("SYSTEM RECOVERY",[powerDecision()]),
+    ...returnHome(),
+  ];
+  missions.push(full(level,entry.chapter,entry.name,entry.destination,tasks,{
+    implemented:true,
+    description:entry.goal+" Educational cruise/orbital training; no surface landing.",
+    majorObjective:entry.goal,
+    phases:[...new Set(tasks.map(t=>t.phase||"OPERATIONS"))],
+    requiredEquipment:[],allowedEquipment:[],
+    funding:entry.funding,reward:entry.reward,
+    experiments:[entry.activity],expectedMinutes:"15–30 min · spaceflight training",
+    optional:[{id:"reserve",title:"Conserve power",description:"Finish with at least 40% battery.",
+       condition:"battery",value:.4,reward:3}],
+  }));
+});
+// Update only prerequisites; do not change mission IDs or historical save keys.
+for (const mission of missions) {
+  const group=campaignForMission(mission.id);
+  if (!group) throw Error("Missing campaign category for "+mission.id);
+  const index=(group.missionIds as readonly string[]).indexOf(mission.id);
+  mission.prerequisites=index===0?[]:[group.missionIds[index-1]];
+}
 export const missionById = (id: string): MissionDefinition => {
   const m =
     missions.find((m) => m.id === id) || oldMissions.find((m) => m.id === id);

@@ -216,9 +216,9 @@ function memoryStorage() {
 }
 
 test("complete missions have explicit phases, choices, meaningful challenges, optional rewards and unique task IDs", () => {
-  assert.equal(missions.length, 16);
-  assert.equal(missions.filter((m) => m.implemented).length, 12);
-  assert.equal(new Set(missions.map((m) => m.id)).size, 16);
+  assert.equal(missions.length, 18);
+  assert.equal(missions.filter((m) => m.implemented).length, 18);
+  assert.equal(new Set(missions.map((m) => m.id)).size, 18);
   for (const m of missions) {
     assert.ok(environments[m.destination]);
     assert.ok(m.prerequisites.every((id) => missions.some((v) => v.id === id)));
@@ -242,23 +242,16 @@ test("complete missions have explicit phases, choices, meaningful challenges, op
 test("mission unlocks, planned restrictions and sequential tasks cannot be bypassed", () => {
   const p = emptyProgress();
   assert.ok(canStart(missions[0], p));
-  assert.equal(canStart(missions[1], p), false);
-  assert.throws(() =>
-    createSession(
-      missions[1],
-      design,
-      life,
-      [...missions[1].requiredEquipment],
-      p,
-    ),
-  );
+  assert.equal(canStart(missions[1], p), true);
+  assert.doesNotThrow(() =>
+    createSession(missions[1], design, life, [...missions[1].requiredEquipment], p));
   assert.throws(() => createSession(missions[4], design, life, [], p));
   const s = createSession(missions[0], design, life, [], p);
   const late = command(s, "insertOrbit");
   assert.equal(late.objective, 0);
   assert.equal(late.flight.status, "pad");
 });
-test("all twelve complete flights finish launch, operations and recovery, award reports and unlock in order", () => {
+test("all playable campaign flights finish launch, operations and recovery with independent branches", () => {
   let p = emptyProgress();
   for (const m of missions.filter((m) => m.implemented)) {
     const s = completeMission(m, p, true);

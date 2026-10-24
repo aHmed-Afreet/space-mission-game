@@ -62,7 +62,7 @@ export const environments: Record<Destination, Environment> = {
     hazards: ["Dust", "Thin atmosphere", "Delayed communication"],
     summary:
       "Dust, weaker sunshine and a thin atmosphere change field operations.",
-    available: false,
+    available: true,
   },
   asteroid: {
     id: "asteroid",
@@ -77,7 +77,7 @@ export const environments: Record<Destination, Environment> = {
     movement: 0.6,
     hazards: ["Extremely low gravity", "Unstable footing"],
     summary: "Careful tethered movement is essential on a very small body.",
-    available: false,
+    available: true,
   },
   "deep-space": {
     id: "deep-space",
