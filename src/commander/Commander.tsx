@@ -10,7 +10,7 @@ import LegacyCommander from "./LegacyCommander";
 import CampaignHome from "./campaign/CampaignHome";
 import Preparation from "./campaign/Preparation";
 import Flight from "./campaign/Flight";
-import { campaignLevel, campaignForMission } from "./campaign/campaignTypes";
+import { campaignLevel, campaignForMission, type CampaignId } from "./campaign/campaignTypes";
 import {
   missions,
   missionById,
@@ -59,6 +59,7 @@ export default function Commander({
       };
     }
   });
+  const [campaignRoute, setCampaignRoute] = useState<CampaignId | null>(null);
   const [store, setStore] = useState<Store>(loaded.store),
     [mode, setMode] = useState<"home" | "prepare" | "flight" | "legacy">(
       "home",
@@ -170,12 +171,14 @@ export default function Commander({
     [updateSession],
   );
   const home = () => {
+    if(store.session) setCampaignRoute(campaignForMission(store.session.missionId)?.id ?? null);
     pause(true);
     save();
     setMode("home");
   };
   const prepare = (m: MissionDefinition) => {
     if (!canStart(m, store.progress) || loaded.readOnly) return;
+    setCampaignRoute(campaignForMission(m.id)?.id ?? null);
     setSelected(m);
     setGear([...m.requiredEquipment]);
     setUpgrades([]);
@@ -373,6 +376,8 @@ export default function Commander({
   return (
     <>
     <CampaignHome
+      selectedRoute={campaignRoute}
+      setSelectedRoute={setCampaignRoute}
       onServiceEquipment={(id) =>
         setStore((v) => ({ ...v, progress: serviceEquipment(v.progress, id) }))
       }

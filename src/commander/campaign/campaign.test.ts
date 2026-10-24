@@ -2028,3 +2028,13 @@ test("recovery is reflected in HUD and tablet but never replaces persisted missi
   assert.match(tablet, /original mission resumes automatically/);
   assert.doesNotMatch(model, /objective:\s*s\.objective\s*\+/);
 });
+
+test("returning from preparation or flight retains its independent campaign levels page",()=>{
+ const controller=readFileSync("src/commander/Commander.tsx","utf8");
+ const home=readFileSync("src/commander/campaign/CampaignHome.tsx","utf8");
+ assert.match(controller,/\[campaignRoute, setCampaignRoute\] = useState/);
+ assert.match(controller,/setCampaignRoute\(campaignForMission\(m\.id\)/);
+ assert.match(controller,/setCampaignRoute\(campaignForMission\(store\.session\.missionId\)/);
+ assert.match(controller,/selectedRoute=\{campaignRoute\}/);
+ assert.match(home,/selectedRoute: CampaignId \| null/);
+});

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { equipment, type EquipmentId } from "./equipment";
 import {
   categories,
@@ -19,6 +19,8 @@ export default function CampaignHome({
   warning,
   readOnly,
   onSelect,
+  selectedRoute,
+  setSelectedRoute,
   onResume,
   onLegacy,
   onExit,
@@ -34,12 +36,13 @@ export default function CampaignHome({
   warning: string;
   readOnly: boolean;
   onSelect: (m: MissionDefinition) => void;
+  selectedRoute: CampaignId | null;
+  setSelectedRoute: Dispatch<SetStateAction<CampaignId | null>>;
   onResume: () => void;
   onLegacy: () => void;
   onExit: () => void;
   onSettings?: () => void;
 }) {
-  const [selectedRoute, setSelectedRoute] = useState<CampaignId | null>(null);
   const selectedCampaign = selectedRoute ? campaignById(selectedRoute) : null;
   const visible = selectedCampaign
     ? missions.filter(m => (selectedCampaign.missionIds as readonly string[]).includes(m.id))
