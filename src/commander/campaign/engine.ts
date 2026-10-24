@@ -1,4 +1,4 @@
-import { previousTrackMission } from "./campaignTracks";
+import { previousInCampaign } from "./campaignTypes";
 import {
   newShip,
   tickShip,
@@ -263,12 +263,12 @@ export function satelliteRepairBlocker(s: Session): string | null {
 export function canStart(m: MissionDefinition, p: Progress) {
   // Branch-specific unlocks; previous campaign progress remains keyed by the
   // unchanged original mission ID. No unrelated destination is required.
-  const earlier = previousTrackMission(m);
+  const earlier = previousInCampaign(m.id);
   return (
     missions.some((candidate) => candidate.id === m.id) &&
     m.implemented &&
     environments[m.destination].available &&
-    (earlier !== null ? !!p.completed[earlier] : m.prerequisites.length === 0)
+    (earlier !== undefined ? !!p.completed[earlier] : m.prerequisites.length === 0)
   );
 }
 export function engineeringCampaign(
