@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { missions, missionById, type MissionDefinition } from "./definitions";
+import { campaigns, campaignLevel, previousInCampaign } from "./campaignTypes";
 import { missions as legacyMissions } from "./legacyDefinitions";
 import { environments } from "./environments";
 import { equipment, packMass, PACK_CAPACITY } from "./equipment";
@@ -568,7 +569,9 @@ test("simulation rates are guarded and return to 1x at event and phase boundarie
 test("destination physics and equipment tradeoffs remain data driven", () => {
   assert.notEqual(environments.earth.terrain, environments.moon.terrain);
   assert.ok(environments.mars.solar < environments.moon.solar);
-  assert.equal(environments.mars.available, false);
+  assert.equal(environments.mars.available, true);
+  assert.equal(environments.asteroid.available, true);
+  assert.equal(environments.europa.available, false);
   assert.ok(
     packMass(Object.keys(equipment) as (keyof typeof equipment)[]) >
       PACK_CAPACITY,
@@ -1337,14 +1340,18 @@ test("navigation map uses real mission location names and includes airlock locat
   assert.doesNotMatch(map, /stroke-dasharray|CURRENT TARGET/);
 });
 
-test("playable missions cite real NASA histories without misrepresenting the game", () => {
+test("existing NASA-inspired missions retain citations; new fictional distant sorties are clearly labeled", () => {
   const stories = missions.filter(m=>m.implemented);
   assert.deepEqual(stories.slice(0,4).map(m=>m.historical?.year),[1981,2009,1971,1972]);
-  for (const m of stories) {
+  for (const m of stories.slice(0,12)) {
     assert.ok(m.historical);
     assert.match(m.historical!.source, /^https:\/\/www\.nasa\.gov\//);
     assert.match(m.historical!.disclaimer, /fictional|fiction|imagined/i);
     assert.ok(m.historical!.learning.length>=4);
+  }
+  for (const m of stories.slice(12)) {
+    assert.equal(m.historical, undefined, "Do not invent a NASA mission link for fictional new flights");
+    assert.match(m.description,/Educational cruise\/orbital training; no surface landing/);
     assert.ok(m.objectives.some(o=>/check|inspect|scan|record|collect|repair|test|verify/i.test(o.title)));
   }
 });
@@ -1867,17 +1874,18 @@ test("lunar descent guidance and cockpit action buttons share the same preflight
   assert.match(flight,/onClick=\{\(\)=>run\("land"\)\}/);
 });
 
-test("Commander mission selection preserves existing saves and sequential unlock gates", () => {
+test("Commander type pages navigate independently, preserve saves and show each local level", () => {
   const commander=readFileSync("src/commander/Commander.tsx","utf8");
   const home=readFileSync("src/commander/campaign/CampaignHome.tsx","utf8");
   const portal=readFileSync("src/ModeSelect.tsx","utf8");
   const css=readFileSync("src/home.css","utf8");
-  assert.match(home,/Choose your next frontier|Choose your/);
-  assert.match(home,/Choose a destination/);
-  assert.match(home,/Choose a mission type/);
-  assert.match(home,/setSelectedRoute/);
-  assert.match(home,/m\.destination === selectedRoute/);
-  assert.match(home,/canStart\(m, progress\)/);
+  assert.match(home,/Choose your/);
+  assert.match(home,/campaigns\.map/);
+  assert.match(home,/setSelectedRoute\(c\.id\)/);
+  assert.match(home,/selectedCampaign && <section/);
+  assert.match(home,/campaignLevel\(m\.id\)/);
+  assert.match(home,/canStart\(m,progress\)/);
+  assert.match(home,/Back to all mission types/);
   assert.match(home,/session && \(/);
   assert.match(home,/disabled=\{!ready \|\| readOnly\}/);
   assert.match(commander,/onResume=\{\(\) => setMode\("flight"\)\}/);
@@ -1888,6 +1896,35 @@ test("Commander mission selection preserves existing saves and sequential unlock
   assert.match(css,/orbital-landing-hero/);
 });
 
+test("six Commander campaign branches each start at Level 1 and unlock only their next local level", () => {
+  assert.equal(campaigns.length,6);
+  assert.equal(new Set(campaigns.flatMap(c=>c.missionIds)).size,18);
+  const fresh=emptyProgress();
+  const initial=campaigns.map(c=>missions.find(m=>m.id===c.missionIds[0])!);
+  for(const m of initial){
+    assert.ok(m.implemented,"Every first level is fully implemented");
+    assert.ok(canStart(m,fresh),m.title+" Level 1 should start unlocked");
+    assert.equal(campaignLevel(m.id),1);
+    assert.equal(previousInCampaign(m.id),undefined);
+    assert.deepEqual(m.prerequisites,[]);
+  }
+  for(const c of campaigns){
+    for(let i=1;i<c.missionIds.length;i++){
+      const m=missionById(c.missionIds[i]);
+      assert.equal(campaignLevel(m.id),i+1);
+      assert.equal(previousInCampaign(m.id),c.missionIds[i-1]);
+      assert.equal(canStart(m,fresh),false,m.title+" must start locked");
+    }
+    const next=missionById(c.missionIds[1]);
+    const onlyPrevious=emptyProgress();
+    onlyPrevious.completed[c.missionIds[0]]={score:95,rank:"A"} as any;
+    assert.equal(canStart(next,onlyPrevious),true,c.name+" next level should unlock only from its own first level");
+    for(const other of campaigns.filter(x=>x.id!==c.id)){
+      assert.equal(canStart(missionById(other.missionIds[1]),onlyPrevious),false,
+        other.name+" must not be affected by "+c.name);
+    }
+  }
+});
 
 test("a fixed Earth background and legible text cover the five non-flight views", () => {
   const global=readFileSync("src/style.css","utf8");
