@@ -2,6 +2,7 @@ import { sound } from "./audio";
 import StationControls from "./StationControls";
 import RendezvousConsole from "./RendezvousConsole";
 import { objectiveGuide } from "./objectiveGuide";
+import { campaignLevel, campaignForMission } from "./campaignTypes";
 import { recoveryMission } from "./recovery";
 import { doors, shipAlerts, type WorldAction } from "./ship";
 import LaunchView from "./LaunchView";
@@ -525,7 +526,7 @@ export default function Flight({
       </div>
       {!s.state.paused && <div className={`campaign-guidance ${helpOpen ? "help-expanded" : "help-collapsed"} ${recovery ? "recovery-active" : ""}`}>
         <small>
-          {m.title.toUpperCase()} / MISSION {m.level}
+          {m.title.toUpperCase()} / {campaignForMission(m.id)?.name.toUpperCase()} LEVEL {campaignLevel(m.id)}
         </small>
         <p className="campaign-phase">
           PHASE {m.phases.indexOf(currentPhase(s)) + 1} / {m.phases.length} ·{" "}

@@ -16,6 +16,7 @@ import {
   type EquipmentId,
 } from "./equipment";
 import type { MissionDefinition } from "./definitions";
+import { campaignLevel, campaignForMission } from "./campaignTypes";
 import Icon from "../Icons";
 export default function Preparation({
   design,
@@ -67,7 +68,7 @@ export default function Preparation({
       <div className="eyebrow">ORBITAL / COMMANDER MODE</div>
       <h1>{mission.title}</h1>
       <p>
-        MISSION {mission.level} / {mission.description}
+        {campaignForMission(mission.id)?.name} LEVEL {campaignLevel(mission.id)} / {mission.description}
       </p>
       <p>
         Read the flight brief, choose your equipment, then board for pre-launch

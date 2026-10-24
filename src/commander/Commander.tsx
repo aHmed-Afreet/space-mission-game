@@ -10,6 +10,7 @@ import LegacyCommander from "./LegacyCommander";
 import CampaignHome from "./campaign/CampaignHome";
 import Preparation from "./campaign/Preparation";
 import Flight from "./campaign/Flight";
+import { campaignLevel, campaignForMission } from "./campaign/campaignTypes";
 import {
   missions,
   missionById,
@@ -243,7 +244,7 @@ export default function Commander({
       <>
         <div className="campaign-nav">
           <button onClick={() => setMode("home")}>← Campaign</button>
-          <span>MISSION PREPARATION / LEVEL {selected.level}</span>
+          <span>{campaignForMission(selected.id)?.name.toUpperCase()} / LEVEL {campaignLevel(selected.id)} · PREPARATION</span>
         </div>
         <Preparation
           mission={selected}

@@ -6,6 +6,7 @@ import Icon, { type IconName } from "../Icons";
 import { missionTime } from "../MissionTablet";
 import { NavigationContent } from "./NavigationMap";
 import { objectiveGuide } from "./objectiveGuide";
+import { campaignForMission, campaignLevel } from "./campaignTypes";
 import { recoveryMission } from "./recovery";
 
 import { lifeOptions, alerts } from "../simulation";
@@ -198,7 +199,7 @@ export default function CampaignTablet({
               <div className="cmd-section-heading">
                 <div>
                   <small>
-                    MISSION {m.level} / {currentPhase(s)}
+                    {campaignForMission(m.id)?.name.toUpperCase()} LEVEL {campaignLevel(m.id)} / {currentPhase(s)}
                   </small>
                   <h2>{m.title}</h2>
                 </div>
@@ -316,10 +317,10 @@ export default function CampaignTablet({
                   </li>
                 ))}
               </ol>
-              <h3 className="cmd-subheading">Chapter progress</h3>
+              <h3 className="cmd-subheading">{campaignForMission(m.id)?.name} progress</h3>
               <div className="campaign-level-chips">
                 {missions
-                  .filter((v) => v.chapter === m.chapter)
+                  .filter((v) => campaignForMission(v.id)?.id === campaignForMission(m.id)?.id)
                   .map((v) => (
                     <span
                       className={
@@ -336,7 +337,7 @@ export default function CampaignTablet({
                         : v.id !== m.id
                           ? "○"
                           : "○"}{" "}
-                      MISSION {v.level}
+                      LEVEL {campaignLevel(v.id)}
                     </span>
                   ))}
               </div>
