@@ -2070,3 +2070,33 @@
 }
 .campaign-tablet .campaign-current-card.recovery-active h3 {color:#ffe9c4}
 .campaign-guidance.recovery-active .campaign-guide-next {color:#fff5e8;font-size:13px}
+
+
+/* Six standalone Commander campaign pages with touch-friendly cards and
+   distinct destination art. Does not affect the 3D flight cockpit. */
+.campaign-home .campaign-type-hub{background:linear-gradient(120deg,rgba(4,14,29,.75),rgba(8,27,46,.55));}
+.campaign-home .campaign-type-hub .campaign-picker-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+.campaign-home .campaign-route-card{min-height:245px;border-radius:14px;cursor:pointer;transition:transform .17s,border-color .17s,box-shadow .17s}
+.campaign-home .campaign-route-card:hover,.campaign-home .campaign-route-card:focus-visible{transform:translateY(-4px);border-color:#b6f7ff;box-shadow:0 15px 45px #2ebfe925}
+.campaign-home .campaign-route-card .campaign-card-planet{font-size:50px;line-height:1.1;display:block;margin:10px 0 0;filter:drop-shadow(0 5px 13px #05101d)}
+.campaign-home .campaign-route-card b{color:#b3fbff;font-size:10px}
+.campaign-route-hero{position:relative;isolation:isolate;margin:25px 0;border-radius:16px;overflow:hidden;padding:clamp(26px,5vw,62px);border:1px solid #a5e7f185;min-height:240px;background:linear-gradient(110deg,rgba(5,16,31,.94),rgba(9,42,64,.65) 74%,rgba(4,15,28,.8));box-shadow:0 20px 45px #0007}
+.campaign-route-hero::before{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(circle at 80% 30%,#53b4ef5c,transparent 36%);pointer-events:none}
+.campaign-route-hero.campaign-route-moon::before{background:radial-gradient(circle at 80% 30%,#e4e8db54,transparent 36%)}
+.campaign-route-hero.campaign-route-mars::before{background:radial-gradient(circle at 80% 30%,#da704c84,transparent 39%)}
+.campaign-route-hero.campaign-route-asteroid::before{background:radial-gradient(circle at 80% 30%,#a6b9ce5f,transparent 40%)}
+.campaign-route-hero>small{font-weight:750;letter-spacing:.2em;color:#b5f3ff;font-size:11px}
+.campaign-route-hero h1{font-size:clamp(34px,6vw,73px);line-height:1.1;letter-spacing:-.05em;color:#fff;margin:19px 0 12px;max-width:720px}
+.campaign-route-hero>p{max-width:590px;font-size:16px;line-height:1.7;color:#e7f5ff}
+.campaign-route-hero .campaign-route-planet{position:absolute;right:8%;top:20%;font-size:clamp(74px,12vw,162px);filter:drop-shadow(0 3px 20px #091426);opacity:.9}
+.campaign-route-stats{margin:25px 0 16px;display:flex;gap:22px;flex-wrap:wrap;font-size:13px;color:#d9eff7}
+.campaign-route-stats strong{color:#b4fcff;font-size:18px}
+.campaign-route-hero>button{border:1px solid #b4eaf2b9;border-radius:6px;background:rgba(6,21,36,.76);color:#eafaff;font-weight:700;padding:12px 17px}
+.campaign-route-levels{margin-top:26px;min-height:290px}
+.campaign-route-levels .campaign-chapter-heading{margin-bottom:19px}
+.campaign-route-levels .campaign-missions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.campaign-route-levels .campaign-missions article{background:rgba(5,19,37,.94);border-color:#9bc9dd9c}
+.campaign-route-levels .campaign-missions article.ready{border-color:#9bebdba8}
+.campaign-route-levels .campaign-missions article.locked{opacity:.79}
+@media(max-width:900px){.campaign-home .campaign-type-hub .campaign-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.campaign-home .campaign-type-hub .campaign-picker-grid,.campaign-route-levels .campaign-missions{grid-template-columns:1fr}.campaign-route-hero .campaign-route-planet{right:6%;top:13%;font-size:80px;opacity:.35}.campaign-route-hero{padding:28px 18px}.campaign-home .campaign-route-card{min-height:215px}}
