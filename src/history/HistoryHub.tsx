@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { historyMissions, type HistoryMission } from "./missionHistory";
 import StoryFlight from "./StoryFlight";
+import StoryBriefingVideo from "./StoryBriefingVideo";
 import { officialFilmFor } from "./officialFilms";
 import "./history.css";
 
@@ -93,10 +94,10 @@ export default function HistoryHub({onExit,startIn="archive"}:{
           onClick={()=>setFilmConfirmed(true)}>I WATCHED THE VIDEO · START LIVING THE MISSION →</button>
         {!filmOpened&&<p className="history-training-note">Open the verified NASA video first to unlock this mission's replay.</p>}
       </> : <>
-        <div className="history-film-banner history-film-pending"><strong>NO VERIFIED MATCHING VIDEO YET</strong></div>
-        <p>We haven't verified an official film for this particular mission. We won't substitute unrelated footage. Read its records or enter the simplified educational scene.</p>
-        <a className="history-film-record" href={chosen.source} target="_blank" rel="noopener noreferrer">Open this mission's historical archive ↗</a>
-        <button className="history-film-continue" onClick={()=>setFilmConfirmed(true)}>CONTINUE TO EDUCATIONAL 3D TRAINING →</button>
+        <div className="history-film-banner history-film-pending"><strong>▶ ANIMATED HISTORICAL VIDEO · MADE FROM DOCUMENTED MISSION FACTS</strong>
+          <span>No verified original film for this mission</span></div>
+        <p>Watch this original animated mission briefing. It is not archival footage; every chapter is based on this story's historical record, and the source is linked below.</p>
+        <StoryBriefingVideo key={chosen.id} mission={chosen} onWatched={()=>setFilmConfirmed(true)}/>
       </>}
       <p className="history-training-note">Only documented sequences are presented as history. Unrecorded movements, controls, distances and settings are educational reconstructions.</p>
     </section>
@@ -121,7 +122,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       <section className="history-hero">
         <small>HUMANITY'S JOURNEY BEYOND EARTH</small>
         <h1>Real missions. <em>Remarkable stories.</em></h1>
-        <p>Watch official NASA films for major missions, then recreate documented events in 3D. Other missions retain archive and training scenes.</p>
+        <p>Every one of the 55 missions starts with a video: official agency footage where verified, otherwise a clearly labeled animated historical explainer. Then enter the 3D mission.</p>
         <div className="history-tabs" role="group" aria-label="Space history experience">
           <button type="button" aria-pressed={view==="archive"} onClick={()=>setView("archive")}>READ HISTORY</button>
           <button type="button" aria-pressed={view==="live"} onClick={()=>setView("live")}>LIVE THE STORY</button>
@@ -129,7 +130,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       </section>
       {view==="live"&&<section className="history-callout">
         <strong>Become the mission specialist</strong>
-        <p>Watch verified historical video first, then follow the mission steps in order. Reconstructions are labeled.</p>
+        <p>All 55 missions now have a video-first experience. Official films are identified separately from original educational animation; both lead to interactive 3D.</p>
       </section>}
       <div className="history-filters">
         <label>SEARCH MISSIONS<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Apollo, Mars, telescope, ISS…"/></label>
@@ -146,7 +147,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
           <div className="history-card-footer">
             {results[m.id]&&<span className="history-done">✓ Explored</span>}
             <button type="button" onClick={()=>open(m,view)}>
-              {view==="live"?(officialFilmFor(m.title)?"Watch video → Live story":"Archive → Training"):"Read story →"}
+              {view==="live"?(officialFilmFor(m.title)?"Watch official video → Live":"Watch animated video → Live"):"Read story →"}
             </button>
           </div>
         </article>)}
