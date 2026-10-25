@@ -129,6 +129,28 @@ export const officialFilms:Record<string,OfficialFilm>={
    scope:"NASA documentary about the space telescope's decades of development, deployment and early science.",
    order:["Design a large infrared observatory.","Prepare and launch Webb.","Deploy the sunshield and mirrors.","Align and calibrate instruments.","Begin infrared astronomy."],
  },
+
+ "Apollo 8":{
+   title:"Apollo 8, Earthrise in 4K",url:"https://plus.nasa.gov/video/apollo-8-earthrise-in-4k/",
+   publisher:"NASA",kind:"historical documentary",duration:"7 min",
+   record:"https://www.nasa.gov/mission/apollo-8/",
+   scope:"NASA's historically grounded recreation and astronaut recollections of Earthrise; not a continuous 1968 cockpit recording.",
+   order:["Prepare the lunar flyby itinerary.","Travel from Earth toward the Moon.","Enter lunar orbit.","Observe Earthrise above the lunar horizon.","Prepare and conduct the Earth-return leg."],
+ },
+ "Skylab 2":{
+   title:"Skylab: The First 40 Days",url:"https://plus.nasa.gov/video/skylab-the-first-40-days-2/",
+   publisher:"NASA",kind:"historical documentary",duration:"23 min",
+   record:"https://www.nasa.gov/mission/skylab/",
+   scope:"Original NASA history film covering the station's deployment problems, repairs by the first crew and laboratory activities.",
+   order:["Review the damage suffered after Skylab's launch.","Assess workshop heating and solar power.","Prepare the crewed repair rendezvous.","Install the sunshade and recover solar power.","Begin station scientific experiments."],
+ },
+ "Curiosity":{
+   title:"Mars in a Minute: How Hard Is It to Land Curiosity on Mars?",url:"https://plus.nasa.gov/video/mars-in-a-minute-how-hard-is-it-to-land-curiosity-on-mars/",
+   publisher:"NASA",kind:"historical documentary",duration:"1 min",
+   record:"https://www.nasa.gov/mission/mars-science-laboratory-curiosity/",
+   scope:"Official one-minute explanation of Curiosity's landing, not full rover operations footage.",
+   order:["Plan the landing site.","Prepare spacecraft systems.","Navigate Mars entry and descent.","Land Curiosity on the surface.","Prepare for surface science operations."],
+ },
 };
 export function officialFilmFor(title:string):OfficialFilm|undefined {
  return officialFilms[title];
