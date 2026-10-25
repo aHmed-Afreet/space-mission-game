@@ -2,7 +2,8 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import type {PointerEvent as ReactPointer} from "react";
 import {joystickVector} from "../commander/controls";
 import type {HistoryMission} from "./missionHistory";
-import {createStoryScenario,type Station,type StoryTask} from "./storyScenarios";
+import {createStoryScenario,type Station,type StoryTask,type FieldAction} from "./storyScenarios";
+import { officialFilmFor } from "./officialFilms";
 import {startStoryWorld,type StoryWorld} from "./storyWorld";
 import "./storyFlight.css";
 
@@ -15,6 +16,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  mission:HistoryMission;onExit:()=>void;onReadHistory:()=>void;onComplete:(correct:boolean)=>void;
 }){
  const scenario=createStoryScenario(mission);
+ const matchingFilm=officialFilmFor(mission.title);
  const canvas=useRef<HTMLCanvasElement>(null);
  const world=useRef<StoryWorld|null>(null);
  const keys=useRef(new Set<string>());
@@ -60,7 +62,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   if(scenario.role==="astronaut"&&world.current?.aimingAtHatch()){
     setEvaNote("");setEvaPanel(true);return;
   }
-  if(st&&task&&st===task.station&&!evaOutsideRef.current){
+  if(st&&task&&!task.fieldAction&&st===task.station&&!evaOutsideRef.current){
    setProcedure(task);setConfirmed(false);setPowerVerified(false);setTelemetryVerified(false);setOperationArmed(false);setMeasurement(false);
   }
  };
@@ -170,6 +172,13 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   (procedure.station==="operations"&&operationArmed)||
   (procedure.station==="science"&&measurement)
  );
+ const completeField=(action:FieldAction)=>{
+  if(!task||task.fieldAction!==action||!evaOutsideRef.current)return;
+  const distance=world.current?.distanceToHatch() ?? 0;
+  if(distance<(action==="walk"?3:2))return;
+  setLogged(a=>[...a,task.complete]);
+  setStage(s=>s+1);
+ };
  const finishTask=()=>{
   if(!task||!canFinish)return;
   setLogged(a=>[...a,task.complete]);
@@ -191,6 +200,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   evaOutsideRef.current=next;setEvaOutside(next);setEvaPanel(false);
   setHatchPrepared(false);verticalTouch.current=0;
   setEvaDistance(Math.round(world.current.distanceToHatch()));
+  if(task?.fieldAction==="egress"&&next){setLogged(a=>[...a,task.complete]);setStage(s=>s+1);}
+  if(task?.fieldAction==="return"&&!next){setLogged(a=>[...a,task.complete]);setStage(s=>s+1);}
  };
  return <div className="story-fps-root">
   <canvas ref={canvas} className="story-fps-canvas" aria-label={"First person interactive 3D training scene for "+mission.title}/>
@@ -210,17 +221,37 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <small>{scenario.setting==="moon"?"LOW GRAVITY · JUMP AND WALK":scenario.setting==="mars"?"MARS GRAVITY · JUMP AND WALK":"ZERO-G THRUSTERS · UP / DOWN · 24 m TETHER"} · RETURN TO HATCH</small>
    </div>}
   <div className="story-fps-objective">
-   <small>{evaOutside?"OPTIONAL EVA TRAINING — ORIGINAL MISSION TASKS REMAIN INSIDE":scenario.role==="astronaut"?"ASTRONAUT TRAINING":"REMOTE OPERATIONS / NO CREW ABOARD"}</small>
+   <small>{task?.fieldAction?"APOLLO 11 · DOCUMENTED MOONWALK RECREATION":evaOutside?"OPTIONAL EVA TRAINING — ORIGINAL MISSION TASKS REMAIN INSIDE":scenario.role==="astronaut"?"ASTRONAUT TRAINING":"REMOTE OPERATIONS / NO CREW ABOARD"}</small>
    <h2>{completed?"History exercise complete":task.heading}</h2>
    <p>{completed?mission.outcome:task.procedure}</p>
-   <span>PROCEDURE {Math.min(stage+1,scenario.tasks.length)} / {scenario.tasks.length} · {scenario.profile.visual}</span>
+   <span>{task?.fieldAction?"HISTORICAL ACTION":"PROCEDURE"} {Math.min(stage+1,scenario.tasks.length)} / {scenario.tasks.length} · {task?.fieldAction?"DOCUMENTED NASA EVA SEQUENCE":scenario.profile.visual}</span>
    <div className="story-fps-progress">{scenario.tasks.map((s,i)=><i key={s.id} className={i<stage?"done":i===stage?"current":""}/>)}</div>
   </div>
   {!completed&&<div className="story-fps-target" aria-live="polite">
    <div className="story-fps-crosshair">+</div>
-   {hatchAim?<span>AIRLOCK CONTROL · PRESS INTERACT</span>:aim&&<span>{displayName[aim]} · {aim===task.station?"PRESS INTERACT":"Find "+displayName[task.station]}</span>}
+   {hatchAim?<span>AIRLOCK CONTROL · PRESS INTERACT</span>:!task?.fieldAction&&aim&&<span>{displayName[aim]} · {aim===task.station?"PRESS INTERACT":"Find "+displayName[task.station]}</span>}
   </div>}
-  <div className="story-fps-instruction">{evaOutside?"EXPLORE THE ENVIRONMENT · RETURN TO HATCH FOR ORIGINAL TASKS":`FIND ${task?displayName[task.station].toUpperCase():"MISSION COMPLETE"} · AIM + INTERACT`}</div>
+  <div className="story-fps-instruction">{task?.fieldAction?
+    task.fieldAction==="egress"?"EQUIP SUIT · GO TO HATCH · ENTER SURFACE":
+    task.fieldAction==="return"?"RETURN TO EAGLE · OPEN AIRLOCK · ENTER":
+    `WALK ON THE LUNAR SURFACE · ${evaDistance} m FROM EAGLE`:
+    evaOutside?"EXPLORE THE ENVIRONMENT · RETURN TO HATCH FOR ORIGINAL TASKS":
+    `FIND ${task?displayName[task.station].toUpperCase():"MISSION COMPLETE"} · AIM + INTERACT`}</div>
+  {task?.fieldAction&&evaOutside&&task.fieldAction!=="egress"&&task.fieldAction!=="return"&&
+    <div className="story-fps-historical-action">
+      <small>DOCUMENTED NASA EVA TASK · {stage+1}/{scenario.tasks.length}</small>
+      <strong>{task.heading}</strong>
+      <p>{evaDistance<(task.fieldAction==="walk"?3:2)?
+        `Move away from Eagle. Distance: ${evaDistance} m.`:
+        "Ready. Carry out the historical surface action below."}</p>
+      <button type="button" disabled={evaDistance<(task.fieldAction==="walk"?3:2)}
+        onClick={()=>completeField(task.fieldAction!)}>{
+          task.fieldAction==="walk"?"EXAMINE LUNAR SOIL":
+          task.fieldAction==="photo"?"TAKE FIELD PHOTOGRAPH":
+          task.fieldAction==="sample"?"COLLECT CONTINGENCY SAMPLE":
+          "DEPLOY FLAG WITH CREW"}</button>
+      <small>Equipment interaction is a simplified teaching model, not an exact recreation of the astronaut's hand movements.</small>
+    </div>}
   <div className="story-fps-look" onPointerDown={beginLook} onPointerMove={moveLook} onPointerUp={endLook} onPointerCancel={endLook} onLostPointerCapture={endLook} aria-label="Drag to look around"/>
   <div className="story-fps-movement" onPointerDown={beginStick} onPointerMove={moveStick}
     onPointerUp={stopStick} onPointerCancel={stopStick} onLostPointerCapture={stopStick} aria-label="Touch to move">
@@ -243,7 +274,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   <div className="story-fps-actions">
     <button type="button" className="story-fps-sprint" onPointerDown={beginSprint} onPointerMove={moveSprint}
       onPointerUp={endSprint} onPointerCancel={endSprint} onLostPointerCapture={endSprint}>SPRINT</button>
-    <button type="button" className="story-fps-interact" disabled={!!procedure||completed||paused||showGuide||evaPanel||!(hatchAim||(!evaOutside&&aim===task?.station))}
+    <button type="button" className="story-fps-interact" disabled={!!procedure||completed||paused||showGuide||evaPanel||!(hatchAim||(!task?.fieldAction&&!evaOutside&&aim===task?.station))}
       onClick={()=>actRef.current()}>INTERACT</button>
   </div>
   {evaPanel&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="EVA safety and airlock">
@@ -271,6 +302,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <p><strong>Spacecraft represented:</strong> {scenario.craft}</p><p><strong>Recognizable hardware:</strong> {scenario.profile.visual}. {scenario.profile.hardware}.</p>
     <p><strong>Your role:</strong> {scenario.role==="astronaut"?"First-person astronaut in a stylized mission training environment. Real spacecraft interiors were generally much smaller.":"First-person mission controller on Earth using remote spacecraft telemetry. The uncrewed vehicle is represented by a 3D model, not an astronaut aboard it."}</p>
     <p><strong>Objective:</strong> {mission.mission}</p>
+    {matchingFilm&&<p><strong>Official video:</strong> <a href={matchingFilm.url} rel="noopener noreferrer" target="_blank">{matchingFilm.title} · NASA ↗</a>. The following tasks represent documented actions in chronological order; some movement and controls are simplified.</p>}
+    {task?.fieldAction&&<p><strong>Apollo 11 EVA:</strong> Wear the suit, use the hatch, walk on the lunar surface, perform the field actions in order and return to Eagle. This is a selected segment of the moonwalk, not the entire three-hour EVA.</p>}
     <p>Move with WASD or the floating joystick; drag to look. Outside, use UP/DOWN (Space/Ctrl) to steer in zero gravity or JUMP on a surface. To leave, visit the airlock, equip a suit and close the inner hatch before depressurizing. Return through the exterior hatch. EVA training is optional and does not change real history.</p>
     <button type="button" onClick={()=>setShowGuide(false)}>BEGIN 3D MISSION →</button>
     <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ REAL HISTORY</button>
