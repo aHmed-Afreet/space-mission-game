@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --import tsx --test src/game.test.ts src/commander/simulation.test.ts src/commander/campaign/campaign.test.ts src/commander/campaign/missionScience.test.ts"
+    "test": "node --import tsx --test src/game.test.ts src/commander/simulation.test.ts src/commander/campaign/campaign.test.ts src/commander/campaign/missionScience.test.ts src/commander/campaign/visualUpgrade.test.ts"
   },
   "dependencies": {
     "react": "^19.1.0",
