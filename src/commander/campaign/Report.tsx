@@ -1,21 +1,24 @@
 import { money, technologies } from "./economy";
 import type { Report as Result } from "./engine";
 import { missionById } from "./definitions";
+import { campaignForMission, campaignLevel } from "./campaignTypes";
 export default function Report({
   result,
   onHome,
   onNext,
+  onRetry,
 }: {
   result: Result;
   onHome: () => void;
   onNext?: () => void;
+  onRetry?: () => void;
 }) {
   return (
     <div className="campaign-report">
       <div className="campaign-report-title">
         <div>
           <span className="eyebrow">
-            MISSION REPORT / MISSION {missionById(result.missionId).level}
+            MISSION REPORT / {campaignForMission(result.missionId)?.name.toUpperCase()} · LEVEL {campaignLevel(result.missionId)}
           </span>
           <h1>
             {result.success
@@ -156,8 +159,14 @@ export default function Report({
         </section>
       </div>
       <div className="actions">
+        {result.success && onNext && <button className="primary" onClick={onNext}>
+          Next level in {campaignForMission(result.missionId)?.name} →
+        </button>}
+        {!result.success && onRetry && <button className="primary" onClick={onRetry}>
+          Retry this level →
+        </button>}
         <button className="secondary" onClick={onHome}>
-          Return to Mission Control
+          {result.success ? "Finish report · Return to campaign" : "Return to campaign · No next level unlocked"}
         </button>
       </div>
     </div>

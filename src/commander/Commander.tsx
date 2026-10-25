@@ -170,11 +170,51 @@ export default function Commander({
     (action: CampaignAction) => updateSession((s) => command(s, action)),
     [updateSession],
   );
+  // A report is an immutable finished flight. Acknowledge it once and
+  // discard only its stale session; keep the settled report in progress.history.
+  const dismissReport = () => {
+    if (store.session) setCampaignRoute(campaignForMission(store.session.missionId)?.id ?? null);
+    setStore(v=>!v.session?.report?v:{
+      ...v,progress:recordReport(v.progress,v.session),session:null
+    });
+    setMode("home");
+  };
   const home = () => {
+    if(store.session?.report){dismissReport();return;}
     if(store.session) setCampaignRoute(campaignForMission(store.session.missionId)?.id ?? null);
     pause(true);
     save();
     setMode("home");
+  };
+  const retryFinished = () => {
+    const s=store.session;
+    if(!s?.report || loaded.readOnly)return;
+    const m=missionById(s.missionId);
+    setStore(v=>!v.session?.report?v:{...v,progress:recordReport(v.progress,v.session),session:null});
+    setCampaignRoute(campaignForMission(m.id)?.id??null);
+    setSelected(m);
+    setGear([...m.requiredEquipment]);
+    setUpgrades([]);
+    setMode("prepare");
+  };
+  const nextFinished = () => {
+    const s=store.session;
+    if(!s?.report?.success || loaded.readOnly)return;
+    const route=campaignForMission(s.missionId);
+    if(!route)return;
+    const index=(route.missionIds as readonly string[]).indexOf(s.missionId);
+    const nextId=route.missionIds[index+1];
+    if(!nextId){dismissReport();return;}
+    const m=missionById(nextId);
+    // Unlock only if this actual report counts as a completed mission.
+    const settled=recordReport(store.progress,s);
+    if(!canStart(m,settled)){dismissReport();return;}
+    setStore(v=>v.session?.report?{...v,progress:recordReport(v.progress,v.session),session:null}:v);
+    setCampaignRoute(route.id);
+    setSelected(m);
+    setGear([...m.requiredEquipment]);
+    setUpgrades([]);
+    setMode("prepare");
   };
   const prepare = (m: MissionDefinition) => {
     if (!canStart(m, store.progress) || loaded.readOnly) return;
@@ -318,9 +358,11 @@ export default function Commander({
       </>
     );
   if (mode === "flight" && store.session) {
-    const next = missions.find(
-      (m) => !store.progress.completed[m.id] && canStart(m, store.progress),
-    );
+    const route = campaignForMission(store.session.missionId);
+    const routeIndex = route ? (route.missionIds as readonly string[]).indexOf(store.session.missionId) : -1;
+    const next = route && routeIndex >= 0
+      ? missions.find(m => m.id === route.missionIds[routeIndex+1])
+      : undefined;
     return (
       <>
       <Flight
@@ -351,7 +393,8 @@ export default function Commander({
         onTickPause={pause}
         onCommand={onCommand}
         onHome={home}
-        onNext={next ? home : undefined}
+        onNext={store.session.report?.success && next ? nextFinished : undefined}
+        onRetry={store.session.report && !store.session.report.success ? retryFinished : undefined}
         onDismissTutorial={(id) =>
           setStore((v) => ({
             ...v,
@@ -390,7 +433,7 @@ export default function Commander({
       warning={saveError || loaded.warning}
       readOnly={loaded.readOnly}
       onSelect={prepare}
-      onResume={() => setMode("flight")}
+      onResume={() => store.session?.report ? dismissReport() : setMode("flight")}
       onLegacy={() => setMode("legacy")}
       onExit={onExit}
       onSettings={openSettings}

@@ -268,11 +268,11 @@ export default function CampaignHome({
             <h2>{missions.find((m) => m.id === session.missionId)?.title}</h2>
             <p>
               {session.report
-                ? "Review the report to continue."
+                ? "This flight has ended. Close the report to return to the level list."
                 : `Task ${session.objective + 1} of ${missions.find((m) => m.id === session.missionId)?.objectives.length}. Progress is preserved.`}
             </p>
           </div>
-          <button onClick={onResume}>Resume mission →</button>
+          <button onClick={onResume}>{session.report?"Close finished report →":"Resume mission →"}</button>
         </section>
       )}
       {selectedCampaign && <section className="campaign-route-levels" aria-labelledby="route-levels-title">
