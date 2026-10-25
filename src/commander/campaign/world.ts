@@ -2,8 +2,9 @@ import * as T from "three";
 import {makePlanet,disposePlanet} from "../celestial";
 import { fieldSites, type Session } from "./engine";
 import { environments, type Destination } from "./environments";
+import { installSurfaceScenery, type SurfaceQuality } from "./surfaceScenery";
 /** Mission-specific 3D environments have offline fallbacks; NASA reference models are optional lazy downloads. */
-export function createFieldWorld(scene: T.Scene, destination: Destination, missionId?: string) {
+export function createFieldWorld(scene: T.Scene, destination: Destination, missionId?: string, quality:SurfaceQuality="balanced") {
   const env = environments[destination],
     group = new T.Group();
   scene.add(group);
@@ -11,9 +12,8 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     materials: T.Material[] = [],
     textures: T.Texture[] = [];
   const cube = new T.BoxGeometry(1, 1, 1),
-    cylinder = new T.CylinderGeometry(1, 1, 1, 10),
-    rock = new T.IcosahedronGeometry(1, 0);
-  geometries.push(cube, cylinder, rock);
+    cylinder = new T.CylinderGeometry(1, 1, 1, 10);
+  geometries.push(cube, cylinder);
   const material = (color: string, metalness = 0.2, roughness = 0.7) => {
     const m = new T.MeshStandardMaterial({ color, metalness, roughness });
     materials.push(m);
@@ -23,8 +23,6 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     white = material("#a5aca8", 0.2, 0.7),
     dark = material("#23333d"),
     solar = material("#1d354a", 0.4, 0.38),
-    ground = material("#726f65", 0, 0.96),
-    rockMat = material("#8b877c", 0, 0.94),
     gold = material("#a18f69", 0.3, 0.7);
   function box(
     x: number,
@@ -105,6 +103,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     }
     box(0,3.13,z,6.35,.07,.11,alloy);
   }
+  let surfaceScenery:ReturnType<typeof installSurfaceScenery>|null=null;
   const orbitEarth=destination==="earth"?makePlanet("earth",17):null;
   if(orbitEarth){orbitEarth.position.set(-20,-12,43);group.add(orbitEarth);}
   if (destination === "earth") {
@@ -181,55 +180,13 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
       box(x,1.22,13.75,.075,.025,.095,suitLight);
     box(1.8,.83,13.78,.4,.04,.12,gold);
   } else {
-    // Low-amplitude relief avoids empty flat-colour maps while preserving a clear walking path.
-    const terrain = new T.PlaneGeometry(64, 64, 38, 38);
-    terrain.rotateX(-Math.PI / 2);
-    const a = terrain.attributes.position;
-    for (let i = 0; i < a.count; i++) {
-      const x = a.getX(i),
-        z = a.getZ(i) + 14;
-      const h =
-        (Math.sin(x * 0.38) * Math.cos(z * 0.31) +
-          Math.sin(x * 0.7 + z * 0.23) * 0.4) *
-        0.13;
-      const path = Math.abs(x) < 2 && z < 13;
-      a.setY(i, path ? -0.06 : Math.min(0.06, h) - 0.1);
-    }
-    terrain.computeVertexNormals();
-    geometries.push(terrain);
-    const mesh = new T.Mesh(terrain, ground);
-    mesh.position.z = 14;
-    group.add(mesh);
-    const count = 95,
-      rocks = new T.InstancedMesh(rock, rockMat, count),
-      dummy = new T.Object3D();
-    for (let i = 0; i < count; i++) {
-      const x = Math.sin(i * 37.1) * 20,
-        z = 12 + ((i * 7.31) % 30);
-      const nearTarget = Object.values(fieldSites).some(
-        (p) => Math.hypot(p.x - x, p.z - z) < 2.7,
-      );
-      dummy.position.set(nearTarget ? x + 3 : x, -0.08, z);
-      dummy.rotation.set(i * 0.3, i * 0.9, i * 0.1);
-      const size = 0.18 + (i % 5) * 0.12;
-      dummy.scale.set(size, size * 0.55, size * 0.8);
-      dummy.updateMatrix();
-      rocks.setMatrixAt(i, dummy.matrix);
-    }
-    group.add(rocks);
-    const craterGeo = new T.TorusGeometry(2.3, 0.12, 5, 28);
-    geometries.push(craterGeo);
-    const crater = new T.Mesh(craterGeo, rockMat);
-    crater.rotation.x = Math.PI / 2;
-    crater.position.set(-6, -0.05, 23);
-    group.add(crater);
+    // Layered geological scenery is visual only: preserve physical interaction
+    // markers, landing site positions and collision/pathfinding exactly.
+    surfaceScenery=installSurfaceScenery(group,destination,Object.values(fieldSites),quality);
     for (const p of Object.values(fieldSites)) {
       rod(p.x, 0.23, p.z, 0.025, 0.5, gold);
       box(p.x, 0.48, p.z, 0.27, 0.12, 0.03, gold);
     }
-    const sun = new T.DirectionalLight("#fff0ce", 1.6);
-    sun.position.set(-6, 12, 10);
-    group.add(sun);
   }
   const satellite = new T.Group();
   satellite.position.set(2.4, 0, 15);
@@ -356,6 +313,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
         });
       }
       scene.remove(group);
+      surfaceScenery?.dispose();
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
       textures.forEach((t) => t.dispose());
