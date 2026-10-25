@@ -44,6 +44,9 @@ import { historyMissions } from "../../history/missionHistory";
 import {planetKind} from "../celestial";
 import {missionProfiles,missionProfile} from "../../history/missionProfiles";
 import { createStoryScenario,historicalCraft,historicalSetting } from "../../history/storyScenarios";
+import { officialFilms, officialFilmFor } from "../../history/officialFilms";
+import { pilotBriefing, pilot } from "../../missionCrew";
+import { strategyChallenges } from "../../strategyChallenges";
 
 function stand(
   s: Session,
@@ -1398,10 +1401,16 @@ test("all 55 history entries have mission-specific spacecraft and first-person o
     const s=scenarios[i],m=historyMissions[i];
     assert.equal(s.destination,m.destination);
     assert.ok(s.tasks.length>=4&&s.tasks.length<=7);
-    assert.equal(s.tasks[0].station,"brief");
-    assert.ok(s.tasks.some(t=>t.station==="systems"));
-    assert.ok(s.tasks.some(t=>t.station==="operations"));
-    assert.ok(s.tasks.some(t=>t.station==="science"));
+    if(m.title==="Apollo 11"){
+      assert.equal(s.tasks[0].fieldAction,"egress");
+      assert.equal(s.tasks.at(-1)?.fieldAction,"return");
+      assert.ok(s.tasks.every(t=>t.fieldAction));
+    }else{
+      assert.equal(s.tasks[0].station,"brief");
+      assert.ok(s.tasks.some(t=>t.station==="systems"));
+      assert.ok(s.tasks.some(t=>t.station==="operations"));
+      assert.ok(s.tasks.some(t=>t.station==="science"));
+    }
     assert.equal(new Set(s.tasks.map(t=>t.id)).size,s.tasks.length);
     assert.ok(s.craft.length>12);
     for(const task of s.tasks){
@@ -1414,7 +1423,8 @@ test("all 55 history entries have mission-specific spacecraft and first-person o
 });
 test("important spacecraft use period-specific equipment and historical tasks",()=>{
  const get=(title:string)=>createStoryScenario(historyMissions.find(m=>m.title===title)!);
- assert.match(get("Apollo 11").tasks[2].heading,/lunar surface EVA/i);
+ assert.match(get("Apollo 11").tasks[0].heading,/Exit Eagle/i);
+ assert.match(get("Apollo 11").tasks[2].heading,/Photograph/i);
  assert.match(get("Apollo 13").tasks[1].procedure,/lifeboat/i);
  assert.match(get("Voyager 1").tasks[1].procedure,/without using solar/i);
  assert.match(get("Vostok 1").tasks[3].procedure,/parachute/i);
@@ -1440,9 +1450,14 @@ test("historic first-person missions use 55 distinctive vehicles and flight obje
   const sc=createStoryScenario(m),p=missionProfile(m.title);
   assert.equal(sc.craft,p.vehicle);
   assert.equal(sc.profile.hardware,p.hardware);
-  assert.ok(sc.tasks.some(t=>t.procedure.includes(p.hardware)));
-  assert.ok(sc.tasks.some(t=>t.procedure.includes(p.operation)));
-  assert.ok(sc.tasks.some(t=>t.procedure.includes(p.observation)));
+  if(m.title==="Apollo 11"){
+    assert.deepEqual(sc.tasks.map(t=>t.fieldAction),["egress","walk","photo","sample","flag","return"]);
+    assert.match(sc.tasks[3].procedure,/contingency/i);
+  }else{
+    assert.ok(sc.tasks.some(t=>t.procedure.includes(p.hardware)));
+    assert.ok(sc.tasks.some(t=>t.procedure.includes(p.operation)));
+    assert.ok(sc.tasks.some(t=>t.procedure.includes(p.observation)));
+  }
  }
  assert.equal(historicalSetting(historyMissions.find(m=>m.title==="Apollo 8")!),"deep");
  assert.equal(historicalSetting(historyMissions.find(m=>m.title==="Apollo 13")!),"deep");
@@ -2037,4 +2052,47 @@ test("returning from preparation or flight retains its independent campaign leve
  assert.match(controller,/setCampaignRoute\(campaignForMission\(store\.session\.missionId\)/);
  assert.match(controller,/selectedRoute=\{campaignRoute\}/);
  assert.match(home,/selectedRoute: CampaignId \| null/);
+});
+
+test("engineer receives astronaut instructions and never flies the spacecraft",()=>{
+ const app=readFileSync("src/App.tsx","utf8");
+ const selection=readFileSync("src/ModeSelect.tsx","utf8");
+ const brief=pilotBriefing(strategyChallenges[2]);
+ assert.equal(pilot.role,"Astronaut / flight crew");
+ assert.match(brief.message,/flight controls once you/);
+ assert.ok(brief.requirements.some(r=>r.includes("radar")));
+ assert.match(app,/Acknowledge astronaut briefing/);
+ assert.match(app,/AUTHORIZE PILOT LAUNCH/);
+ assert.match(app,/eventMessage\(selected\.title\)/);
+ assert.match(app,/flightMessage\(progress,design\)/);
+ assert.match(selection,/MISSION ENGINEER/);
+});
+test("official agency films open before the historical 3D scene",()=>{
+ const hub=readFileSync("src/history/HistoryHub.tsx","utf8");
+ const films=Object.values(officialFilms);
+ assert.ok(films.length>=5);
+ assert.match(hub,/!filmConfirmed/);
+ assert.match(hub,/disabled=\{!filmOpened\}/);
+ assert.match(hub,/WATCH VIDEO AT/);
+ assert.match(hub,/setFilmOpened\(true\)/);
+ assert.match(hub,/setFilmConfirmed\(true\)/);
+ for(const v of films){
+   assert.match(v.url,/^https:\/\/(plus\.nasa\.gov|images\.nasa\.gov)\//);
+   assert.match(v.record,/^https:\/\/www\.nasa\.gov\//);
+   assert.equal(v.publisher,"NASA");
+   assert.ok(v.order.length>=5);
+ }
+ assert.equal(officialFilmFor("Apollo 11")?.kind,"original EVA broadcast");
+ assert.equal(officialFilmFor("Sputnik 1"),undefined);
+});
+test("Apollo 11 3D recreates documented first step, photography, sampling and return in order",()=>{
+ const sc=createStoryScenario(historyMissions.find(m=>m.title==="Apollo 11")!);
+ const player=readFileSync("src/history/StoryFlight.tsx","utf8");
+ assert.deepEqual(sc.tasks.map(t=>t.fieldAction),["egress","walk","photo","sample","flag","return"]);
+ assert.equal(sc.tasks.length,officialFilmFor("Apollo 11")!.order.length-1);
+ assert.match(player,/distanceToHatch\(\)/);
+ assert.match(player,/completeField\(task\.fieldAction/);
+ assert.match(player,/TAKE FIELD PHOTOGRAPH/);
+ assert.match(player,/COLLECT CONTINGENCY SAMPLE/);
+ assert.match(player,/DEPLOY FLAG WITH CREW/);
 });
