@@ -1,6 +1,6 @@
 # Space Mission Design Game
 
-A complete client-side **React + Vite + TypeScript** educational game. The first mission, **Mars Explorer**, challenges players to design and launch a robotic spacecraft to search for water.
+A complete client-side **React + Vite + TypeScript** educational space-mission game. Strategy Mode lets players design rockets, instruments, resources and astronaut support; Commander Mode provides 18 first-person training missions across six independent campaigns.
 
 ## Run locally
 
@@ -55,7 +55,19 @@ The success percentage is a game performance score, not a physical probability o
 - `src/game.test.ts`: resource, launch-validation, event-mitigation and scoring checks.
 - `src/main.tsx`: React entry point.
 
-Large touch controls support iPad and desktop. Choices use native buttons with keyboard focus and selection state. The game is held in memory; refreshing resets the mission. No copyrighted artwork, NASA branding or agency affiliation is used.
+Large touch controls support iPad and desktop. Choices use native buttons with keyboard focus and selection state. Active Strategy attempts are held in memory, while best Strategy scores and Commander save/checkpoints are persisted locally in the browser. No copyrighted artwork, NASA branding or agency affiliation is used.
+
+## Scientific evidence and review demonstration
+
+The **Mission Decision Lab** is available during both Strategy spacecraft design and Commander preflight. It updates automatically when hardware or launch vehicles change, showing game-model payload/budget/power/fuel margins beside scientific reference facts drawn from official NASA pages. Solar irradiance uses an approximate 1,361 W/m² reference at 1 AU and inverse-square scaling for mean Mars distance; the Earth–Moon one-way light-time calculation uses 384,400 km and the speed of light. Mars one-way signal delay is shown as a range rather than a fabricated constant; unspecified asteroids never receive a made-up fixed value.
+
+**Science separation:** NASA reference facts do not make game scores into real probabilities or certify the fictional fuel/power models. Solar-panel conversion, eclipse, hardware efficiency and true orbital dynamics remain simplified. Relevant sources are linked directly in the game.
+
+**For reviewers:** Go to Strategy → Level 1 → Spacecraft Builder. Change an instrument or rocket, observe the resource meter and Mission Decision Lab, launch, make one engineering decision and review the report. Commander → Satellite Repair & EVA demonstrates first-person mission operations.
+
+**Submission/eligibility:** This repository was developed before NASA Space Apps November 14–15, 2026. Do not misrepresent existing work as new hackathon work. Obtain explicit Local Event guidance about whether a pre-existing project can be used, and what must be developed during the event. A passing CI build does not certify event eligibility or physical-device functionality.
+
+The full [2026 readiness dossier and manual iPad test checklist](docs/SPACE_APPS_2026_READINESS.md) documents sources, assumptions, demonstration steps, and release blockers.
 
 ## Publication and privacy
 
@@ -63,7 +75,7 @@ ORBITAL is an independent **educational simulation**, not an official NASA produ
 
 **Web publication:** deploy from `main` using `npm run build` and publish directory `dist`. CI runs `npm test` and `npm run build`. The legal information page at `public/privacy.html` documents browser-local progress and preferences. The game requires neither account creation nor an API key. A current browser with WebGL is recommended.
 
-**Remaining release checks:** verify all twelve Commander missions and twenty Strategy challenges on real touch devices and with keyboard/mouse; airplane/offline PWA install; save/restore and reset behavior; financial progression and legacy-save migration; viewport and fullscreen; controls, accessibility and performance on physical iPad/Safari and iPhone; host deployment and privacy link. A successful build does not by itself guarantee app-store acceptance.
+**Remaining release checks:** verify all eighteen Commander missions and twenty Strategy challenges on real touch devices and with keyboard/mouse; airplane/offline PWA install; save/restore and reset behavior; financial progression and legacy-save migration; viewport and fullscreen; controls, accessibility and performance on physical iPad/Safari and iPhone; host deployment and privacy link. A successful build does not by itself guarantee app-store acceptance.
 
 ## New first-person historical spacecraft experience
 
@@ -77,7 +89,7 @@ Controls: WASD/arrows or floating touch joystick for movement; drag to look; Shi
 
 The main menu now offers **five experiences**:
 - **Strategy Mode:** 20 escalating, playable mission-design challenges. Each has specific science, reliability, budget and instrument requirements. Clearing one unlocks the next. Scores are stored in browser local storage.
-- **Commander Mode:** 12 implemented first-person, multi-phase spacecraft sorties, including EVA, orbital maintenance, lunar landing and geology work. Four more Mars/asteroid missions are listed as planned but cannot be launched.
+- **Commander Mode:** 18 implemented first-person training sorties across six independently numbered campaign pages: Orbital Training, Satellite Repair & EVA, Lunar Landings, Scientific Research, Mars cruise/orbit and remote asteroid/deep-space survey. Level 1 in each campaign is initially unlocked. Mars and asteroid sorties are not surface-landing simulations.
 - **Real Space History:** An archive of 55 carefully selected spaceflight milestones across multiple agencies and decades, with historical background, outcomes and links to authoritative archives.
 - **Live the Story:** Each of the 55 selected histories now opens a first-person 3D spacecraft training scene with a historically inspired vehicle and four mission-specific objectives. Astronaut and remote-robotic missions are distinguished. Real outcomes are shown after the exercise; it is not an exact replica of the mission.
 - **How to Play:** Controls and instructions for Strategy, Commander and historical stories.
@@ -86,7 +98,7 @@ The history archive is a curated selection of major missions rather than a compr
 
 ## Commander complete-mission campaign
 
-Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no longer count as campaign levels. The original professional cabin, life support, touch controls, temporary tablet, EVA/airlock, Moon environment, inventory, science, camp, PWA and Strategy Mode are preserved.
+Commander now uses **Campaign type → independently numbered Level → Phase → Task**. Small tasks no longer count as campaign levels. The original professional cabin, life support, touch controls, temporary tablet, EVA/airlock, Moon environment, inventory, science, camp, PWA and Strategy Mode are preserved.
 
 ### Fully playable flights
 
@@ -99,7 +111,7 @@ Commander now uses **Chapter → Mission → Phase → Task**. Small tasks no lo
 
 Each flight has 4–9 phases, a short briefing, required equipment, multiple stations, resource decisions, a mandatory challenge, two optional objectives and a full report. Granular launch and airlock safety procedures produce 28–57 individual task steps. First-time play targets 15–30 minutes, but this is a design target rather than a measured promise; familiarity, exploration, optional detours and acceleration change duration. The current goal is prominent, but it observes completed conditions rather than locking unrelated systems. Early meals, water, equipment collection and suit checkout are recognized. Repeated measurements after a fault need fresh evidence.
 
-Four additional missions (future Mars and asteroid operations) are **PLANNED and cannot be launched**. Only the twelve flights above are implemented. Adding another mission does not require changing a fixed mission-count limit.
+There are **18 implemented flights total**, including six simplified remote Mars/asteroid cruise-and-orbit training sorties. The table above describes the four original flagship story flights; all other flights are maintained as separate campaign levels. Mars and asteroid landings are not implemented; the distant sorties should not be mistaken for such simulations.
 
 ### Launch, travel and controls
 
@@ -148,7 +160,7 @@ The original manifest/icons, standalone mode, safe-area layout and production se
 
 ### Architecture and validation
 
-- `definitions.ts`: complete-flight chapters, phases, tasks, event choices, optionals, rewards, technology unlocks and planned content.
+- `definitions.ts`: complete-flight campaigns, phases, tasks, event choices, optionals, rewards and technology unlocks. `campaignTypes.ts` stores the independent level sequence without changing saved mission IDs.
 - `engine.ts`: goal progression, guided flight, resources, freely available station actions, EVA, science, camp and reports. `observations.ts` records operational evidence, earlier preparation, visits, rest and data acknowledgements.
 - `economy.ts`: funding, purchases, idempotent settlement, failure recovery and technology catalog.
 - `save.ts`: v3 validation, backup, archive migration and protected future versions; `legacyDefinitions.ts` / `legacySave.ts` preserve v2 interpretation.
