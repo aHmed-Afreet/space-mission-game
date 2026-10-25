@@ -45,6 +45,7 @@ import {planetKind} from "../celestial";
 import {missionProfiles,missionProfile} from "../../history/missionProfiles";
 import { createStoryScenario,historicalCraft,historicalSetting } from "../../history/storyScenarios";
 import { officialFilms, officialFilmFor } from "../../history/officialFilms";
+import {storyVideoChapters,storyVideoWorld,STORY_VIDEO_CHAPTER_SECONDS} from "../../history/StoryBriefingVideo";
 import { pilotBriefing, pilot } from "../../missionCrew";
 import { strategyChallenges } from "../../strategyChallenges";
 
@@ -2095,4 +2096,37 @@ test("Apollo 11 3D recreates documented first step, photography, sampling and re
  assert.match(player,/TAKE FIELD PHOTOGRAPH/);
  assert.match(player,/COLLECT CONTINGENCY SAMPLE/);
  assert.match(player,/DEPLOY FLAG WITH CREW/);
+});
+
+test("every one of the 55 Story Mode missions has a video chapter sequence backed by its existing history",()=>{
+ assert.equal(historyMissions.length,55);
+ const official=historyMissions.filter(m=>officialFilmFor(m.title));
+ assert.ok(official.length>=12,"include expanded verified NASA documentaries");
+ const animated=historyMissions.filter(m=>!officialFilmFor(m.title));
+ assert.equal(official.length+animated.length,55);
+ for(const mission of historyMissions){
+   const chapters=storyVideoChapters(mission);
+   assert.equal(chapters.length,6,mission.title);
+   assert.deepEqual(chapters.map(c=>c.scene),["launch","orbit","science","warning","return","legacy"]);
+   assert.equal(chapters[0].title,mission.title);
+   assert.match(chapters[0].description,new RegExp(String(mission.year)));
+   assert.equal(chapters[1].description,mission.background);
+   assert.equal(chapters[2].description,mission.mission);
+   assert.equal(chapters[3].description,mission.challenge);
+   assert.equal(chapters[4].description,mission.outcome);
+   assert.equal(chapters[5].description,mission.skill);
+   assert.ok(["moon","earth","mars","outer"].includes(storyVideoWorld(mission)));
+ }
+ assert.equal(STORY_VIDEO_CHAPTER_SECONDS,6);
+ const video=readFileSync("src/history/StoryBriefingVideo.tsx","utf8");
+ const home=readFileSync("src/history/HistoryHub.tsx","utf8");
+ assert.match(video,/ANIMATED RECONSTRUCTION · NOT ORIGINAL FILM/);
+ assert.match(video,/setPlaying/);
+ assert.match(video,/type="range"/);
+ assert.match(video,/mission\.source/);
+ assert.match(video,/onWatched/);
+ assert.match(home,/StoryBriefingVideo/);
+ assert.match(home,/mission=\{chosen\}/);
+ assert.match(home,/Watch animated video → Live/);
+ assert.match(home,/!filmConfirmed/);
 });
