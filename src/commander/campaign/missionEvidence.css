@@ -1,0 +1,29 @@
+.mission-science-panel{margin:22px 0;padding:clamp(15px,3vw,25px);border:1px solid rgba(119,204,222,.65);border-radius:14px;background:linear-gradient(140deg,rgba(8,32,49,.95),rgba(5,18,32,.97));color:#eaf8ff;box-shadow:0 14px 35px #0004}
+.mission-science-panel *{box-sizing:border-box}
+.mission-science-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #78c4d447;padding-bottom:13px}
+.mission-science-heading small{font:700 10px/1.6 system-ui;letter-spacing:.14em;color:#9decfb}
+.mission-science-heading h2{font-size:clamp(21px,3vw,30px);margin:5px 0 7px;color:#fff}
+.mission-science-heading p{font-size:12px;line-height:1.65;color:#d1edf5;max-width:740px}
+.mission-science-heading>span{font-size:40px;color:#74e1df;opacity:.8}
+.mission-science-columns{display:grid;grid-template-columns:1fr 1fr;gap:17px;margin-top:16px}
+.mission-science-columns>section{background:rgba(8,27,43,.84);border:1px solid #95c6d34d;border-radius:9px;padding:17px;min-width:0}
+.mission-science-columns h3{margin:0 0 14px;font-size:15px;color:#f7ffff}
+.mission-science-facts dl{display:grid;gap:12px;margin:0}
+.mission-science-facts dl div{display:grid;gap:4px}
+.mission-science-facts dt,.mission-science-metrics small{font-size:10px;font-weight:700;letter-spacing:.045em;color:#a9d4e5}
+.mission-science-facts dd{margin:0;color:#fff;font-size:13px;line-height:1.5}
+.mission-science-caveat,.mission-science-legal,.mission-science-game>p{font-size:11px;line-height:1.7;color:#cae4ef}
+.mission-science-sources{display:flex;gap:7px;flex-wrap:wrap;align-items:center;border-top:1px solid #a5d2e33d;margin-top:14px;padding-top:13px}
+.mission-science-sources strong{width:100%;font-size:11px}
+.mission-science-sources a{display:inline-flex;padding:7px 10px;border-radius:5px;border:1px solid #92d5e578;color:#c8f7ff;font-size:11px;text-decoration:none;background:#164052}
+.mission-science-sources a:hover,.mission-science-sources a:focus-visible{outline:2px solid #a9eff9;outline-offset:2px}
+.mission-science-metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.mission-science-metrics div{padding:12px;border-radius:7px;background:rgba(19,55,73,.86);display:grid;gap:5px}
+.mission-science-metrics strong{font-size:21px;color:#f4ffff;overflow-wrap:anywhere}
+.mission-science-metrics strong.mission-science-negative{color:#ffbc90}
+.mission-science-comparison{margin-top:17px}
+.mission-science-ready{padding:10px;border:1px solid #91ddb48a;border-radius:7px;background:#19422a82;color:#d4fddf!important}
+.mission-science-warnings{padding:12px 14px;border-radius:7px;background:#5430197d;border:1px solid #ffc38a91;font-size:12px}
+.mission-science-warnings ul{margin:8px 0;padding-left:22px;line-height:1.6}
+.mission-science-legal{margin:15px 0 0!important;color:#d2e0e9!important}
+@media(max-width:720px){.mission-science-columns{grid-template-columns:1fr}.mission-science-heading>span{display:none}.mission-science-panel{margin:15px 0}}
