@@ -91,6 +91,7 @@ export default function Flight({
   onCommand,
   onHome,
   onNext,
+  onRetry,
   onDismissTutorial,
   onResetTutorials,
   saveError,
@@ -115,6 +116,7 @@ export default function Flight({
   onCommand: (a: CampaignAction) => void;
   onHome: () => void;
   onNext?: () => void;
+  onRetry?: () => void;
   onDismissTutorial: (id: string) => void;
   onResetTutorials: () => void;
   saveError: string;
@@ -196,7 +198,7 @@ export default function Flight({
   const lastRecovery = useRef<string | null>(null);
   useEffect(() => {
     if (recovery && lastRecovery.current !== recovery.id) {
-      setHelpOpen(true);
+      // Show recovery status without opening instructions automatically.
       setGuideFeedback("");
     }
     if (!recovery && lastRecovery.current) {
@@ -213,7 +215,7 @@ export default function Flight({
     setGuideFeedback(blocked
       ? s.notice || "The task did not advance. Check the requirements above and try again."
       : "");
-    if (blocked) setHelpOpen(true); // Explain failures instead of hiding the instructions.
+    // Never open instructions automatically on blocked actions.
   }, [s]);
   // Close only after the actual campaign objective advances.
   useEffect(() => {
@@ -225,20 +227,15 @@ export default function Flight({
     const id = setTimeout(() => setToast(false), 4500);
     return () => clearTimeout(id);
   }, [s.notice, s.objective]);
-  useEffect(() => {
+  // Tutorials only open after a player's explicit tap.
+  const showTutorial = () => {
     const t = o?.tutorial;
-    if (
-      !t ||
-      progress.tutorials.includes(t) ||
-      lastTutorial.current === t ||
-      s.report
-    )
-      return;
+    if (!t || s.report) return;
     lastTutorial.current = t;
     resumedAfterGuide.current = !s.state.paused;
     onTickPause(true);
     setTutorial(t);
-  }, [o?.tutorial, progress.tutorials, s.report]);
+  };
   useEffect(() => {
     const log = s.state.log[s.state.log.length - 1];
     if (log !== lastLog.current) {
@@ -274,6 +271,7 @@ export default function Flight({
         result={s.report}
         onHome={onHome}
         onNext={s.report.success ? onNext : undefined}
+        onRetry={!s.report.success ? onRetry : undefined}
       />
     );
   const launching =
@@ -554,6 +552,7 @@ export default function Flight({
             onClick={()=>setHelpOpen(open=>!open)}>
             {helpOpen ? "▲ Hide instructions · Return to moving" : "ⓘ HOW TO COMPLETE · Show instructions ▼"}
           </button>
+          {o.tutorial && <button type="button" className="campaign-tutorial-manual" onClick={showTutorial}>ⓘ VIEW TUTORIAL (OPTIONAL)</button>}
           {helpOpen && <div id="campaign-objective-help" className="campaign-task-guide-content">
           <p className="campaign-guide-next">{guide.next}</p>
           <ol>

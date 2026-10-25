@@ -469,6 +469,7 @@ export default function Cabin(props: Props) {
   const startLook = (e: ReactPointer<HTMLDivElement>) => {
     if (props.locked || lookPointer.current) return;
     e.preventDefault();
+    // Retain a right-side camera drag even if the finger leaves that region.
     e.currentTarget.setPointerCapture(e.pointerId);
     lookPointer.current = { id: e.pointerId, x: e.clientX, y: e.clientY, startX:e.clientX, startY:e.clientY, dragged:false };
     e.currentTarget.classList.add("using");
@@ -577,7 +578,7 @@ export default function Cabin(props: Props) {
       {props.settings?.showHints !== false && <div className="cmd-control-hint">
         {props.device === "laptop"
           ? "WASD MOVE · SHIFT SPRINT · DRAG TO LOOK · E INTERACT · SPACE/CTRL EVA THRUSTERS"
-          : "LEFT TOUCH MOVE · HOLD & DRAG SPRINT TO TURN · AIM + INTERACT"}
+          : "LEFT MOVE · DRAG ANYWHERE RIGHT TO LOOK · SPRINT OPTIONAL · INTERACT"}
       </div>}
       {props.settings?.showHints !== false && aimLabel && !props.locked && <div className="cmd-aim-target"><i />{aimLabel}</div>}
       {props.world &&

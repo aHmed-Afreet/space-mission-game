@@ -2176,3 +2176,12 @@ select {
 .cmd-rendezvous-shortcut button{border:1px solid #9cf2da;background:#176d6a;color:white;border-radius:8px;padding:10px 14px;font:700 12px system-ui;cursor:pointer;min-height:42px}
 .cmd-rendezvous-shortcut button:active{background:#25a9a5}
 @media(max-width:730px){.cmd-rendezvous-shortcut{bottom:86px;left:38%;width:min(350px,53vw);padding:8px}.cmd-rendezvous-shortcut span{display:none}.cmd-rendezvous-shortcut button{padding:8px;font-size:10px}}
+
+/* Camera drag independent of Sprint. Above visual overlays, below HUD controls. */
+.cmd-session .cmd-world .cmd-look-surface{
+ position:absolute;inset:0 0 0 48%;z-index:5;
+ touch-action:none;pointer-events:auto;user-select:none;
+ -webkit-user-select:none;-webkit-touch-callout:none;
+}
+.cmd-session .cmd-world .cmd-floating-zone{width:48%}
+.cmd-session .cmd-world .cmd-look-surface>span{pointer-events:none}
