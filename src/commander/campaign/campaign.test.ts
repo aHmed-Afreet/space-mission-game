@@ -2173,7 +2173,8 @@ test("report settlement is acknowledged once: success advances only within campa
  assert.match(report,/Next level in/);
  assert.match(report,/Finish report · Return to campaign/);
  assert.match(home,/Close finished report/);
- const failed=makeReport({...createSession(missions[0],design,life,missions[0].requiredEquipment,emptyProgress()),state:{...defaultLife,ended:true}} as any,false);
+ const initial=createSession(missions[0],design,life,missions[0].requiredEquipment,emptyProgress());
+ const failed=makeReport(initial,false);
  assert.equal(failed.success,false);
- assert.equal(recordReport(emptyProgress(),{...createSession(missions[0],design,life,missions[0].requiredEquipment,emptyProgress()),report:failed} as Session).completed[missions[0].id],undefined);
+ assert.equal(recordReport(emptyProgress(),{...initial,report:failed} as Session).completed[missions[0].id],undefined);
 });
