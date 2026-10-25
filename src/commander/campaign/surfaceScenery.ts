@@ -77,7 +77,7 @@ function createSky(
   texture.colorSpace=T.SRGBColorSpace;textures.push(texture);
   const material=new T.MeshBasicMaterial({map:texture,side:T.BackSide,depthWrite:false,fog:false});
   materials.push(material);
-  const geometry=new T.SphereGeometry(61,quality==="battery"?20:36,quality==="battery"?12:20);
+  const geometry=new T.SphereGeometry(48,quality==="battery"?20:36,quality==="battery"?12:20);
   geometries.push(geometry);
   const mesh=new T.Mesh(geometry,material);
   mesh.position.set(0,4,20);mesh.renderOrder=-2;group.add(mesh);
