@@ -191,15 +191,40 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   const satellite = new T.Group();
   satellite.position.set(2.4, 0, 15);
   group.add(satellite);
-  box(0, 1.2, 0, 0.8, 0.8, 0.8, gold, satellite);
+  // Detailed cylindrical spacecraft bus. The original collision footprint,
+  // repair-panel position and electrical interaction targets remain unchanged.
+  const busGeo=new T.CylinderGeometry(.41,.41,1.04,24);
+  geometries.push(busGeo);
+  const bus=new T.Mesh(busGeo,white);
+  bus.position.set(0,1.2,0);bus.rotation.x=Math.PI/2;
+  satellite.add(bus);
+  const busRingGeo=new T.TorusGeometry(.42,.039,8,28);
+  geometries.push(busRingGeo);
+  for(const z of [-.48,.48]){
+    const ring=new T.Mesh(busRingGeo,gold);
+    ring.position.set(0,1.2,z);satellite.add(ring);
+  }
+  const opticsGeo=new T.CylinderGeometry(.2,.26,.21,20);
+  geometries.push(opticsGeo);
+  const optics=new T.Mesh(opticsGeo,dark);
+  optics.rotation.x=Math.PI/2;optics.position.set(0,1.2,-.59);
+  satellite.add(optics);
+  for(const offset of [-.18,0,.18]){
+    box(offset,1.51,.08,.036,.035,.72,alloy,satellite);
+  }
   box(0, 1.2, 0, 3.7, 0.04, 0.8, solar, satellite);
   box(0, 1.9, 0, 0.035, 0.7, 0.035, alloy, satellite);
-  const dishGeometry = new T.CylinderGeometry(0.42, 0.12, 0.12, 12);
+  const dishGeometry = new T.SphereGeometry(.42,24,12,0,Math.PI*2,0,Math.PI*.43);
   geometries.push(dishGeometry);
   const dish = new T.Mesh(dishGeometry, white);
-  dish.position.set(0, 2.2, 0);
-  dish.rotation.x = 0.35;
+  dish.position.set(0, 2.24, 0);
+  dish.rotation.x = -.28;
   satellite.add(dish);
+  const dishLip=new T.TorusGeometry(.41,.018,6,30);
+  geometries.push(dishLip);
+  const lip=new T.Mesh(dishLip,alloy);
+  lip.position.set(0,2.24,0);lip.rotation.x=Math.PI/2-.28;
+  satellite.add(lip);
   const serviceMaterial = new T.MeshBasicMaterial({ color: "#d0a265" });
   materials.push(serviceMaterial);
   const maintenanceStatus=box(-0.42,1.2,0.2,.04,.12,.12,serviceMaterial,satellite);
