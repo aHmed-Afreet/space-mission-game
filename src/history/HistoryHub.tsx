@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { historyMissions, type HistoryMission } from "./missionHistory";
 import StoryFlight from "./StoryFlight";
+import { officialFilmFor } from "./officialFilms";
 import "./history.css";
 
 const progressKey="orbital-history-progress-v1";
@@ -34,6 +35,8 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   const [category,setCategory]=useState("All types");
   const [chosen,setChosen]=useState<HistoryMission|null>(null);
   const [stage,setStage]=useState<Stage>("context");
+  const [filmOpened,setFilmOpened]=useState(false);
+  const [filmConfirmed,setFilmConfirmed]=useState(false);
   const [answer,setAnswer]=useState<number|null>(null);
   const [results,setResults]=useState<HistoryProgress>(readHistory);
   const [page,setPage]=useState(1);
@@ -48,9 +51,10 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   useEffect(()=>{setPage(1)},[query,era,category]);
   const open=(m:HistoryMission,mode:EntryView)=>{
     setChosen(m);setView(mode);setStage("context");setAnswer(null);
+    setFilmOpened(false);setFilmConfirmed(false);
     window.scrollTo({top:0,behavior:"smooth"});
   };
-  const close=()=>{setChosen(null);setAnswer(null);setStage("context")};
+  const close=()=>{setChosen(null);setAnswer(null);setStage("context");setFilmOpened(false);setFilmConfirmed(false)};
   const next=()=>{
     if(!chosen)return;
     if(stage==="result"){
@@ -63,6 +67,40 @@ export default function HistoryHub({onExit,startIn="archive"}:{
     setStage(stageOrder[step+1]);
   };
   const choice=chosen?preferences[chosen.category]:null;
+  const officialFilm=chosen?officialFilmFor(chosen.title):undefined;
+  // Watch verified video on the publisher's own site; never rehost agency footage.
+  if(chosen&&view==="live"&&!filmConfirmed)return <main className="history-hub history-film-screen">
+    <header className="history-header">
+      <button type="button" className="history-back" onClick={close}>← All missions</button>
+      <div className="history-brand"><span>✦</span> ORBITAL <small>WATCH → LIVE</small></div>
+      <span className="history-completions">01 / 02 · WATCH FIRST</span>
+    </header>
+    <section className="history-film-card">
+      <small>HISTORICAL MISSION · {chosen.year} · VIDEO FIRST</small>
+      <h1>{chosen.title}: <em>watch the mission, then live it.</em></h1>
+      {officialFilm ? <>
+        <div className="history-film-banner"><strong>✓ VERIFIED OFFICIAL {officialFilm.publisher} VIDEO</strong>
+          <span>{officialFilm.kind} · {officialFilm.duration}</span></div>
+        <h2>{officialFilm.title}</h2>
+        <p>{officialFilm.scope}</p>
+        <a className="history-film-watch" href={officialFilm.url} target="_blank"
+           rel="noopener noreferrer" onClick={()=>setFilmOpened(true)}>▶ WATCH VIDEO AT {officialFilm.publisher} ↗</a>
+        <p className="history-film-instruction">The official video opens on NASA's website. Watch it there, then return to this tab to begin the interactive recreation.</p>
+        <h3>Recreate these documented actions in order</h3>
+        <ol className="history-film-steps">{officialFilm.order.map(item=><li key={item}>{item}</li>)}</ol>
+        <a className="history-film-record" href={officialFilm.record} target="_blank" rel="noopener noreferrer">Read the official historical timeline / mission record ↗</a>
+        <button className="history-film-continue" disabled={!filmOpened}
+          onClick={()=>setFilmConfirmed(true)}>I WATCHED THE VIDEO · START LIVING THE MISSION →</button>
+        {!filmOpened&&<p className="history-training-note">Open the verified NASA video first to unlock this mission's replay.</p>}
+      </> : <>
+        <div className="history-film-banner history-film-pending"><strong>NO VERIFIED MATCHING VIDEO YET</strong></div>
+        <p>We haven't verified an official film for this particular mission. We won't substitute unrelated footage. Read its records or enter the simplified educational scene.</p>
+        <a className="history-film-record" href={chosen.source} target="_blank" rel="noopener noreferrer">Open this mission's historical archive ↗</a>
+        <button className="history-film-continue" onClick={()=>setFilmConfirmed(true)}>CONTINUE TO EDUCATIONAL 3D TRAINING →</button>
+      </>}
+      <p className="history-training-note">Only documented sequences are presented as history. Unrecorded movements, controls, distances and settings are educational reconstructions.</p>
+    </section>
+  </main>;
   if(chosen&&view==="live")return <StoryFlight key={chosen.id} mission={chosen}
     onExit={close}
     onReadHistory={()=>{setView("archive");setStage("context");setAnswer(null)}}
@@ -83,7 +121,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       <section className="history-hero">
         <small>HUMANITY'S JOURNEY BEYOND EARTH</small>
         <h1>Real missions. <em>Remarkable stories.</em></h1>
-        <p>Discover {historyMissions.length} real space milestones, then explore historically inspired 3D training scenes.</p>
+        <p>Watch official NASA films for major missions, then recreate documented events in 3D. Other missions retain archive and training scenes.</p>
         <div className="history-tabs" role="group" aria-label="Space history experience">
           <button type="button" aria-pressed={view==="archive"} onClick={()=>setView("archive")}>READ HISTORY</button>
           <button type="button" aria-pressed={view==="live"} onClick={()=>setView("live")}>LIVE THE STORY</button>
@@ -91,7 +129,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       </section>
       {view==="live"&&<section className="history-callout">
         <strong>Become the mission specialist</strong>
-        <p>Choose a mission and try its <b>simplified 3D training scene</b>. Crewed and robotic missions use different perspectives; equipment is historically inspired.</p>
+        <p>Watch verified historical video first, then follow the mission steps in order. Reconstructions are labeled.</p>
       </section>}
       <div className="history-filters">
         <label>SEARCH MISSIONS<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Apollo, Mars, telescope, ISS…"/></label>
@@ -108,7 +146,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
           <div className="history-card-footer">
             {results[m.id]&&<span className="history-done">✓ Explored</span>}
             <button type="button" onClick={()=>open(m,view)}>
-              {view==="live"?"Live this story →":"Read story →"}
+              {view==="live"?(officialFilmFor(m.title)?"Watch video → Live story":"Archive → Training"):"Read story →"}
             </button>
           </div>
         </article>)}
