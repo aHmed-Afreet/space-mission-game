@@ -98,7 +98,7 @@ function tailored(m:HistoryMission):StoryTask[]|undefined{
     "Armstrong photographed the lunar module and surroundings after taking his first steps. Position yourself on the surface and capture your field photograph.",
     "Initial lunar-site photographs recorded."),fieldAction:"photo"},
   {...build("contingency-sample","science","Collect a contingency lunar soil sample","Collect contingency sample",
-    "Collect a simulated lunar regolith sample near the lander. Armstrong collected this early so there would be material if the EVA ended suddenly.",
+    "Collect a simulated contingency lunar regolith sample near the lander. Armstrong collected this early so there would be material if the EVA ended suddenly.",
     "Contingency sample secured."),fieldAction:"sample"},
   {...build("flag","operations","Document the flag deployment","Deploy mission flag",
     "After Buzz Aldrin joined Armstrong on the lunar surface, they deployed the flag. You are recreating Armstrong's documented contribution to the sequence.",
