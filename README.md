@@ -237,6 +237,18 @@ settings, not guaranteed benchmark frame rates; test on an actual iPad.
 
 See How to Play for joystick, look and INTERACT controls.
 
+## October 2026 procedural graphics upgrade
+
+Commander received an additional geometry-focused visual pass, not only CSS changes:
+
+- **Lunar exterior:** local GPU-friendly procedural regolith texture; sloped terrain, fractured instanced stones, raised crater rims and depressed bowls; layered distant mountain silhouettes; physically dark star sky and distant Earth. Scenery remains independent of gameplay collision and site positions.
+- **Astronaut cabin:** instrument housings, machined circular gauges, tactile side-console banks, engraved labels and baked diffuse contact shadows. These are noninteractive decorative meshes kept clear of the central walkway.
+- **Satellite and lunar research camp:** a cylindrical spacecraft bus, curved dishes, detailed photovoltaic arrays, service couplers, feet, rails and thermal-rib details instead of bare solid cubes. The satellite still uses the existing optional NASA-hosted visual asset when available, with its offline geometry fallback.
+- **Quality levels:** Quality increases lunar terrain detail and stone counts; Balanced targets normal play; Battery minimizes extra scenery geometry and screen-space cost. All use local generated textures without a new mandatory network download.
+- **Validation:** The automated suite includes deterministic terrain, graphics tier, cleanup, unchanged iPad control paths and original mission-completion regression checks.
+
+**Limits:** This is a procedural realism upgrade rather than photorealism. Materials, lighting and terrain remain artistically simplified, and real iPad Safari frame rate must be measured manually. No claim is made that movement or orbital physics were changed by the artwork.
+
 ## Mission 2 rendezvous navigation and NASA visual reference
 
 Mission 2 now uses a genuinely operable, touch-friendly training navigation
