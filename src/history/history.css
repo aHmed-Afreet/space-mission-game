@@ -84,3 +84,24 @@
 .history-hub .history-result-count,.history-hub .history-training-note,.history-hub .history-footer,.history-hub .history-card-date small,.history-hub .history-filters label,.history-hub .history-completions{color:#d0e6f5!important;font-size:12px!important}
 .history-hub .history-choice{background:rgba(24,61,78,.91);color:#f0faff;font-size:14px}
 .history-hub .history-tabs button,.history-hub .history-back{color:#f5fbff}
+
+/* Source-verified Watch -> Live episode landing. NASA video stays at NASA's URL. */
+.history-film-screen{min-height:100vh}
+.history-film-card{max-width:1060px;margin:35px auto 70px;padding:clamp(22px,4vw,48px);border:1px solid #85bfe09e;background:linear-gradient(135deg,rgba(7,26,47,.96),rgba(8,34,49,.89));border-radius:16px;box-shadow:0 15px 50px #0006}
+.history-film-card>small{color:#a9e9ff;font-size:11px;letter-spacing:.12em}
+.history-film-card h1{font-size:clamp(30px,4.7vw,60px);line-height:1.17;color:#f6fbff;margin:15px 0 26px}
+.history-film-card h1 em{font-style:normal;color:#b0e8ef}
+.history-film-card h2{font-size:23px;color:#fff;margin:20px 0 10px}
+.history-film-card h3{font-size:16px;color:#e1f7ff;margin-top:26px}
+.history-film-card p,.history-film-steps li{color:#dfedf8;font-size:15px;line-height:1.8}
+.history-film-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:17px;background:#1552484f;border:1px solid #79d2b48f;border-radius:9px;color:#ddfff4;font-size:12px}
+.history-film-banner.history-film-pending{background:#65461b4f;border-color:#ddc18c75}
+.history-film-watch,.history-film-record,.history-film-continue{display:inline-block;text-align:center;text-decoration:none;border-radius:9px;font-weight:750}
+.history-film-watch{background:#b7f0f2;color:#052536;padding:17px 25px;margin:12px 0;min-height:48px}
+.history-film-watch:hover{background:#e4ffff}
+.history-film-record{color:#b9efff;padding:10px 0}
+.history-film-continue{display:block;width:100%;margin-top:22px;background:#186c66;color:#fff;border:1px solid #94dccc;padding:18px;cursor:pointer;font-size:13px;min-height:50px}
+.history-film-continue:disabled{background:#2d3a45;color:#a9b7be;border-color:#586b77;cursor:not-allowed}
+.history-film-steps{display:grid;gap:11px;padding-left:29px}
+.history-film-steps li{padding-left:6px}
+@media(max-width:700px){.history-film-card{margin:13px 10px 40px;padding:23px 16px}.history-film-watch{display:block}.history-film-banner{align-items:flex-start;flex-direction:column}}

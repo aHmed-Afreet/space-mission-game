@@ -10,8 +10,8 @@ type GameMode = "strategy" | "commander" | "history" | "guide";
 
 const experiences: { id: GameMode; number: string; label: string; title: string; detail: string; meta: string }[] = [
   { id: "commander", number: "01", label: "FIRST-PERSON SIMULATION", title: "Fly as an Astronaut", detail: "Pilot a spacecraft, repair satellites and explore the Moon. Choose your destination inside.", meta: "EARTH ORBIT · MOON · MORE PLANNED" },
-  { id: "strategy", number: "02", label: "MISSION DESIGN", title: "Build & Launch Missions", detail: "Design a Mars probe, manage your budget and complete 20 challenges.", meta: "20 STRATEGY LEVELS" },
-  { id: "history", number: "03", label: "SPACE EXPLORATION ARCHIVE", title: "Explore Space History", detail: "Explore 55 historic missions and play their inspired training scenes.", meta: "55 HISTORICAL MISSIONS" },
+  { id: "strategy", number: "02", label: "MISSION ENGINEER / GROUND CONTROL", title: "Build & Launch Missions", detail: "Receive an astronaut’s instructions, prepare the spacecraft and guide the pilot from Mission Control. You do not fly.", meta: "20 ENGINEERING ASSIGNMENTS" },
+  { id: "history", number: "03", label: "WATCH VERIFIED FOOTAGE · THEN LIVE IT", title: "Explore Space History", detail: "Watch official NASA footage for major missions, then recreate documented events in first-person 3D.", meta: "NASA VIDEO / HISTORICAL RECREATION" },
   { id: "guide", number: "04", label: "START HERE", title: "Controls & How to Play", detail: "Learn controls, mission steps and how to save progress.", meta: "IPAD · IPHONE · LAPTOP" },
 ];
 
@@ -67,7 +67,7 @@ export default function ModeSelect() {
 
   return <>
     {mode === "strategy" && <div className="cmd-mode-bar">
-      <button onClick={() => setMode(null)}>← Main menu</button><span>BUILD & LAUNCH · STRATEGY</span>
+      <button onClick={() => setMode(null)}>← Main menu</button><span>ENGINEERING SUPPORT · ASTRONAUT FLIES</span>
     </div>}
     {mode === "strategy" ? <App /> :
       <Suspense fallback={<p className="cmd-builder">Loading spacecraft systems…</p>}>

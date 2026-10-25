@@ -49,3 +49,8 @@
 .app .resource small,.app .specs span,.app .feedback ul,.app .log p{font-size:12px;color:#dae9f5}
 .app .page-top,.app .stage-count,.app .version{color:#dce9f5}
 @media print{#root::before{display:none}}
+
+/* Strategy now uses ground-controller briefings with an assigned fictional pilot. */
+.app .engineer-radio{background:rgba(7,44,58,.82);border-left:3px solid #85dcd1;color:#f1ffff!important;padding:14px 16px;border-radius:8px;font-size:14px;line-height:1.75;margin:12px 0}
+.app .briefing li{color:#eff7fd;line-height:1.65;margin:6px 0}
+.strategy-mission-board .strategy-board-hero p{color:#f0faff}

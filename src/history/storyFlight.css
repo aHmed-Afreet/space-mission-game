@@ -87,3 +87,12 @@
 .story-fps-eva-vertical{right:10px;bottom:105px;gap:6px}
 .story-fps-eva-vertical button{min-width:61px;min-height:48px;padding:8px;font-size:11px}
 }
+
+/* First-person Apollo 11 EVA: prominent contextual actions on the surface. */
+.story-fps-historical-action{position:absolute;z-index:11;right:max(16px,env(safe-area-inset-right));top:clamp(115px,18vh,200px);width:min(345px,39vw);border:1px solid #f2dfa69c;border-radius:14px;padding:18px;background:linear-gradient(130deg,#192935f2,#1b343def);color:#f8f7ea;box-shadow:0 10px 30px #0007}
+.story-fps-historical-action small{display:block;font-size:10px;color:#f9eab2;letter-spacing:.06em;line-height:1.5}
+.story-fps-historical-action strong{display:block;font-size:17px;margin:12px 0}
+.story-fps-historical-action p{font-size:12px;line-height:1.65;color:#f0f4eb}
+.story-fps-historical-action button{display:block;width:100%;border-radius:8px;border:1px solid #c3e3c4;background:#2f7365;color:#fff;font-size:12px;font-weight:750;padding:14px;margin:13px 0}
+.story-fps-historical-action button:disabled{background:#243c48;color:#b8cacb;opacity:.66}
+@media(max-width:700px){.story-fps-historical-action{top:auto;bottom:110px;left:11px;right:auto;width:min(310px,58vw);padding:11px}.story-fps-historical-action strong{font-size:13px}.story-fps-historical-action p{font-size:11px}.story-fps-historical-action button{min-height:45px;padding:10px}}
