@@ -2,6 +2,7 @@ import type { ShipState } from "./campaign/ship";
 import {makePlanet,planetKind,disposePlanet} from "./celestial";
 import {installShipArchitecture} from "./shipArchitecture";
 import {installCabinDetail} from "./cabinDetailPass";
+import {installCockpitFinishing} from "./cockpitFinishing";
 import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -590,6 +591,7 @@ export function createInterior(
   const disposeDetails=installCabinDetail(scene,{
     hull:shell,panel,dark,floor,metal:silver,fabric
   },options.graphics||"balanced");
+  const disposeCockpitFinishing=installCockpitFinishing(scene,options.graphics||"balanced");
   // Ambient fill and bounded practical lights. No real-time shadows or post-processing.
   scene.add(new T.HemisphereLight("#bed7e4", "#101821", 1.35));
   const sun = new T.DirectionalLight("#d9ecfa", 1.75);
@@ -738,6 +740,7 @@ export function createInterior(
       }
     },
     dispose() {
+      disposeCockpitFinishing();
       disposeDetails();
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
