@@ -18,6 +18,7 @@ import {
 import type { MissionDefinition } from "./definitions";
 import { campaignLevel, campaignForMission } from "./campaignTypes";
 import Icon from "../Icons";
+import MissionEvidence from "./MissionEvidence";
 export default function Preparation({
   design,
   setDesign,
@@ -182,6 +183,8 @@ export default function Preparation({
         <strong>{e.capacity} kWh reserve</strong>
         <strong>{e.fuel} fuel reserve</strong>
       </section>
+      <MissionEvidence destination={mission.destination} design={design}
+        metrics={{mass:e.mass,cost:e.cost,power:e.power,fuel:e.fuel}} />
       {mission.allowedEquipment.length > 0 && (
         <section className="panel campaign-pack">
           <h2>Field equipment</h2>
