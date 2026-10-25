@@ -2,7 +2,8 @@ import type { HistoryMission } from "./missionHistory";
 import {missionProfile,type HistoricProfile} from "./missionProfiles";
 export type CraftFamily="sphere"|"capsule"|"gemini"|"apollo"|"lunar"|"shuttle"|"station"|"telescope"|"probe"|"lander"|"rover"|"helicopter"|"observatory";
 export type Station="brief"|"systems"|"operations"|"science";
-export type StoryTask={id:string;station:Station;heading:string;action:string;procedure:string;complete:string};
+export type FieldAction="egress"|"walk"|"photo"|"sample"|"flag"|"return";
+export type StoryTask={id:string;station:Station;heading:string;action:string;procedure:string;complete:string;fieldAction?:FieldAction};
 export type StoryScenario={missionId:string;title:string;craft:string;family:CraftFamily;destination:string;setting:"moon"|"mars"|"orbit"|"deep";role:"astronaut"|"mission operator";tasks:StoryTask[];historicalNote:string;profile:HistoricProfile;};
 const build=(id:string,station:Station,heading:string,action:string,procedure:string,complete:string):StoryTask=>({id,station,heading,action,procedure,complete});
 export function historicalCraft(m:HistoryMission):{craft:string;family:CraftFamily}{
@@ -87,10 +88,25 @@ function tailored(m:HistoryMission):StoryTask[]|undefined{
  build("mirror","operations","Align segmented primary mirror","Arm optics alignment","Webb's 18 primary-mirror segments require precise optical alignment.","Optical commissioning logged."),
  build("calibration","science","Collect calibration observations","Verify infrared instruments","Review test images and instrument readiness.","Infrared observation verified.")];
  if(t==="Apollo 11")return [
- build("landing","brief","Prepare Eagle's lunar landing","Review descent checklist","Confirm landing-site observations and descent flight plan.","Lunar landing briefing accepted."),
- build("guidance","systems","Check lunar module guidance and fuel","Verify descent controls","Read the simplified guidance and propellant indications.","Descent configuration verified."),
- build("eva","operations","Prepare first lunar surface EVA","Check suit and access ladder","Review Apollo 11 surface access and spacesuit readiness.","EVA preparation complete."),
- build("samples","science","Document Moon rocks and photographs","Record sample context","Enter the location and scientific context of sample collections.","Lunar geology records secured.")];
+  {...build("egress","operations","Exit Eagle and step onto the lunar surface","Egress Eagle",
+    "As Neil Armstrong, equip your simulated EVA suit, operate the airlock and descend to the lunar surface. The Eagle ladder is represented by the training hatch, not a geometrically exact reconstruction.",
+    "Eagle EVA egress completed."),fieldAction:"egress"},
+  {...build("first-steps","operations","Take the first lunar steps and inspect the surface","Walk on the Moon",
+    "Walk at least three meters from Eagle. Armstrong first described the fine lunar soil and moved carefully in low gravity.",
+    "First steps and surface examination recorded."),fieldAction:"walk"},
+  {...build("photographs","science","Photograph the landing area","Photograph the Moon",
+    "Armstrong photographed the lunar module and surroundings after taking his first steps. Position yourself on the surface and capture your field photograph.",
+    "Initial lunar-site photographs recorded."),fieldAction:"photo"},
+  {...build("contingency-sample","science","Collect a contingency lunar soil sample","Collect contingency sample",
+    "Collect a simulated lunar regolith sample near the lander. Armstrong collected this early so there would be material if the EVA ended suddenly.",
+    "Contingency sample secured."),fieldAction:"sample"},
+  {...build("flag","operations","Document the flag deployment","Deploy mission flag",
+    "After Buzz Aldrin joined Armstrong on the lunar surface, they deployed the flag. You are recreating Armstrong's documented contribution to the sequence.",
+    "Flag deployment recorded."),fieldAction:"flag"},
+  {...build("return","operations","Return to Eagle after the highlighted EVA tasks","Return to Eagle",
+    "Return to the training airlock and reenter the lunar module. This is an abbreviated selection of documented EVA actions; the full recording includes additional science experiments.",
+    "Eagle reentry and highlighted EVA sequence complete."),fieldAction:"return"},
+ ];
  if(t==="Apollo 13")return [
  build("report","brief","Identify the Apollo 13 emergency","Read mission report","Review the in-flight malfunction and the decision to abort lunar landing.","Emergency briefing logged."),
  build("conserve","systems","Conserve onboard power","Verify limited-resource operation","Review electrical, water and oxygen conservation using the lunar module as a lifeboat.","Consumables plan confirmed."),
