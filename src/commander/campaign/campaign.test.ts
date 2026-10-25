@@ -1840,7 +1840,8 @@ test("Level 3 lunar approach progresses from old premature power warnings and ex
   assert.match(guide.next,/Power & life support/);
   const flightSource=readFileSync("src/commander/campaign/Flight.tsx","utf8");
   assert.match(flightSource,/guide.recoveryStation/);
-  assert.match(flightSource,/if \(blocked\) setHelpOpen\(true\)/);
+  assert.doesNotMatch(flightSource,/if \(blocked\) setHelpOpen\(true\)/);
+  assert.match(flightSource,/Never open instructions automatically on blocked actions/);
 });
 
 test("every playable lunar landing teaches and operates destination and guarded arm before execution", () => {
@@ -1904,7 +1905,7 @@ test("Commander type pages navigate independently, preserve saves and show each 
   assert.match(home,/Back to all mission types/);
   assert.match(home,/session && \(/);
   assert.match(home,/disabled=\{!ready \|\| readOnly\}/);
-  assert.match(commander,/onResume=\{\(\) => setMode\("flight"\)\}/);
+  assert.match(commander,/onResume=\{\(\) => store\.session\?\.report \? dismissReport\(\) : setMode\("flight"\)\}/);
   assert.match(portal,/ENTER COMMANDER/);
   assert.match(portal,/Fly as an Astronaut/);
   assert.match(portal,/Build & Launch Missions/);
@@ -2129,4 +2130,50 @@ test("every one of the 55 Story Mode missions has a video chapter sequence backe
  assert.match(home,/mission=\{chosen\}/);
  assert.match(home,/Watch animated video → Live/);
  assert.match(home,/!filmConfirmed/);
+});
+
+test("recovery, failed actions and tutorials cannot open instructions without player input",()=>{
+ const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+ assert.match(flight,/\[helpOpen,setHelpOpen\] = useState\(false\)/);
+ assert.match(flight,/onClick=\{\(\)=>setHelpOpen\(open=>!open\)\}/);
+ assert.match(flight,/const showTutorial = \(\) =>/);
+ assert.match(flight,/onClick=\{showTutorial\}/);
+ assert.doesNotMatch(flight,/if \(blocked\) setHelpOpen\(true\)/);
+ assert.doesNotMatch(flight,/if \(recovery && lastRecovery.current !== recovery.id\) \{\s*setHelpOpen\(true\)/);
+ assert.doesNotMatch(flight,/useEffect\(\(\) => \{\s*const t = o\?\.tutorial/);
+ assert.match(flight,/setHelpOpen\(false\); \/\/ Free the movement area/);
+});
+test("iPad right half captures pointer for rotation without sprint",()=>{
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+ const css=readFileSync("src/commander/commander.css","utf8");
+ assert.match(cabin,/className="cmd-look-surface"/);
+ assert.match(cabin,/onPointerDown=\{startLook\}/);
+ assert.match(cabin,/onPointerMove=\{moveLook\}/);
+ assert.match(cabin,/setPointerCapture\(e.pointerId\)/);
+ assert.match(cabin,/look\.current\.yaw -=/);
+ assert.match(cabin,/DRAG ANYWHERE RIGHT TO LOOK/);
+ assert.match(css,/\.cmd-session \.cmd-world \.cmd-look-surface/);
+ assert.match(css,/inset:0 0 0 48%;z-index:5/);
+ assert.match(css,/pointer-events:auto/);
+});
+test("report settlement is acknowledged once: success advances only within campaign, failure retries",()=>{
+ const commander=readFileSync("src/commander/Commander.tsx","utf8");
+ const report=readFileSync("src/commander/campaign/Report.tsx","utf8");
+ const home=readFileSync("src/commander/campaign/CampaignHome.tsx","utf8");
+ assert.match(commander,/const dismissReport = \(\) =>/);
+ assert.match(commander,/progress:recordReport\(v\.progress,v\.session\),session:null/);
+ assert.match(commander,/if\(store\.session\?\.report\)\{dismissReport\(\);return;\}/);
+ assert.match(commander,/const retryFinished = \(\) =>/);
+ assert.match(commander,/const nextFinished = \(\) =>/);
+ assert.match(commander,/const nextId=route\.missionIds\[index\+1\]/);
+ assert.match(commander,/if\(!canStart\(m,settled\)\)/);
+ assert.match(commander,/onNext=\{store\.session\.report\?\.success && next \? nextFinished : undefined\}/);
+ assert.match(commander,/onRetry=\{store\.session\.report && !store\.session\.report\.success \? retryFinished : undefined\}/);
+ assert.match(report,/Retry this level/);
+ assert.match(report,/Next level in/);
+ assert.match(report,/Finish report · Return to campaign/);
+ assert.match(home,/Close finished report/);
+ const failed=makeReport({...createSession(missions[0],design,life,missions[0].requiredEquipment,emptyProgress()),state:{...defaultLife,ended:true}} as any,false);
+ assert.equal(failed.success,false);
+ assert.equal(recordReport(emptyProgress(),{...createSession(missions[0],design,life,missions[0].requiredEquipment,emptyProgress()),report:failed} as Session).completed[missions[0].id],undefined);
 });
