@@ -45,7 +45,7 @@ import {planetKind} from "../celestial";
 import {missionProfiles,missionProfile} from "../../history/missionProfiles";
 import { createStoryScenario,historicalCraft,historicalSetting } from "../../history/storyScenarios";
 import { officialFilms, officialFilmFor } from "../../history/officialFilms";
-import {storyVideoChapters,storyVideoWorld,STORY_VIDEO_CHAPTER_SECONDS} from "../../history/StoryBriefingVideo";
+import {storyVideoChapters,storyVideoWorld,STORY_VIDEO_CHAPTER_SECONDS} from "../../history/storyVideoTimeline";
 import { pilotBriefing, pilot } from "../../missionCrew";
 import { strategyChallenges } from "../../strategyChallenges";
 
