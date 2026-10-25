@@ -238,6 +238,10 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     }
     for(const z of [-.42,.42])
       box(wing*1.22,1.26,z,1.5,.035,.026,borderMat,satellite);
+    // Electrical traces, bus couplers and solid array edge rails.
+    box(wing*.55,1.25,0,.07,.18,.13,alloy,satellite);
+    for(let i=0;i<5;i++)
+      box(wing*(.58+i*.285),1.268,0,.012,.014,.78,borderMat,satellite);
   }
   box(0,1.15,.53,.56,.64,.08,white,satellite);
   box(0,1.13,.59,.37,.42,.035,gasket,satellite);
@@ -281,19 +285,38 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   box(0, 0.72, 0, 2.2, 1.4, 1.6, white, shelter);
   box(0, 1.49, 0, 2.4, 0.14, 1.8, gold, shelter);
   box(0, 0.75, 1.05, 1.7, 0.1, 0.6, alloy, shelter);
+  // Mechanical feet, thermal blanket ribs and an access hatch.
+  for(const x of [-.92,.92])for(const z of [-.61,.61]){
+    box(x,.16,z,.15,.34,.19,dark,shelter);
+    box(x,.032,z,.38,.055,.42,gold,shelter);
+  }
+  for(let x=-.8;x<=.8;x+=.4)
+    box(x,1.49,0,.045,.036,1.69,alloy,shelter);
+  box(0,.91,.821,.9,.74,.06,dark,shelter);
+  box(0,.91,.854,.71,.52,.018,gold,shelter);
   parts.shelter = shelter;
   const panels = new T.Group();
   panels.position.set(2.2, 0.5, 0);
   camp.add(panels);
   box(0, 0, 0, 1.7, 0.08, 1.2, solar, panels);
   box(0, -0.3, 0, 0.06, 0.6, 0.06, alloy, panels);
+  const pv=material("#1c4a68",.46,.33),gridline=material("#b7bdbe",.5,.39);
+  for(let i=0;i<8;i++)for(let j=0;j<5;j++)
+    box(-.74+i*.21,.052,-.48+j*.24,.183,.01,.211,pv,panels);
+  for(let i=0;i<=8;i++)box(-.84+i*.21,.065,0,.011,.018,1.18,gridline,panels);
+  for(let j=0;j<=5;j++)box(0,.065,-.6+j*.24,1.68,.018,.012,gridline,panels);
   panels.rotation.z = -0.3;
   parts.solar = panels;
   parts.battery = box(-1.6, 0.3, 0, 0.6, 0.6, 0.6, dark, camp);
   const antenna = new T.Group();
   camp.add(antenna);
   box(-1.7, 1.1, -1, 0.045, 2.2, 0.045, alloy, antenna);
-  box(-1.7, 2.1, -1, 0.7, 0.25, 0.5, white, antenna);
+  const campDishGeo=new T.SphereGeometry(.35,20,10,0,Math.PI*2,0,Math.PI*.46);
+  geometries.push(campDishGeo);
+  const campDish=new T.Mesh(campDishGeo,white);
+  campDish.position.set(-1.7,2.1,-1);campDish.rotation.x=-.52;antenna.add(campDish);
+  for(const x of [-1.98,-1.42])
+    box(x,.22,-1,.09,.39,.11,gold,antenna);
   parts.antenna = antenna;
   parts.storage = box(0, 0.3, 1.6, 0.8, 0.6, 0.45, gold, camp);
   parts.sensor = box(1, 0.7, 1.6, 0.1, 1.4, 0.1, alloy, camp);
