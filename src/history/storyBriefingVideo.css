@@ -1,0 +1,55 @@
+/* Responsive 16:9 animated mission documentary player, entirely original UI art.
+   Distinct visual storytelling, never falsely presented as archival footage. */
+.story-briefing-video{width:100%;margin:20px auto 15px;border:1px solid #6b9aacc2;border-radius:16px;background:#061826f5;box-shadow:0 20px 65px #0006;overflow:hidden}
+.story-video-header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px 22px;background:#061523;border-bottom:1px solid #37617f88}
+.story-video-header>div{display:grid;gap:6px}
+.story-video-header small{font-size:10px;color:#9ad4ef;letter-spacing:.16em}
+.story-video-header strong{font-size:18px;color:#f0fbff}
+.story-video-header>span{font-size:10px;color:#ffe9ad;letter-spacing:.1em}
+.story-video-screen{position:relative;aspect-ratio:16/9;min-height:230px;overflow:hidden;background:radial-gradient(ellipse at 75% 25%,#1d4462 0%,#040b18 60%,#000613 100%);color:white;isolation:isolate}
+.story-video-space{position:absolute;inset:0;background-image:radial-gradient(1px 1px at 10% 9%,#fff 90%,transparent),radial-gradient(2px 2px at 23% 44%,#fff8 90%,transparent),radial-gradient(1px 1px at 33% 82%,#fff 90%,transparent),radial-gradient(2px 2px at 53% 18%,#fff9 90%,transparent),radial-gradient(1px 1px at 76% 83%,#fff 90%,transparent),radial-gradient(2px 2px at 93% 37%,#fff8 90%,transparent);background-size:175px 147px,267px 213px,221px 181px,301px 232px,173px 227px,241px 165px;opacity:.97}
+.story-video-planet{position:absolute;right:8%;top:8%;width:39%;aspect-ratio:1;border-radius:50%;background:radial-gradient(ellipse at 34% 27%,#a2dfed 0%,#366cb4 28%,#123872 55%,#031d42 81%,#010a19 100%);box-shadow:inset -32px -25px 56px #000b,0 0 45px #42afff37;transform:rotate(-21deg)}
+.story-video-planet::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse at 32% 60%,#b9eee5 0 9%,transparent 14%),radial-gradient(ellipse at 57% 29%,#74ba8b 0 11%,transparent 23%),radial-gradient(ellipse at 42% 51%,#83d9c5 0 14%,transparent 19%),radial-gradient(ellipse at 67% 66%,#74ad78 0 9%,transparent 15%);opacity:.66}
+.story-video-world-moon .story-video-planet{background:radial-gradient(circle at 30% 24%,#e1e5df,#989d9f 39%,#55595f 75%,#1b222e);box-shadow:inset -40px -30px 40px #0009,0 0 35px #dedad456}
+.story-video-world-moon .story-video-planet::before{background:radial-gradient(circle at 25% 35%,#51545b 0 5%,transparent 6%),radial-gradient(circle at 57% 57%,#54545c 0 8%,transparent 9%),radial-gradient(circle at 71% 29%,#777b80 0 9%,transparent 11%),radial-gradient(circle at 33% 69%,#454b54 0 11%,transparent 13%);opacity:.7}
+.story-video-world-mars .story-video-planet{background:radial-gradient(circle at 32% 26%,#e7b087,#bb6641 38%,#73382e 67%,#271f29);box-shadow:inset -43px -35px 52px #000a,0 0 50px #e67b454e}
+.story-video-world-mars .story-video-planet::before{background:radial-gradient(ellipse at 40% 58%,#7a3c2e 0 20%,transparent 33%),radial-gradient(ellipse at 63% 28%,#ffdabb 0 9%,transparent 18%);opacity:.65}
+.story-video-world-outer .story-video-planet{background:repeating-linear-gradient(-20deg,#ceaa72 0 11px,#bd8853 12px 23px,#e4c495 24px 32px,#805a4a 33px 38px);box-shadow:inset -48px -25px 65px #000b,0 0 42px #c8a06c4e}
+.story-video-world-outer .story-video-planet::before{opacity:0}
+.story-video-horizon{position:absolute;inset:auto -10% -40% -10%;height:59%;border-radius:50%;background:radial-gradient(ellipse at 50% 0,#3c759a 0%,#0c224a 65%,#000b1b 92%);box-shadow:0 -5px 24px #57bdfc48;transform:rotate(-4deg)}
+.story-video-orbit{position:absolute;left:10%;top:21%;width:75%;height:64%;border:1px solid #a8defc63;border-radius:50%;transform:rotate(-18deg)}
+.story-video-orbit.orbit-two{left:4%;top:6%;width:91%;height:85%;transform:rotate(18deg);border-color:#acd8d21d}
+.story-video-spacecraft{position:absolute;left:23%;top:32%;width:60px;height:21px;background:linear-gradient(#d8dedb,#506875);clip-path:polygon(0 43%,70% 0,100% 48%,70% 100%,0 58%);filter:drop-shadow(0 0 9px #a8ffff8a);transform:rotate(-25deg);z-index:2}
+.story-video-spacecraft b{display:block;position:absolute;inset:7px 0;background:#314b67}
+.story-video-spacecraft>span{position:absolute;left:35%;top:-15px;width:8px;height:57px;background:#6cb8d2}
+.story-video-spacecraft em{position:absolute;right:0;top:-7px;width:16px;height:33px;background:#799eaa}
+.story-video-screen.playing .story-video-spacecraft{animation:story-video-cruise 9s ease-in-out infinite alternate}
+.story-video-screen.playing .story-video-planet{animation:story-video-planet-drift 24s ease-in-out infinite alternate}
+.story-video-screen.playing .story-video-space{animation:story-video-star-drift 30s linear infinite}
+.story-video-scene-warning .story-video-orbit{border-color:#ffa657ac;box-shadow:0 0 15px #dc5b3055}
+.story-video-scene-return .story-video-horizon{box-shadow:0 -5px 39px #a6fbd991}
+.story-video-film-noise{position:absolute;inset:0;pointer-events:none;opacity:.18;background:repeating-linear-gradient(transparent 0 6px,#fff1 7px 8px)}
+.story-video-screen-content{position:absolute;inset:0;padding:clamp(20px,4vw,50px);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;background:linear-gradient(90deg,#020913ea 0%,#061523cc 47%,transparent 83%);z-index:3}
+.story-video-screen-content>small{display:block;color:#91e6f0;font-size:12px;letter-spacing:.16em;font-weight:700;text-shadow:0 2px 9px #000}
+.story-video-screen-content>h2{font-size:clamp(24px,3.8vw,56px);line-height:1.09;letter-spacing:-.035em;color:#f7feff;max-width:65%;margin:17px 0 18px;text-shadow:0 4px 20px #000}
+.story-video-screen-content>p{font-size:clamp(13px,1.5vw,19px);line-height:1.5;color:#e5f0f9;max-width:56%;margin:0;text-shadow:0 2px 12px #000}
+.story-video-screen.playing .story-video-screen-content h2,.story-video-screen.playing .story-video-screen-content p{animation:story-video-title-appear .6s ease-out}
+.story-video-timecode{position:absolute;bottom:19px;left:clamp(20px,4vw,50px);color:#d4f0fd;font:700 12px monospace;letter-spacing:.08em}
+.story-video-finished{position:absolute;z-index:4;top:15px;right:15px;padding:9px 14px;color:#d5fff1;background:#063c36d9;border:1px solid #a5ffe2b8;border-radius:8px;font-size:11px;font-weight:750}
+.story-video-controls{display:flex;align-items:center;gap:15px;padding:14px 22px;background:#091d2d;border-top:1px solid #2f576d}
+.story-video-controls button{min-width:105px;border-radius:7px;border:1px solid #77b4c5;background:#18475b;color:#effdff;font-weight:750;padding:12px 13px;cursor:pointer}
+.story-video-controls input{flex:1;min-width:45px;accent-color:#6fe2e3}
+.story-video-controls>span{font-size:12px;color:#b0cddd;white-space:nowrap}
+.story-video-chapters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;padding:8px 18px}
+.story-video-chapters button{font-size:10px;display:grid;gap:4px;border:1px solid #2e586c;border-radius:5px;background:#10293a;color:#b4d2de;text-align:left;padding:9px 8px;cursor:pointer}
+.story-video-chapters button.active{color:#fff;background:#225570;border-color:#91e3e7}
+.story-video-source{padding:10px 23px 4px;color:#daeaf1;font-size:12px;line-height:1.7}
+.story-video-source p{color:#d9ebf3;font-size:12px;line-height:1.65;margin:4px 0}
+.story-video-source a{color:#a1e7f0;text-decoration:underline}
+.story-briefing-video>.history-film-continue{width:calc(100% - 42px);margin:16px 21px 21px}
+@keyframes story-video-cruise{from{transform:translate(-12px,16px) rotate(-27deg) scale(.9)}to{transform:translate(80px,-54px) rotate(-20deg) scale(1.08)}}
+@keyframes story-video-planet-drift{from{transform:rotate(-21deg) translate(0,0)}to{transform:rotate(-15deg) translate(10px,8px)}}
+@keyframes story-video-star-drift{from{transform:translate(0,0)}to{transform:translate(-26px,8px)}}
+@keyframes story-video-title-appear{from{opacity:0;transform:translateY(13px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:750px){.story-video-header{padding:13px 14px;flex-direction:column;align-items:flex-start;gap:5px}.story-video-screen-content{padding:18px}.story-video-screen-content>h2{font-size:clamp(19px,5vw,33px);max-width:84%}.story-video-screen-content>p{font-size:clamp(12px,2.5vw,14px);max-width:81%}.story-video-timecode{bottom:8px;left:14px}.story-video-chapters{grid-template-columns:repeat(3,minmax(0,1fr));padding:8px}.story-video-controls{padding:10px 12px}.story-video-planet{width:56%;right:2%}.story-video-header>span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.story-video-screen.playing .story-video-spacecraft,.story-video-screen.playing .story-video-planet,.story-video-screen.playing .story-video-space,.story-video-screen.playing .story-video-screen-content h2,.story-video-screen.playing .story-video-screen-content p{animation:none}}
