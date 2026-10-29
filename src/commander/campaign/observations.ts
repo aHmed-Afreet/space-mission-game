@@ -59,6 +59,9 @@ function eventReady(s: Session, index: number) {
 }
 export function receipt(s: Session, action: CampaignAction): Session {
   s = withObservations(s);
+  // Food and water may be prepared before an unrelated scripted warning.
+  // Each successful operation still belongs to just one specific task.
+  const provision = ["takeMeal", "fill", "eat", "drink"].includes(action);
   const m = missionById(s.missionId),
     obs = {
       ...s.observations,
@@ -73,7 +76,7 @@ export function receipt(s: Session, action: CampaignAction): Session {
       !obs.pending.includes(o.id) &&
       (o.action === action || o.choices?.some((c) => c.action === action)) &&
       (!o.site || atSite(s, o.site)) &&
-      eventReady(s, i) &&
+      (provision || eventReady(s, i)) &&
       (!o.phase?.includes("EVA RETURN") || obs.exterior) &&
       (!["science", "course"].includes(action) ||
         o.phase === "PRE-LAUNCH" ||
@@ -128,15 +131,10 @@ export function satisfied(s: Session, o: Objective): boolean {
       obs.transmitted >= s.state.science
     );
   if (obs.achieved.includes(o.id) || s.completed.includes(o.id)) return true;
+  // Provision actions are events, recorded for one objective by receipt().
+  // Persistent nutrition, bottle contents or an earlier meal cannot certify a
+  // later duty shift; early preparation still keeps its own task receipt.
   switch (o.action) {
-    case "takeMeal":
-      return s.state.meals > 0;
-    case "fill":
-      return s.state.bottle > 0;
-    case "eat":
-      return s.lastEat >= 0;
-    case "drink":
-      return s.lastDrink >= 0;
     case "tools":
       return s.state.tools || s.pack.includes("repair");
     case "equipSuit":

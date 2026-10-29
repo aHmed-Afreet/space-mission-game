@@ -136,8 +136,9 @@ function shuttle(g:THREE.Group){
 function telescope(g:THREE.Group,title:string){
  if(/Webb/.test(title)){
   // Eighteen iconic gold primary segments, simplified sunshield layers and boom.
-  for(let l=0;l<4;l++){
+  for(let l=0;l<5;l++){
    const shield=block(g,0,-1.45-l*.13,0,5.1,.04,2.7,white);
+   shield.name="Webb sunshield layer "+(l+1);
    shield.rotation.y=l%2?.05:-.05;
   }
   const rows=[3,4,5,4,2];let c=0;
@@ -195,7 +196,8 @@ export function createHistoricVehicle(scenario:StoryScenario):THREE.Group {
    tube(g,[Math.cos(a)*.5,Math.sin(a)*.5,.55],
      [Math.cos(a)*2.8,Math.sin(a)*2.8,2.1],.018,metal);
   }
- } else if(scenario.family==="helicopter")helicopter(g);
+ } else if(title==="Luna 2")probe(g,title);
+ else if(scenario.family==="helicopter")helicopter(g);
  else if(scenario.family==="rover")rover(g,/Pathfinder/.test(title));
  else if(scenario.family==="lunar"){
   lander(g,"apollo");

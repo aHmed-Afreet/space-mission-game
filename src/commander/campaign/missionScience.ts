@@ -74,7 +74,7 @@ export function scienceReference(destination: Destination): ScienceReference {
 }
 
 export type GameMetrics = { mass:number; cost:number; power:number; fuel:number };
-export function designTradeoffs(destination: Destination, design: Design, metrics: GameMetrics) {
+export function designTradeoffs(destination: Destination, design: Design, metrics: GameMetrics, budgetCap = BUDGET) {
   const facts=scienceReference(destination);
   const selected=rockets[design.rocket];
   if (!selected) throw Error("Unknown rocket");
@@ -83,7 +83,7 @@ export function designTradeoffs(destination: Destination, design: Design, metric
   const arrayAtEarth=Math.max(0,count)*solar.power;
   const atDestination=facts.sunlightFraction===null ? null : arrayAtEarth*facts.sunlightFraction;
   const capacityMargin=selected.payload-metrics.mass;
-  const budgetMargin=BUDGET-metrics.cost;
+  const budgetMargin=budgetCap-metrics.cost;
   const risks=[
     ...(capacityMargin<0?[`Reduce payload by at least ${Math.ceil(-capacityMargin)} kg or choose a larger launcher.`]:[]),
     ...(budgetMargin<0?[`Reduce estimated game spending by ${Math.ceil(-budgetMargin)} million credits.`]:[]),

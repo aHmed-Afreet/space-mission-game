@@ -1,4 +1,4 @@
-import { atSite, currentObjective, outside, satelliteRepairBlocker, sitePosition, type Session } from "./engine";
+import { atSite, currentObjective, maneuverFuelRequired, outside, satelliteRepairBlocker, sitePosition, type Session } from "./engine";
 import { missionById, type Site } from "./definitions";
 import { faultCatalog } from "./ship";
 import { recoveryMission } from "./recovery";
@@ -10,10 +10,10 @@ export type ObjectiveGuide = { steps: GuideStep[]; next: string; recoveryStation
 /** Shared, state-aware recovery instructions for all campaign missions. */
 function systemRecoveryGuide(s: Session): ObjectiveGuide | null {
   const action = currentObjective(s)?.action;
-  if (!action || !["approach","land","course","science","powerScience"].includes(action)) return null;
+  if (!action || !["approach","land","returnBurn","course","science","powerScience"].includes(action)) return null;
   const name = (site: Site) => sitePosition(site, missionById(s.missionId).destination).name;
   const live = s.world.faults.filter(f=>!f.verified);
-  const navigation = ["approach","land","course"].includes(action);
+  const navigation = ["approach","land","returnBurn","course"].includes(action);
   const fault = live.find(f=>
     (f.kind==="bus" && s.state.malfunction) ||
     (f.kind==="navigation" && navigation) ||
@@ -21,21 +21,23 @@ function systemRecoveryGuide(s: Session): ObjectiveGuide | null {
   if (fault) {
     const c=faultCatalog[fault.kind];
     const station:Site=c.system==="navigation"?"cockpit":c.system==="science"?"science":"power";
+    const isolationStation:Site=c.system==="science"?"power":station;
     const tools=s.state.tools || s.pack.includes("repair");
     const isolated=!s.world.switches[c.isolation];
     const steps:GuideStep[]=[
       {text:`Go to ${name(station)}, open station controls and diagnose ${c.name}.`,done:fault.diagnosed},
       {text:"At Power & life support open the Power maintenance panel.",done:s.world.lockers.maintenance},
-      {text:`At ${name(station)}, set ${c.isolation} to ISOLATED before repair.`,done:isolated || fault.repaired},
+      {text:`At ${name(isolationStation)}, set ${c.isolation} to ISOLATED before repair.`,done:isolated || fault.repaired},
       {text:"At Equipment storage open Repair cabinet and take the repair toolkit.",done:tools},
       {text:"Bring one spare part (initial missions include spares; stored spares can be collected from Repair cabinet).",done:s.state.parts>0 || fault.repaired},
       {text:`Return to ${name(station)} and press Replace failed hardware.`,done:fault.repaired},
-      {text:`Turn ${c.isolation} back ON, then press Verify operation at ${name(station)}.`,done:fault.verified},
+      {text:`At ${name(isolationStation)}, turn ${c.isolation} back ON, then press Verify operation at ${name(station)}.`,done:fault.verified},
     ];
     const recoveryStation:Site=!fault.diagnosed?station:
       !s.world.lockers.maintenance?"power":
-      !fault.repaired && !isolated?station:
-      !fault.repaired && (!tools || s.state.parts<1)?"equipment":station;
+      !fault.repaired && !isolated?isolationStation:
+      !fault.repaired && (!tools || s.state.parts<1)?"equipment":
+      fault.repaired && isolated?isolationStation:station;
     const next=!atSite(s,recoveryStation)?`Open MAP and go to ${name(recoveryStation)} for fault recovery.`:
       !fault.diagnosed?`Open station controls and press Diagnose for ${c.name}.`:
       !s.world.lockers.maintenance?"Open the Power maintenance panel.":
@@ -63,10 +65,10 @@ function systemRecoveryGuide(s: Session): ObjectiveGuide | null {
   if (navigation && !s.world.switches.navigation) return {
     recoveryStation:"cockpit",steps:[{text:"At the Flight deck open station controls and turn Navigation computer ON.",done:false}],
     next:"Turn ON Navigation computer at the Flight deck."};
-  if (["approach","land"].includes(action) && s.state.battery<0.1) return {
+  if (["approach","land","returnBurn"].includes(action) && s.state.battery<0.1) return {
     recoveryStation:"power",steps:[{text:"At Power & life support turn Solar input ON, shed optional loads, and let battery recharge to 0.10 kWh.",done:false}],
     next:"Recharge the battery to at least 0.10 kWh."};
-  if (["approach","land"].includes(action) && s.state.pressure<90) return {
+  if (["approach","land","returnBurn"].includes(action) && s.state.pressure<90) return {
     recoveryStation:"power",steps:[{text:"At Power & life support restore oxygen recycling and cabin cooling, repair any subsystem fault, then let cabin pressure recover to at least 90 kPa.",done:false}],
     next:"Restore cabin pressure to at least 90 kPa."};
   return null;
@@ -140,7 +142,7 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
       done: s.world.switches.maneuver,
     });
     steps.push({
-      text: "Press Start the controlled return burn. Keep sufficient fuel and complete earlier mission tasks first.",
+      text: `Keep at least ${maneuverFuelRequired(s, "returnBurn")} fuel units, complete earlier mission tasks, then press Start the controlled return burn.`,
       done: false,
     });
     return {
@@ -256,6 +258,15 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
   }
   if (o.action === "eat" || o.action === "drink") {
     steps.push({ text: "Open INVENTORY, then use the carried food or water. Collect supplies from the galley if necessary.", done: false });
+    const waiting = o.action === "eat"
+      ? s.state.minutes - s.lastEat < 20 || s.state.nutrition >= 98
+      : s.state.minutes - s.lastDrink < 2 || s.state.hydration >= 99;
+    if (waiting) {
+      steps.push({ text: o.action === "eat"
+        ? "Let mission time pass until at least 20 minutes after your previous meal and you need food again."
+        : "Let mission time pass until at least 2 minutes after your previous drink and you need water again.", done: false });
+      return { steps, next: "Let mission time advance before using the next supply." };
+    }
     return { steps, next: "Open INVENTORY." };
   }
   if (o.action === "wake") {

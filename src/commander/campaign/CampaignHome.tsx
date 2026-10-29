@@ -11,6 +11,7 @@ import { chapters, missions, type MissionDefinition } from "./definitions";
 import { campaigns, campaignById, campaignForMission, campaignLevel, type CampaignId } from "./campaignTypes";
 import { canStart, type Progress, type Session } from "./engine";
 import { environments } from "./environments";
+import { canServiceEquipment } from "./maintenance";
 import Icon from "../Icons";
 export default function CampaignHome({
   progress,
@@ -246,11 +247,7 @@ export default function CampaignHome({
                 {equipment[id as EquipmentId].name} · {value?.toFixed(1)}%
               </span>
               <button
-                disabled={
-                  (value || 100) >= 100 ||
-                  (!!session && !session.report) ||
-                  progress.economy.balance < equipmentServiceCost(value ?? 100)
-                }
+                disabled={!canServiceEquipment(value, progress.economy.balance, session)}
                 onClick={() => onServiceEquipment(id as EquipmentId)}
               >
                 Service · ${equipmentServiceCost(value ?? 100).toFixed(2)}M

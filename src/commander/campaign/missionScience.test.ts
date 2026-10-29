@@ -66,3 +66,10 @@ test("Evidence citations point to NASA and gameplay mounts the lab in BOTH inter
   assert.match(strategy,/<MissionEvidence destination="mars"/);
   assert.match(commander,/<MissionEvidence destination=\{mission\.destination\}/);
 });
+
+test("decision lab uses the active challenge budget rather than the general allocation",()=>{
+  for(const cap of [180,215,220]){
+    const info=designTradeoffs("mars",smallCraft,{...metrics,cost:cap+1},cap);
+    assert.equal(info.budgetMargin,-1);assert.ok(info.risks.some(r=>r.includes("spending")));
+  }
+});

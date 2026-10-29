@@ -1,0 +1,35 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { runInNewContext } from "node:vm";
+import { offline } from "../vite.config";
+
+test("production worker precaches privacy and lazy chunks and serves the correct offline document",async()=>{
+  const plugin=offline();let source="";
+  assert.equal(typeof plugin.generateBundle,"function");
+  await (plugin.generateBundle as Function).call({emitFile:(file:{fileName:string;source:string})=>{if(file.fileName==="sw.js")source=file.source;}}, {}, {"assets/history.js":{},"assets/commander.js":{}},false);
+  const handlers:Record<string,(event:any)=>void>={};
+  let files:string[]=[];
+  const scope="https://example.test/game/";
+  const documents=new Map([[scope+"privacy.html","PRIVACY"],[scope+"index.html","GAME"],[scope+"assets/history.js","HISTORY_CHUNK"]]);
+  runInNewContext(source,{
+    self:{registration:{scope},location:{origin:"https://example.test"},clients:{claim:async()=>{}},addEventListener:(type:string,fn:(event:any)=>void)=>{handlers[type]=fn;}},
+    URL,Date,Promise,
+    caches:{open:async()=>({addAll:async(list:string[])=>{files=list;}}),keys:async()=>[],match:async(req:{url?:string;mode?:string}|URL,options?:{ignoreVary?:boolean})=>{
+      // Precache fetches and module requests differ in Origin, while Vite's
+      // preview sends Vary: Origin. Hashed public assets must still be found.
+      if(!(req instanceof URL)&&req.mode==="cors"&&!options?.ignoreVary)return undefined;
+      return documents.get(req instanceof URL?req.href:req.url!);
+    }},
+    fetch:async()=>{throw Error("offline");},
+  });
+  let installing=Promise.resolve();handlers.install({waitUntil:(p:Promise<void>)=>{installing=p;}});await installing;
+  assert.ok(files.includes("./privacy.html"));assert.ok(files.includes("./assets/history.js"));assert.ok(files.includes("./assets/commander.js"));
+  for(const [path,expected] of [["privacy.html","PRIVACY"],["unknown-app-route","GAME"]]){
+    let response:Promise<unknown>=Promise.resolve();
+    handlers.fetch({request:{method:"GET",url:scope+path,mode:"navigate"},respondWith:(p:Promise<unknown>)=>{response=p;}});
+    assert.equal(await response,expected);
+  }
+  let chunk:Promise<unknown>=Promise.resolve();
+  handlers.fetch({request:{method:"GET",url:scope+"assets/history.js",mode:"cors"},respondWith:(p:Promise<unknown>)=>{chunk=p;}});
+  assert.equal(await chunk,"HISTORY_CHUNK","cached modules remain usable when offline despite Vary: Origin");
+});

@@ -5,6 +5,7 @@ import type {HistoryMission} from "./missionHistory";
 import {createStoryScenario,type Station,type StoryTask,type FieldAction} from "./storyScenarios";
 import { officialFilmFor } from "./officialFilms";
 import {startStoryWorld,type StoryWorld} from "./storyWorld";
+import { storyFrameDue, storyFrame, refillStoryOxygen } from "./storyRuntime";
 import "./storyFlight.css";
 
 const displayName:Record<Station,string>={
@@ -12,8 +13,8 @@ const displayName:Record<Station,string>={
 };
 type PointerState={id:number,x:number,y:number};
 function observeLimit(v:number){return Math.max(-1,Math.min(1,v));}
-export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
- mission:HistoryMission;onExit:()=>void;onReadHistory:()=>void;onComplete:(correct:boolean)=>void;
+export default function StoryFlight({mission,onExit,onReadHistory,onComplete,saveError=""}:{
+ mission:HistoryMission;onExit:()=>void;onReadHistory:()=>void;onComplete:(correct:boolean)=>void;saveError?:string;
 }){
  const scenario=createStoryScenario(mission);
  const matchingFilm=officialFilmFor(mission.title);
@@ -55,6 +56,12 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  const completed=stage>=scenario.tasks.length;
  const pauseRef=useRef(false);
  pauseRef.current=paused||!!procedure||completed||showGuide||evaPanel;
+ const simulationPaused=pauseRef.current;
+ useEffect(()=>{
+  if(!simulationPaused)return;
+  keys.current.clear();stick.current=null;lookPointer.current=null;sprintPointer.current=null;
+  sprint.current=false;verticalTouch.current=0;setJoystick(null);
+ },[simulationPaused]);
  const actRef=useRef<()=>void>(()=>{});
  actRef.current=()=>{
   if(pauseRef.current)return;
@@ -75,8 +82,9 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   let frame=0,last=0,lastAim:Station|null=null,lastHatchAim=false;
   const tick=(time:number)=>{
    frame=requestAnimationFrame(tick);
-   if(time-last<30)return;
-   const delta=Math.min((time-last)/1000,.06);last=time;
+   if(!storyFrameDue(time,last))return;
+   const step=storyFrame(oxygenRef.current,evaOutsideRef.current,pauseRef.current,(time-last)/1000);last=time;
+   const delta=step.delta;
    let x=0,y=0;
    if(!pauseRef.current){
     if(keys.current.has("w")||keys.current.has("arrowup"))y++;
@@ -85,18 +93,19 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     if(keys.current.has("d")||keys.current.has("arrowright"))x++;
     if(stick.current){const s=joystickVector(stick.current.dx,stick.current.dy,59);x+=s.x;y-=s.y;}
    }
-   const vertical=(keys.current.has(" ")||keys.current.has("pageup")?1:0)-(keys.current.has("control")||keys.current.has("pagedown")?1:0)+verticalTouch.current;
+   const vertical=pauseRef.current?0:(keys.current.has(" ")||keys.current.has("pageup")?1:0)-(keys.current.has("control")||keys.current.has("pagedown")?1:0)+verticalTouch.current;
    const aimed=instance.update(observeLimit(x),observeLimit(y),sprint.current||keys.current.has("shift"),delta,activeStation.current,observeLimit(vertical));
 
    if(evaOutsideRef.current){
-    oxygenRef.current=Math.max(0,oxygenRef.current-delta*.06);
+    oxygenRef.current=step.oxygen;
     suitReadout.current+=delta;
     if(suitReadout.current>=.5){
      setSuitOxygen(Math.round(oxygenRef.current));setEvaDistance(Math.round(instance.distanceToHatch()));
      suitReadout.current=0;
     }
-    if(oxygenRef.current<=0){
+    if(step.emergencyReturn){
      evaOutsideRef.current=false;instance.setExcursion(false);setEvaOutside(false);
+     setSuitOxygen(0);setHatchPrepared(false);
      setEvaNote("Emergency training return: suit oxygen depleted. Restore reserves before another EVA.");
      setEvaPanel(true);
     }
@@ -107,9 +116,10 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
   };
   const resize=()=>instance.resize();
   const down=(e:KeyboardEvent)=>{
+   if(e.key==="Escape"){e.preventDefault();setPaused(p=>!p);return;}
+   if(pauseRef.current)return;
    if(e.key.toLowerCase()==="e"&&!e.repeat){e.preventDefault();actRef.current();}
    if((e.key===" "||e.key==="Spacebar")&&!e.repeat)world.current?.jump();
-   if(e.key==="Escape")setPaused(p=>!p);
    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
    keys.current.add(e.key.toLowerCase());
   };
@@ -186,6 +196,12 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
  };
  const quit=()=>{sprint.current=false;onExit();};
  const canEva=scenario.role==="astronaut";
+ const refillSuit=()=>{
+  if(evaOutsideRef.current||!world.current?.nearHatch())return;
+  oxygenRef.current=refillStoryOxygen(oxygenRef.current,false,true);
+  setSuitOxygen(oxygenRef.current);suitReadout.current=0;setHatchPrepared(false);
+  setEvaNote("Suit oxygen replenished from cabin reserves. Prepare the hatch again and resume the unfinished mission task.");
+ };
  const openEva=()=>{
   if(!canEva||pauseRef.current)return;
   if(!world.current?.nearHatch()){setEvaNote("Move to the airlock hatch at the rear of the cabin, or return near the spacecraft to re-enter.");setEvaPanel(true);return;}
@@ -281,12 +297,17 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <small>MISSION EQUIPMENT · PRESSURE LOCK · PROTECTIVE SUIT</small>
     <h2>{evaOutside?"Return aboard spacecraft":"Prepare for exterior exploration"}</h2>
     <p>{scenario.setting==="moon"?"Exterior: lunar regolith, boulders and low gravity.":scenario.setting==="mars"?"Exterior: planetary terrain.":"Exterior: open space with your actual destination visible."}</p>
-    <p><strong>Safety:</strong> This is a short, optional fictional training excursion. Some historic crews never performed EVA. It is not an additional claimed event in the real mission.</p>
+    <p><strong>Safety:</strong> {scenario.tasks.some(t=>t.fieldAction)
+      ? "This mission requires the selected documented Apollo 11 surface sequence. Suit and hatch controls are simplified educational reconstructions."
+      : "This is an optional fictional training excursion. Some historic crews never performed EVA. It is not an additional claimed event in the real mission."}</p>
     <p>{evaNote||"Approach the airlock, prepare the spacesuit, equalize the fictional chamber, and use the control on your side of the hatch."}</p>
     {!evaOutside&&<button type="button" className={suitEquipped?"story-fps-armed":"story-fps-minor"} onClick={()=>setSuitEquipped(true)}>
       {suitEquipped?"✓ HELMET SEALED · GLOVES SECURED · O₂ CONNECTED":"EQUIP PROTECTIVE SPACE SUIT"}
     </button>}
     <div className="story-fps-readout">SUIT OXYGEN <strong>{suitOxygen}%</strong></div>
+    {!evaOutside&&<button type="button" className="story-fps-minor" disabled={!world.current?.nearHatch()||suitOxygen>=100} onClick={refillSuit}>
+      REPLENISH SUIT OXYGEN FROM CABIN
+    </button>}
     {!evaOutside&&suitEquipped&&<button type="button" className={hatchPrepared?"story-fps-armed":"story-fps-minor"}
       onClick={()=>setHatchPrepared(true)}>
        {hatchPrepared?"✓ INNER HATCH SEALED · CHAMBER SIMULATED AT VACUUM":"CLOSE INNER HATCH · SIMULATE DEPRESSURIZATION"}
@@ -304,7 +325,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <p><strong>Objective:</strong> {mission.mission}</p>
     {matchingFilm&&<p><strong>Official video:</strong> <a href={matchingFilm.url} rel="noopener noreferrer" target="_blank">{matchingFilm.title} · NASA ↗</a>. The following tasks represent documented actions in chronological order; some movement and controls are simplified.</p>}
     {task?.fieldAction&&<p><strong>Apollo 11 EVA:</strong> Wear the suit, use the hatch, walk on the lunar surface, perform the field actions in order and return to Eagle. This is a selected segment of the moonwalk, not the entire three-hour EVA.</p>}
-    <p>Move with WASD or the floating joystick; drag to look. Outside, use UP/DOWN (Space/Ctrl) to steer in zero gravity or JUMP on a surface. To leave, visit the airlock, equip a suit and close the inner hatch before depressurizing. Return through the exterior hatch. EVA training is optional and does not change real history.</p>
+    <p>Move with WASD or the floating joystick; drag to look. Outside, use UP/DOWN (Space/Ctrl) to steer in zero gravity or JUMP on a surface. To leave, visit the airlock, equip a suit and close the inner hatch before depressurizing. Return through the exterior hatch. {scenario.tasks.some(t=>t.fieldAction)?"Complete the required surface tasks and return to Eagle. Replenish suit oxygen inside if necessary.":"EVA training is optional and does not change real history."}</p>
     <button type="button" onClick={()=>setShowGuide(false)}>BEGIN 3D MISSION →</button>
     <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ REAL HISTORY</button>
   </section></div>}
@@ -354,7 +375,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete}:{
     <p><strong>Skill practiced:</strong> {mission.skill}</p>
     <ul>{logged.map((entry,i)=><li key={i}>{entry}</li>)}</ul>
     <p>The spacecraft shapes and workstations are educational approximations, not flight-ready layouts. Procedures are simplified; historical outcomes remain unchanged.</p>
-    <button type="button" onClick={()=>onComplete(true)}>SAVE COMPLETION & RETURN</button>
+    {saveError&&<p role="alert">{saveError}</p>}
+    <button type="button" onClick={()=>onComplete(true)}>{saveError?"RETRY SAVE COMPLETION & RETURN":"SAVE COMPLETION & RETURN"}</button>
     <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ THE ACTUAL HISTORY</button>
     <a href={mission.source} target="_blank" rel="noopener noreferrer">Official mission archive ↗</a>
   </section></div>}

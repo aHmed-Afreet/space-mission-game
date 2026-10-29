@@ -1,10 +1,10 @@
-import { strategyChallenges, strategyIssues, strategyUnlocked, readStrategyProgress } from "./strategyChallenges";
+import { strategyChallenges, strategyIssues, strategyUnlocked, readStrategyProgress, strategyStarter } from "./strategyChallenges";
 import { historyMissions } from "./history/missionHistory";
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {resources,errors,report,events,outcome,zero,addDelta,type Design} from './game';
-const starter:Design={counts:{spectrometer:1,solar:1,battery:1,tank:1,antenna:1},rocket:0,trajectory:1};
-test('starter is launchable and resources reflect all components',()=>{assert.deepEqual(errors(starter),[]);assert.equal(resources(starter).mass,695);assert.equal(resources(starter).fuel,15);assert.equal(resources(starter).power,100);});
+const starter:Design=strategyStarter;
+test('starter is launchable and resources reflect all components',()=>{assert.deepEqual(errors(starter),[]);assert.equal(resources(starter).mass,740);assert.equal(resources(starter).fuel,15);assert.equal(resources(starter).power,88);});
 test('instruments increase mass, cost, power demand and science',()=>{const a=resources(starter);const b=resources({...starter,counts:{...starter.counts,radar:1}});assert.equal(b.mass-a.mass,95);assert.equal(b.cost-a.cost,22);assert.equal(b.power-a.power,-30);assert.equal(b.science-a.science,28);});
 test('payload, missing equipment, fuel and budget block launch',()=>{assert.ok(errors({...starter,counts:{...starter.counts,shield:2,radar:2,tank:2}}).some(s=>s.includes('payload')));assert.ok(errors({...starter,counts:{}}).some(s=>s.includes('spectrometer')));assert.ok(errors({...starter,trajectory:0}).some(s=>s.includes('fuel')));assert.ok(errors({...starter,rocket:2,counts:{...starter.counts,radar:2,shield:2}}).some(s=>s.includes('budget')));});
 test('shield and battery mitigate event losses',()=>{assert.equal(outcome(events[0].choices[1],events[0],{...starter,counts:{...starter.counts,shield:1}}).reliability,-8);assert.equal(outcome(events[2].choices[1],events[2],starter).power,-5);});
@@ -31,5 +31,5 @@ test("Strategy campaign has twenty sequential playable engineering challenges",(
   assert.ok(!strategyUnlocked(1,empty));
   assert.ok(strategyUnlocked(1,{[strategyChallenges[0].id]:65}));
   assert.equal(strategyChallenges[19].level,20);
-  assert.ok(strategyIssues(starter,strategyChallenges[1]).some(x=>x.includes("camera")));
+  assert.ok(strategyIssues({...starter,counts:{...starter.counts,camera:0}},strategyChallenges[1]).some(x=>x.includes("camera")));
 });

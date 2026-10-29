@@ -1,4 +1,4 @@
-import { atSite, currentObjective, outside, sitePosition, type Session } from "./engine";
+import { atSite, currentObjective, maneuverFuelRequired, outside, sitePosition, type Session } from "./engine";
 import { missionById, type CampaignAction, type Site } from "./definitions";
 import { equipment, packMass, PACK_CAPACITY, type EquipmentId } from "./equipment";
 import { equipmentLocker, lockers, faultCatalog } from "./ship";
@@ -90,13 +90,16 @@ export function recoveryMission(s: Session): RecoveryMission | null {
         step("At Equipment Storage, open the EVA suit locker."),
         step("Equip the suit, verify oxygen and battery, then return outside."),
       ],fromStation(s,"equipment","Open the EVA suit locker and equip the suit."));
-  if (item && outside(s) && s.suit.power < equipment[item].power)
+  if (item && s.suit.power < equipment[item].power)
     return rescue(s,"eva-battery","Restore EVA suit battery",
       "Suit power is insufficient for this equipment operation.","equipment",[
-        step("Return to the spacecraft through the airlock."),
-        step("Use the EVA suit locker and recharge or prepare a powered suit."),
-        step("Confirm adequate suit power before returning to the field."),
-      ],fromStation(s,"equipment","Inspect the EVA suit power before resuming."));
+        step("Return through the airlock into the pressurized spacecraft.", !outside(s) && s.position.z <= 7.7),
+        step("At Equipment Storage, open the EVA suit locker.", s.world.lockers.eva),
+        step("Stow the depleted suit, then equip it again to refill oxygen and recharge its battery. Charging requires spacecraft oxygen and 0.15 kWh battery reserve."),
+        step("Check suit oxygen and battery before returning to the field.", s.suit.oxygenChecked && s.suit.powerChecked),
+      ],fromStation(s,"equipment", s.suit.equipped
+        ? "Stow the depleted suit, then equip it again to recharge."
+        : "Equip the stowed suit to refill oxygen and recharge its battery."));
 
   // Physical faults require genuine isolation, replacement and verification.
   const activity = ["course","approach","land","returnBurn","science","powerScience","scan","comms","verifyRadio"];
@@ -112,11 +115,12 @@ export function recoveryMission(s: Session): RecoveryMission | null {
     const station: Site = c.system==="navigation" ? "cockpit" :
       c.system==="science" ? "science" :
       c.system==="communications" ? "communications" : "power";
+    const isolationStation: Site = c.system === "science" ? "power" : station;
     const tools = s.state.tools || s.pack.includes("repair");
     const parts = s.state.parts > 0;
     const hasTools = tools || s.world.stored.includes("repair");
     const hasParts = parts || s.world.partsStored > 0;
-    if (!hasTools || !hasParts)
+    if (!systemFault.repaired && (!hasTools || !hasParts))
       return rescue(s,"hardware-unavailable-"+systemFault.kind,
         "Hardware repair needs supplies",
         `The ${c.name} cannot be repaired with the current toolkit/spare inventory.`,
@@ -126,25 +130,29 @@ export function recoveryMission(s: Session): RecoveryMission | null {
           step("If the required supplies are unavailable, return to campaign and retry with a recoverable flight."),
         ],fromStation(s,"equipment","Check the Repair cabinet. If supplies are exhausted, return to campaign."),true);
     const stationToVisit: Site = !systemFault.diagnosed ? station :
-      !tools || !parts ? "equipment" :
-      !s.world.lockers.maintenance ? "power" : station;
+      !systemFault.repaired && (!tools || !parts) ? "equipment" :
+      !s.world.lockers.maintenance ? "power" :
+      (!systemFault.repaired && s.world.switches[circuit]) ||
+        (systemFault.repaired && !s.world.switches[circuit]) ? isolationStation : station;
     return rescue(s,"fault-"+systemFault.kind,`Repair ${c.name}`,
       "A real spacecraft fault blocks this operation; it must be diagnosed and verified first.",
       stationToVisit,[
         step(`At ${name(s,station)}, press Diagnose for ${c.name}.`,systemFault.diagnosed),
-        step("At Equipment Storage, open Repair cabinet and take a toolkit and spare part.",tools && parts),
+        step("At Equipment Storage, open Repair cabinet and take a toolkit and spare part.",systemFault.repaired || (tools && parts)),
         step("At Power & life support, open the Power maintenance panel.",s.world.lockers.maintenance),
-        step(`At ${name(s,station)}, isolate circuit ${circuit} before replacement.`,
+        step(`At ${name(s,isolationStation)}, isolate circuit ${circuit} before replacement.`,
           !s.world.switches[circuit] || systemFault.repaired),
         step(`At ${name(s,station)}, select Replace failed hardware.`,systemFault.repaired),
-        step(`Turn ${circuit} back ON and select Verify operation.`,systemFault.verified),
+        step(`At ${name(s,isolationStation)}, turn ${circuit} back ON; then at ${name(s,station)} select Verify operation.`,systemFault.verified),
       ],
       fromStation(s,stationToVisit,
         !systemFault.diagnosed ? `Press Diagnose for ${c.name}.` :
-        !tools || !parts ? "Open Repair cabinet and take toolkit and spare part." :
+        !systemFault.repaired && (!tools || !parts) ? "Open Repair cabinet and take toolkit and spare part." :
         !s.world.lockers.maintenance ? "Open Power maintenance panel." :
-        !systemFault.repaired ? `Isolate ${circuit}, then press Replace failed hardware.` :
-        `Restore ${circuit} and press Verify operation.`));
+        !systemFault.repaired && s.world.switches[circuit] ? `Isolate ${circuit} at ${name(s,isolationStation)}.` :
+        !systemFault.repaired ? "Press Replace failed hardware." :
+        !s.world.switches[circuit] ? `Restore ${circuit} at ${name(s,isolationStation)}.` :
+        "Press Verify operation."));
   }
   const flightAction = ["course","approach","land","returnBurn"].includes(action);
   const navAction = ["approach","land","returnBurn"].includes(action);
@@ -223,9 +231,9 @@ export function recoveryMission(s: Session): RecoveryMission | null {
         step("Go to the research camp and deploy sample storage if available."),
         step("Store the collected samples, then return to the original field site."),
       ],fromStation(s,"camp","Open sample storage and store carried samples."));
-  if (navAction && s.state.fuel < (action==="land"?5:2))
+  if (navAction && s.state.fuel < maneuverFuelRequired(s, action))
     return rescue(s,"fuel-unrecoverable","Insufficient fuel for manoeuvre",
-      "The required fuel reserve is not available, and there is no in-flight refuelling.","cockpit",[
+      `This manoeuvre requires ${maneuverFuelRequired(s, action)} fuel units. There is no in-flight refuelling.`,"cockpit",[
         step("Review fuel and completed objectives in the Mission tablet."),
         step("Save and return to campaign. Retry with a configuration that has adequate fuel."),
       ],"Return to campaign for a safe retry.",true);

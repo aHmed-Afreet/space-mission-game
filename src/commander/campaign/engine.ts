@@ -239,6 +239,13 @@ export function atSite(s: Session, site: Site) {
   );
 }
 export const outside = (s: Session) => s.position.z > 10.4;
+/** Fuel committed by the same manoeuvre shown in the recovery checklist. */
+export function maneuverFuelRequired(s: Session, action: CampaignAction): number {
+  if (action === "returnBurn") return s.landed ? 6 : 3;
+  if (action === "land") return 5;
+  if (action === "approach") return 2;
+  return 0;
+}
 /** Exact on-screen prerequisites for Mission 2's exterior connector replacement. */
 export function satelliteRepairBlocker(s: Session): string | null {
   const m = missionById(s.missionId);
@@ -1032,13 +1039,21 @@ export function command(s: Session, action: CampaignAction): Session {
   )
     return fail("Restore the radio circuit and antenna feed.");
   if (
-    ["course", "approach", "land"].includes(action) &&
+    ["course", "approach", "land", "returnBurn"].includes(action) &&
     (!s.world.switches.navigation ||
       liveFaults.some((f) => f.kind === "navigation"))
   )
     return fail("Restore the navigation computer circuit.");
   if (["land", "returnBurn"].includes(action) && !s.world.switches.maneuver)
     return fail("At Flight deck → NAVIGATION, switch Guarded manoeuvre arm to ON, then retry the manoeuvre.");
+  if (["approach", "land", "returnBurn"].includes(action)) {
+    if (s.state.malfunction)
+      return fail("Power bus unstable. Open MAP, go to Power & life support, inspect and repair or bypass the diagnosed fault.");
+    if (s.state.battery < 0.1)
+      return fail("Battery below 0.10 kWh. At Power & life support turn Solar input ON, shed optional loads, and recharge.");
+    if (s.state.pressure < 90)
+      return fail("Cabin pressure below 90 kPa. At Power & life support restore the life-support circuits, then wait for pressure to recover.");
+  }
   if (baseActions.has(action)) {
     if (
       (outside(s) ||
@@ -1319,11 +1334,13 @@ export function command(s: Session, action: CampaignAction): Session {
           return fail(
             "Mission-critical operations remain incomplete. Review MISSION before committing to recovery.",
           );
-        if (outside(s) || s.airlock.outer || s.state.fuel < (s.landed ? 6 : 3))
+        if (outside(s) || s.airlock.outer)
           return fail(
-            "Return inside, close the outer hatch and reserve enough fuel for recovery.",
+            "Return inside and close the outer hatch before recovery.",
           );
-        n.state.fuel -= s.landed ? 6 : 3;
+        if (s.state.fuel < maneuverFuelRequired(s, action))
+          return fail(`Recovery needs at least ${maneuverFuelRequired(s, action)} fuel units.`);
+        n.state.fuel -= maneuverFuelRequired(s, action);
         n.landed = false;
         n.world = {
           ...n.world,
@@ -1465,7 +1482,7 @@ export function command(s: Session, action: CampaignAction): Session {
             equipped: true,
             oxygen: s.upgrades.includes("improvedSuit") ? 0.5 : 0.35,
             power: s.upgrades.includes("improvedSuit") ? 1.25 : 1,
-            condition: 100,
+            condition: s.world.equipment.suit ?? s.suit.condition,
             oxygenChecked: false,
             powerChecked: false,
           };
@@ -1560,16 +1577,10 @@ export function command(s: Session, action: CampaignAction): Session {
           );
         if (action === "land" && s.landed)
           return fail("The vehicle is already landed.");
-        if (s.state.malfunction)
-          return fail("Power bus unstable. Open MAP, go to Power & life support, inspect and repair or bypass the diagnosed fault.");
-        if (s.state.battery < 0.1)
-          return fail("Battery below 0.10 kWh. At Power & life support turn Solar input ON, shed optional loads, and recharge.");
-        if (s.state.pressure < 90)
-          return fail("Cabin pressure below 90 kPa. At Power & life support restore the life-support circuits, then wait for pressure to recover.");
         if (!atSite(s, "cockpit")) return fail("Go to the navigation console.");
-        if (s.state.fuel < (action === "land" ? 5 : 2))
+        if (s.state.fuel < maneuverFuelRequired(s, action))
           return fail("Not enough fuel for this manoeuvre.");
-        n.state.fuel -= action === "land" ? 5 : 2;
+        n.state.fuel -= maneuverFuelRequired(s, action);
         if (action === "land") {
           n.landed = true;
           n.world = {

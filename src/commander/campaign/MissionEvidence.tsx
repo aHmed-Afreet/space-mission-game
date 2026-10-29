@@ -7,9 +7,9 @@ import "./missionEvidence.css";
  * No telemetry or external API call is required; sources open in a separate tab.
  */
 export default function MissionEvidence({
-  destination, design, metrics,
-}: {destination:Destination; design:Design; metrics:GameMetrics}) {
-  const info=designTradeoffs(destination,design,metrics);
+  destination, design, metrics, budgetCap,
+}: {destination:Destination; design:Design; metrics:GameMetrics; budgetCap?:number}) {
+  const info=designTradeoffs(destination,design,metrics,budgetCap);
   const {facts}=info;
   return <section className="mission-science-panel" aria-label="Science and engineering decision lab">
     <div className="mission-science-heading">

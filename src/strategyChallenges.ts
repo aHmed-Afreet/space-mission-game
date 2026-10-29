@@ -4,6 +4,8 @@ export type StrategyChallenge={
  minScience:number;minReliability:number;minFuel:number;minCommunication:number;budgetCap:number;
  required:Record<string,number>;trajectory?:number;massCap?:number;
 };
+// The supplied first mission has science headroom for any flight-event deck.
+export const strategyStarter:Design={counts:{camera:1,spectrometer:1,solar:1,battery:1,tank:1,antenna:1},rocket:0,trajectory:1};
 export const strategyChallenges:StrategyChallenge[] = [
   {
     "id": "strategy-1",
@@ -289,11 +291,41 @@ export const strategyChallenges:StrategyChallenge[] = [
   }
 ];
 export const STRATEGY_SAVE_KEY="orbital-strategy-levels-v1";
+type StrategyStorage=Pick<Storage,"getItem"|"setItem">;
+export function strategyStorage(host:{readonly localStorage:StrategyStorage}|undefined=typeof window==="undefined"?undefined:window):StrategyStorage|undefined{
+ try{return host?.localStorage;}catch{return undefined;}
+}
+function parseStrategyProgress(value:string|null):Record<string,number>{
+ const x=JSON.parse(value||"{}");
+ return x&&typeof x==="object"&&!Array.isArray(x)?(Object.fromEntries(Object.entries(x).filter(([k,v])=>/^strategy-\d+$/.test(k)&&typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=100)) as Record<string,number>):{};
+}
 export function readStrategyProgress(storage?:Pick<Storage,"getItem">):Record<string,number>{
+ try{return parseStrategyProgress(storage?.getItem(STRATEGY_SAVE_KEY)||null);}catch{return {};}
+}
+export function recordStrategyScore(progress:Record<string,number>,id:string,score:number):Record<string,number>{
+ return (progress[id]||0)>=score?progress:{...progress,[id]:score};
+}
+export function saveStrategyProgress(progress:Record<string,number>,storage:StrategyStorage|undefined=strategyStorage()):{saved:true;progress:Record<string,number>}|{saved:false}{
  try{
-  const x=JSON.parse(storage?.getItem(STRATEGY_SAVE_KEY)||"{}");
-  return x&&typeof x==="object"&&!Array.isArray(x)?(Object.fromEntries(Object.entries(x).filter(([k,v])=>/^strategy-\d+$/.test(k)&&typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<=100)) as Record<string,number>):{};
- }catch{return {};}
+  if(!storage)return {saved:false};
+  // Read before writing so a retry or another tab cannot erase existing bests.
+  // A read error leaves storage untouched and can be retried when it recovers.
+  const existing=storage.getItem(STRATEGY_SAVE_KEY);
+  let next:Record<string,number>;
+  try{next=parseStrategyProgress(existing);}catch{next={};}
+  for(const [id,score] of Object.entries(progress))next=recordStrategyScore(next,id,score);
+  storage.setItem(STRATEGY_SAVE_KEY,JSON.stringify(next));
+  return {saved:true,progress:next};
+ }catch{return {saved:false};}
+}
+export function strategyBudget(cost:number,budgetCap:number){
+ const maintained=cost<=budgetCap;
+ return {remaining:budgetCap-cost,percent:100-cost/budgetCap*100,exceeded:!maintained,
+  allocation:`$${cost}M allocated / $${budgetCap}M`,
+  detail:`Spent $${cost}M of $${budgetCap}M. ${maintained?'Budget maintained.':'Event costs exceeded your allocation.'}`};
+}
+export function strategyDebrief(success:boolean,score:number){
+ return {headline:!success?'Mission needs refinement.':score>=75?'Discovery delivered.':'Mission completed.',scoreLabel:'PERFORMANCE SCORE'};
 }
 export function strategyUnlocked(index:number,progress:Record<string,number>){
  return index===0||!!progress[strategyChallenges[index-1].id];

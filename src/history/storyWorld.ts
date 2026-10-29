@@ -3,6 +3,7 @@ import type { StoryScenario, Station } from "./storyScenarios";
 import {createHistoricVehicle} from "./historicVehicles";
 import {makePlanet,planetKind} from "../commander/celestial";
 import {installStoryBridge} from "./storyBridge";
+import { storyPixelRatio } from "./storyRuntime";
 
 const stationLocations:Record<Station,[number,number]>={
  brief:[-3,2.5],systems:[3,2.5],operations:[-3,-2.5],science:[3,-2.5],
@@ -370,7 +371,7 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    const interval=now-frameClock;
    if(interval>3100){
     const fps=drawn*1000/interval;
-    const desired=fps<40?Math.max(.8,pixelRatio-.12):fps>54?Math.min(pixelLimit,pixelRatio+.06):pixelRatio;
+    const desired=storyPixelRatio(pixelRatio,pixelLimit,fps);
     if(Math.abs(desired-pixelRatio)>.015){
      pixelRatio=desired;renderer.setPixelRatio(pixelRatio);
      renderer.setSize(Math.max(1,canvas.clientWidth),Math.max(1,canvas.clientHeight),false);

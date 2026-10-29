@@ -1,8 +1,8 @@
 import { worldAction, service, serviceEquipment } from "./campaign/ship";
 import { useCallback, useEffect, useRef, useState } from "react";
 import GameSettings from "./campaign/GameSettings";
-import { readPreferences, writePreferences } from "./campaign/preferences";
-import { SAVE_KEY } from "./campaign/save";
+import { writePreferences } from "./campaign/preferences";
+import { initializeCommander, UNSAVED_WARNING } from "./campaign/commanderStorage";
 import type { Design } from "../game";
 import type { LifeSupport } from "./simulation";
 import type { Position } from "./layout";
@@ -32,9 +32,8 @@ import {
   type Session,
 } from "./campaign/engine";
 import {
-  loadStore,
-  newStore,
   persist,
+  resetStore,
   toggleGear,
   type Store,
 } from "./campaign/save";
@@ -47,18 +46,8 @@ export default function Commander({
 }: {
   onExit?: () => void;
 }) {
-  const [loaded] = useState(() => {
-    try {
-      return loadStore(localStorage);
-    } catch {
-      return {
-        store: newStore(),
-        warning: "Saving is unavailable in this browser.",
-        readOnly: false,
-        legacy: false,
-      };
-    }
-  });
+  const [initial] = useState(() => initializeCommander());
+  const { storage, loaded } = initial;
   const [campaignRoute, setCampaignRoute] = useState<CampaignId | null>(null);
   const [store, setStore] = useState<Store>(loaded.store),
     [mode, setMode] = useState<"home" | "prepare" | "flight" | "legacy">(
@@ -67,25 +56,29 @@ export default function Commander({
     [selected, setSelected] = useState<MissionDefinition>(missions[0]),
     [gear, setGear] = useState<EquipmentId[]>([]),
     [upgrades, setUpgrades] = useState<Technology[]>([]),
+    [loadWarning, setLoadWarning] = useState(loaded.warning),
     [saveError, setSaveError] = useState(""),
     [device, setDevice] = useState<"ipad" | "iphone" | "laptop" | null>(null),
     [laptopIntro, setLaptopIntro] = useState(false),
     [settingsOpen, setSettingsOpen] = useState(false),
-    [preferences, setPreferences] = useState(() => readPreferences(typeof localStorage !== "undefined" ? localStorage : undefined));
-  useEffect(() => { try { writePreferences(localStorage, preferences); } catch { /* Storage may be blocked. */ } }, [preferences]);
+    [preferences, setPreferences] = useState(initial.preferences);
+  useEffect(() => {
+    if (!storage) return;
+    try { writePreferences(storage, preferences); } catch { /* Storage may be blocked. */ }
+  }, [storage, preferences]);
   const latest = useRef(store);
   latest.current = store;
   const save = useCallback(() => {
     if (loaded.readOnly) return;
+    if (!storage) { setSaveError(UNSAVED_WARNING); return; }
     try {
-      persist(localStorage, latest.current);
-      setSaveError("");
+      setSaveError(persist(storage, latest.current));
     } catch {
       setSaveError(
         "Progress cannot be saved on this device. Keep this tab open or allow browser storage.",
       );
     }
-  }, [loaded.readOnly]);
+  }, [loaded.readOnly, storage]);
   useEffect(() => {
     const id = setInterval(save, 1500);
     const hide = () => {
@@ -228,20 +221,26 @@ export default function Commander({
   const openSettings = () => { if (mode === "flight") pause(true); setSettingsOpen(true); };
   const resetProgress = () => {
     if (loaded.readOnly) return;
+    if (!storage) {
+      setSaveError("Reset is unavailable because browser storage is blocked. Your current progress has been kept.");
+      return;
+    }
     try {
-      localStorage.removeItem(SAVE_KEY);
-      localStorage.removeItem(SAVE_KEY + ".backup");
-      const next = newStore();
+      const { store: next, warning } = resetStore(storage);
       latest.current = next;
-      persist(localStorage, next);
       setStore(next);
       setSelected(missions[0]);
       setGear([]);
       setUpgrades([]);
-      setSaveError("");
+      setLoadWarning("");
+      setSaveError(warning);
       setSettingsOpen(false);
       setMode("home");
-    } catch { setSaveError("Reset failed because browser storage is unavailable. No changes were made."); }
+    } catch (error) {
+      setSaveError(error instanceof Error && /newer campaign save/.test(error.message)
+        ? "Reset is unavailable because a newer campaign save is protected. Your current progress and saved data have been kept."
+        : "Reset could not be saved. Your current progress and saved data have been kept.");
+    }
   };
   const settingsView = settingsOpen ? (
     <GameSettings value={preferences} onChange={setPreferences} device={deviceValue}
@@ -430,7 +429,7 @@ export default function Commander({
       progress={store.progress}
       session={store.session}
       legacy={loaded.legacy}
-      warning={saveError || loaded.warning}
+      warning={saveError || loadWarning}
       readOnly={loaded.readOnly}
       onSelect={prepare}
       onResume={() => store.session?.report ? dismissReport() : setMode("flight")}

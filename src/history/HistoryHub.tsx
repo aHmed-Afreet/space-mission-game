@@ -3,16 +3,11 @@ import { historyMissions, type HistoryMission } from "./missionHistory";
 import StoryFlight from "./StoryFlight";
 import StoryBriefingVideo from "./StoryBriefingVideo";
 import { officialFilmFor } from "./officialFilms";
+import { readHistoryProgress, saveHistoryProgress, type HistoryProgress } from "./historyProgress";
 import "./history.css";
 
-const progressKey="orbital-history-progress-v1";
-type HistoryProgress=Record<string,number>;
 const readHistory=():HistoryProgress=>{
-  try {
-    const stored=JSON.parse(localStorage.getItem(progressKey)||"{}");
-    if(!stored||Array.isArray(stored)||typeof stored!=="object")return {};
-    return Object.fromEntries(Object.entries(stored).filter(([,v])=>v===1||v===2)) as HistoryProgress;
-  } catch {return {};}
+  try { return readHistoryProgress(localStorage); } catch {return {};}
 };
 const preferences:{
   [key in HistoryMission["category"]]:{safe:string;risky:string;why:string}
@@ -40,6 +35,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   const [filmConfirmed,setFilmConfirmed]=useState(false);
   const [answer,setAnswer]=useState<number|null>(null);
   const [results,setResults]=useState<HistoryProgress>(readHistory);
+  const [saveError,setSaveError]=useState("");
   const [page,setPage]=useState(1);
   const chosenCount=Object.keys(results).length;
   const list=useMemo(()=>historyMissions.filter(m=>{
@@ -51,17 +47,25 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   const step=stageOrder.indexOf(stage);
   useEffect(()=>{setPage(1)},[query,era,category]);
   const open=(m:HistoryMission,mode:EntryView)=>{
+    setSaveError("");
     setChosen(m);setView(mode);setStage("context");setAnswer(null);
     setFilmOpened(false);setFilmConfirmed(false);
     window.scrollTo({top:0,behavior:"smooth"});
   };
   const close=()=>{setChosen(null);setAnswer(null);setStage("context");setFilmOpened(false);setFilmConfirmed(false)};
+  const recordCompletion=(id:string,value:1|2)=>{
+    try {
+      const saved=saveHistoryProgress(localStorage,results,id,value);
+      setResults(saved);setSaveError("");return true;
+    } catch {
+      setSaveError("Completion could not be saved. Keep this tab open, allow browser storage or free space, then retry. Your existing saved stories have not been reset.");
+      return false;
+    }
+  };
   const next=()=>{
     if(!chosen)return;
     if(stage==="result"){
-      const newResults={...results,[chosen.id]:answer===0?2:1};
-      setResults(newResults);
-      try{localStorage.setItem(progressKey,JSON.stringify(newResults));}catch{/* private browsers can block storage */}
+      if(!recordCompletion(chosen.id,answer===0?2:1))return;
       setChosen(null);setStage("context");setAnswer(null);
       return;
     }
@@ -103,16 +107,15 @@ export default function HistoryHub({onExit,startIn="archive"}:{
     </section>
   </main>;
   if(chosen&&view==="live")return <StoryFlight key={chosen.id} mission={chosen}
+    saveError={saveError}
     onExit={close}
     onReadHistory={()=>{setView("archive");setStage("context");setAnswer(null)}}
     onComplete={()=>{
-      const next={...results,[chosen.id]:2};
-      setResults(next);
-      try{localStorage.setItem(progressKey,JSON.stringify(next));}catch{/* storage may be disabled */}
-      close();
+      if(recordCompletion(chosen.id,2))close();
     }}
   />;
   return <main className="history-hub">
+    {saveError&&<p role="alert">{saveError}</p>}
     <header className="history-header">
       <button type="button" className="history-back" onClick={chosen?close:onExit}>{chosen?"← All missions":"← Main menu"}</button>
       <div className="history-brand"><span>✦</span> ORBITAL <small>SPACE HISTORY</small></div>

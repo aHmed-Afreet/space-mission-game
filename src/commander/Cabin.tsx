@@ -17,14 +17,9 @@ import { doors, lockers } from "./campaign/ship";
 import { environments } from "./campaign/environments";
 import { missionById } from "./campaign/definitions";
 import type { PlayerPreferences } from "./campaign/preferences";
+import { pickAimTarget, type AimTarget } from "./targeting";
 
-export type AimTarget = { kind: "door" | "locker" | "station" | "airlock"; id: string };
-const lockerPositions: Record<string, [number, number, number]> = {
-  food: [2.2,1.3,.45], water: [2.7,1.8,.75], science: [-2.45,1.8,-2.7],
-  samples: [-2.45,1.8,-3.7], equipment: [2.4,1.8,5.7],
-  eva: [2.45,1.8,3.8], repair: [2.45,1.8,4.8], emergency: [1.5,1.8,6.1],
-  maintenance: [-2.4,1.8,.75]
-};
+export type { AimTarget } from "./targeting";
 type Props = {
   device?: "ipad" | "iphone" | "laptop";
   settings?: PlayerPreferences;
@@ -134,12 +129,14 @@ export default function Cabin(props: Props) {
     }
     current.current.onArea(undefined);
     const { camera, scene } = interior;
+    let needsDraw = true;
     const resize = () => {
       const w = Math.max(1, el.clientWidth),
         h = Math.max(1, el.clientHeight);
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      needsDraw = true;
     };
     const observer = new ResizeObserver(resize);
     observer.observe(el);
@@ -299,37 +296,8 @@ export default function Cabin(props: Props) {
       }
       if (current.current.world && now - lastAim > 120) {
         lastAim = now;
-        const targets: {kind: AimTarget["kind"]; id: string; position: THREE.Vector3; distance: number}[] = [];
-        // Large touch-accessible door panels and frame controls on the facing side.
-        // Aim at the door itself to open it, even if the tiny control is hard to see.
-        for(const [id,d] of Object.entries(doors)){
-          const facingSide=camera.position.z>d.z?1:-1;
-          for(const x of [-1.08,1.08,.53,0]){
-            targets.push({kind:"door",id,position:new THREE.Vector3(x,1.35,d.z+facingSide*.19),distance:3.5});
-          }
-        }
         const supportsEva=missionById(current.current.world.session.missionId).eva;
-        for(const [id,z] of [["inner",7.75],["outer",10.25]] as const){
-          if(id==="outer"&&!supportsEva)continue;
-          const facingSide=camera.position.z>z?1:-1;
-          for(const x of [.67,0]){
-            targets.push({kind:"airlock",id,position:new THREE.Vector3(x,1.35,z+facingSide*.24),distance:3.4});
-          }
-        }
-        for (const [id, loc] of Object.entries(lockerPositions))
-          targets.push({kind:"locker",id,position:new THREE.Vector3(...loc),distance:2.6});
-        for (const [id, loc] of Object.entries(deck))
-          targets.push({kind:"station",id,position:new THREE.Vector3(loc.x,1.3,loc.z+.48),distance:2.9});
-        let picked: AimTarget | null = null, best = Infinity;
-        for (const t of targets) {
-          const d = t.position.distanceTo(camera.position);
-          if (d > t.distance) continue;
-          const p = t.position.clone().project(camera);
-          if (p.z < -1 || p.z > 1) continue;
-          const error = Math.hypot(p.x, p.y*.8);
-          if (error > (t.kind === "door" || t.kind === "airlock" ? .68 : .52)) continue;
-          if (error + d*.04 < best) { best = error + d*.04; picked = {kind:t.kind,id:t.id}; }
-        }
+        const picked = pickAimTarget(camera, current.current.world.session, supportsEva);
         aim.current = picked;
         const label = picked
           ? picked.kind === "airlock" ? (supportsEva
@@ -376,8 +344,17 @@ export default function Cabin(props: Props) {
         field?.update(current.current.world.session);
         fixtures?.update(current.current.world.session);
       }
-      if (!document.hidden && now - lastDraw >= frameDuration*.83) {
+      // Movement is suspended behind maps, tablets and paused procedures. Keep
+      // the last cabin image there so software GPUs leave time for those controls.
+      // A resize still gets a fresh frame, and unlocking resumes immediately.
+      if (current.current.locked) {
+        sampleStart = now;
+        sampleFrames = 0;
+      }
+      if (!document.hidden && (needsDraw || !current.current.locked) &&
+          now - lastDraw >= frameDuration*.83) {
         renderer.render(scene, camera);
+        needsDraw = false;
         lastDraw = now;
         sampleFrames++;
         const sampleElapsed=now-sampleStart;
@@ -432,6 +409,7 @@ export default function Cabin(props: Props) {
       keys.current.clear();
       pointer.current = undefined;
       sprint.current = false;
+      orbitalThrust.current = 0;
       sprintTouch.current = null;
       stick.current = { x: 0, y: 0 };
       if (thumb.current) thumb.current.style.transform = "translate(0px,0px)";
@@ -526,8 +504,10 @@ export default function Cabin(props: Props) {
     sprintTouch.current=null;
     sprint.current=false;
   };
+  const orbitalEva = !!props.world && props.world.session.position.z > 10.4 &&
+    missionById(props.world.session.missionId).destination === "earth";
   return (
-    <div className="cmd-world">
+    <div className={`cmd-world${orbitalEva ? " cmd-world-orbital" : ""}`}>
       <div className="cmd-canvas" ref={host} />
       <div
         className="cmd-look-surface"
@@ -564,12 +544,11 @@ export default function Cabin(props: Props) {
             disabled={props.locked} onClick={() => props.onInteract(aim.current)}>INTERACT</button>
         </div>
       </>}
-      {props.world&&props.world.session.position.z>10.4&&
-        missionById(props.world.session.missionId).destination==="earth"&&
-        props.device!=="laptop"&&
+      {orbitalEva&&props.device!=="laptop"&&
         <div className="cmd-orbital-thrusters" aria-label="Spacesuit vertical thrusters">
           {(["UP","DOWN"] as const).map(direction=><button key={direction} type="button"
-            onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);orbitalThrust.current=direction==="UP"?1:-1;}}
+            disabled={props.locked}
+            onPointerDown={e=>{if(props.locked)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);orbitalThrust.current=direction==="UP"?1:-1;}}
             onPointerUp={()=>orbitalThrust.current=0}
             onPointerCancel={()=>orbitalThrust.current=0}
             onLostPointerCapture={()=>orbitalThrust.current=0}>

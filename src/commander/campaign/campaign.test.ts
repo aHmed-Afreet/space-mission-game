@@ -188,6 +188,12 @@ export function completeMission(
         s = worldAction(s, { kind: "target", value: "earth" }, 0);
       if (["approach", "land"].includes(action) && m.surface)
         s = worldAction(s, { kind: "target", value: "moon" }, 0);
+      // Repeated duty shifts require a new meal/drink. Let the actual
+      // physiological cooldown pass instead of reusing the earlier receipt.
+      for (let waits = 0; waits < 80 && (
+        (action === "eat" && (s.state.minutes - s.lastEat < 20 || s.state.nutrition >= 98)) ||
+        (action === "drink" && (s.state.minutes - s.lastDrink < 2 || s.state.hydration >= 99))
+      ); waits++) s = tickSession(s, 0.5);
       s = command(s, action);
       if (o.type === "TRANSMIT" && s.pendingTransmit) s = tickSession(s, 5);
       assert.ok(
@@ -1485,7 +1491,7 @@ test("historical stories have airlocks, suit requirement, safe return and real e
  assert.match(s,/SIMULATE DEPRESSURIZATION/);
  assert.match(s,/verticalTouch/);
  assert.match(s,/if\(!canEva/);
- assert.match(s,/oxygenRef\.current<=0/);
+ assert.match(s,/step\.emergencyReturn/);
  assert.match(world,/setExcursion/);
  assert.match(world,/nearHatch/);
  assert.match(world,/distanceToHatch/);
@@ -1502,9 +1508,9 @@ test("Commander cabinet inventory, visible EVA suit and both-sided hatch buttons
  const field=readFileSync("src/commander/campaign/world.ts","utf8");
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  const engine=readFileSync("src/commander/campaign/engine.ts","utf8");
- assert.match(cabin,/kind:"airlock"/);
- assert.match(cabin,/for\(const x of \[-1\.08,1\.08,\.53,0\]\)/);
- assert.match(cabin,/distance:3\.5/);
+ // Hatch reach, occlusion and controls on both faces are exercised through
+ // pickAimTarget with real cameras in targeting.test.ts.
+ assert.match(cabin,/pickAimTarget/);
  assert.match(cabin,/OPEN/);
  assert.match(fixtures,/for\(const face of \[-1,1\]\)/);
  assert.match(fixtures,/leafSwitches/);
@@ -1581,7 +1587,7 @@ test("performance options adapt iPad image quality without removing controls",()
  assert.match(cabin,/actualFps<targetFps/);
  assert.match(cabin,/renderer.setPixelRatio\(renderRatio\)/);
  assert.match(cabin,/movement.forward/);
- assert.match(cabin,/kind:"airlock"/);
+ assert.match(cabin,/pickAimTarget/);
  assert.match(story,/now-lastRender>=14/);
  assert.match(story,/pixelRatio=desired/);
  assert.match(story,/aimingAtHatch/);
@@ -2177,4 +2183,230 @@ test("report settlement is acknowledged once: success advances only within campa
  const failed=makeReport(initial,false);
  assert.equal(failed.success,false);
  assert.equal(recordReport(emptyProgress(),{...initial,report:failed} as Session).completed[missions[0].id],undefined);
+});
+
+function readyForReturn(m: MissionDefinition, progress: Progress): Session {
+  const s = createSession(m, design, life, m.requiredEquipment, progress);
+  s.objective = m.objectives.findIndex(o => o.action === "returnBurn");
+  s.completed = m.objectives.slice(0, s.objective).map(o => o.id);
+  s.observations.achieved = [...s.completed];
+  s.eventIds = m.objectives.filter(o => o.event).map(o => o.id);
+  s.flight.status = "orbit";
+  s.landed = m.surface;
+  s.position = { ...sitePosition("cockpit", m.destination), heading: 0 };
+  s.world.target = "earth";
+  s.world.switches.maneuver = true;
+  return s;
+}
+
+test("return burns enforce every navigation, power and pressure recovery blocker without spending fuel", () => {
+  const initial = readyForReturn(missions[0], emptyProgress());
+  const blockers: { id: string; change: (s: Session) => void; notice: RegExp }[] = [
+    { id: "navigation-switch", change: s => { s.world.switches.navigation = false; }, notice: /navigation computer circuit/i },
+    { id: "fault-navigation", change: s => { s.world.faults.push({ id: "nav", kind: "navigation", diagnosed: false, repaired: false, verified: false, at: 0 }); }, notice: /navigation computer circuit/i },
+    { id: "bus-warning", change: s => { s.state.malfunction = true; }, notice: /Power bus unstable/ },
+    { id: "battery", change: s => { s.state.battery = 0.099; }, notice: /Battery below/ },
+    { id: "pressure", change: s => { s.state.pressure = 89.99; }, notice: /Cabin pressure below/ },
+  ];
+  for (const { id, change, notice } of blockers) {
+    const blocked = structuredClone(initial);
+    change(blocked);
+    assert.equal(recoveryMission(blocked)?.id, id);
+    const before = structuredClone(blocked);
+    const result = command(blocked, "returnBurn");
+    assert.match(result.notice, notice);
+    assert.equal(result.flight.status, "orbit");
+    assert.equal(result.objective, before.objective);
+    assert.equal(result.state.fuel, before.state.fuel);
+    assert.deepEqual(blocked, before, "A rejected command must not mutate its input");
+  }
+  const safe = structuredClone(initial);
+  safe.state.battery = 0.1;
+  safe.state.pressure = 90;
+  const result = command(safe, "returnBurn");
+  assert.equal(result.flight.status, "returning");
+  assert.equal(result.state.fuel, safe.state.fuel - 3);
+});
+
+test("orbital and landed return fuel warnings match the exact burn cost and permit the threshold", () => {
+  const progress = qualified(2);
+  for (const [mission, cost] of [[missions[0], 3], [missions[2], 6]] as const) {
+    const s = readyForReturn(mission, progress);
+    s.state.fuel = cost - 0.01;
+    const warning = recoveryMission(s);
+    assert.equal(warning?.id, "fuel-unrecoverable");
+    assert.match(warning!.cause, new RegExp(`${cost} fuel units`));
+    const blocked = command(s, "returnBurn");
+    assert.equal(blocked.flight.status, "orbit");
+    assert.equal(blocked.state.fuel, s.state.fuel);
+    s.state.fuel = cost;
+    assert.equal(recoveryMission(s), null);
+    assert.match(objectiveGuide(s).steps.map(step => step.text).join(" "), new RegExp(`${cost} fuel units`));
+    const result = command(s, "returnBurn");
+    assert.equal(result.flight.status, "returning");
+    assert.equal(result.state.fuel, 0);
+    assert.equal(result.landed, false);
+  }
+});
+
+test("science sensor recovery follows operable consoles through isolation, replacement and last-part verification", () => {
+  const mission = missions[0];
+  let s = createSession(mission, design, life, [], emptyProgress());
+  s.objective = mission.objectives.findIndex(o => o.action === "science");
+  s.flight.status = "orbit";
+  s.state.tools = true;
+  s.state.parts = 1;
+  s.world.faults = [{ id: "sensor", kind: "sensor", diagnosed: false, repaired: false, verified: false, at: 0 }];
+  s = stand(s, "science");
+  assert.equal(recoveryMission(s)?.station, "science");
+  s = worldAction(s, { kind: "diagnose", id: "sensor" });
+  assert.equal(recoveryMission(s)?.station, "power");
+  s = stand(s, "power");
+  assert.match(recoveryMission(s)!.next, /Isolate science at Power/);
+  s = worldAction(s, { kind: "switch", id: "science" });
+  assert.equal(s.world.switches.science, false);
+  assert.equal(recoveryMission(s)?.station, "science");
+  s = stand(s, "science");
+  s = worldAction(s, { kind: "repairFault", id: "sensor" });
+  assert.equal(s.world.faults[0].repaired, true);
+  assert.equal(s.state.parts, 0);
+  assert.equal(recoveryMission(s)?.station, "power");
+  assert.equal(recoveryMission(s)?.retry, false);
+  s = stand(s, "power");
+  s = worldAction(s, { kind: "switch", id: "science" });
+  assert.equal(recoveryMission(s)?.station, "science");
+  s = stand(s, "science");
+  s = worldAction(s, { kind: "verifyFault", id: "sensor" });
+  assert.equal(s.world.faults[0].verified, true);
+  assert.equal(recoveryMission(s), null);
+  const science = s.state.science;
+  s = command(s, "science");
+  assert.ok(s.state.science > science);
+});
+
+test("depleted EVA battery recovery persists inside and across a checkpoint until the suit is recharged", () => {
+  const mission = missions[2], progress = qualified(2);
+  let s = createSession(mission, design, life, mission.requiredEquipment, progress);
+  s = stand(s, "science");
+  s = worldAction(s, { kind: "take", id: "scanner" });
+  s.objective = mission.objectives.findIndex(o => o.action === "scan");
+  s.flight.status = "orbit";
+  s.landed = true;
+  s.suit = { equipped: true, oxygen: 0.2, power: 0, condition: 43, oxygenChecked: true, powerChecked: true };
+  s.position = { ...sitePosition("survey", mission.destination), heading: 0 };
+  const objective = s.objective;
+  assert.equal(recoveryMission(s)?.id, "eva-battery");
+  // The same derived emergency remains active after a safe cabin return.
+  s.position = { ...sitePosition("equipment", mission.destination), heading: 0 };
+  s = stand(s, "equipment");
+  assert.equal(recoveryMission(s)?.id, "eva-battery");
+  const stored = decodeStore(JSON.stringify({ ...newStore(), progress: bookLaunch(progress, s), session: s }));
+  assert.ok(stored.session);
+  s = { ...stored.session, state: { ...stored.session.state, paused: false } };
+  assert.equal(recoveryMission(s)?.id, "eva-battery");
+  assert.match(objectiveGuide(s).next, /Stow.*equip.*recharge/);
+  s = worldAction(s, { kind: "stowSuit" });
+  assert.equal(recoveryMission(s)?.id, "eva-battery");
+  const battery = s.state.battery;
+  s = command(s, "equipSuit");
+  assert.equal(s.suit.power, 1);
+  assert.equal(s.suit.condition, 43);
+  assert.equal(s.state.battery, battery - 0.15);
+  assert.equal(recoveryMission(s), null);
+  assert.equal(s.objective, objective);
+});
+
+test("repeated provision blocks in missions 5–12 consume distinct supplies and preserve early preparation receipts", () => {
+  const progress = qualified(12);
+  for (const mission of missions.slice(4, 12)) {
+    let s = createSession(mission, design, life, mission.requiredEquipment, progress);
+    s = stand(s, "galley");
+    const first = mission.objectives.findIndex(o => o.action === "takeMeal");
+    const second = mission.objectives.findIndex((o, i) => i > first && o.action === "takeMeal");
+    assert.ok(first >= 0 && second > first);
+    const objective = s.objective;
+    for (const action of ["takeMeal", "fill", "eat", "drink"] as const) s = command(s, action);
+    assert.equal(s.objective, objective, `${mission.title}: early preparations do not skip launch`);
+    for (const task of mission.objectives.slice(first, first + 4))
+      assert.ok(s.observations.achieved.includes(task.id));
+    for (const task of mission.objectives.slice(second, second + 4))
+      assert.equal(s.observations.achieved.includes(task.id), false);
+    s.objective = first;
+    s = command(s, "inspectStorage");
+    assert.ok(s.objective >= first + 4, "Prepared tasks retain their receipts");
+    s.objective = second;
+    s.completed = mission.objectives.slice(0, second).map(o => o.id);
+    s.eventIds = mission.objectives.slice(0, second).filter(o => o.event).map(o => o.id);
+    s.flight.status = "orbit";
+    s = command(s, "inspectStorage");
+    assert.equal(s.objective, second, `${mission.title}: an earlier meal cannot complete the next block`);
+    const food = s.state.food;
+    s = command(s, "takeMeal");
+    assert.equal(s.objective, second + 1);
+    assert.equal(s.state.food, food - 1);
+    const water = s.state.water;
+    s = command(s, "fill");
+    assert.equal(s.objective, second + 2);
+    assert.ok(s.state.water < water);
+    const tooSoon = command(s, "eat");
+    assert.equal(tooSoon.objective, second + 2);
+    assert.equal(tooSoon.state.meals, 1);
+    assert.match(objectiveGuide(tooSoon).next, /mission time advance/);
+    s = tickSession(tooSoon, 20);
+    s = command(s, "eat");
+    assert.equal(s.objective, second + 3);
+    assert.equal(s.state.meals, 0);
+    const bottle = s.state.bottle;
+    s = command(s, "drink");
+    assert.ok(s.objective >= second + 4);
+    assert.equal(s.state.bottle, bottle - 0.25);
+    for (const task of mission.objectives.slice(second, second + 4))
+      assert.ok(s.observations.achieved.includes(task.id));
+  }
+});
+
+test("a second early meal earns its own receipts before an unrelated scripted power warning", () => {
+  const mission = missions[4];
+  let s = createSession(mission, design, life, mission.requiredEquipment, qualified(4));
+  s = stand(s, "galley");
+  const initial = s.objective;
+  for (const action of ["takeMeal", "fill", "eat", "drink"] as const) s = command(s, action);
+  s = tickSession(s, 20);
+  const food = s.state.food;
+  for (const action of ["takeMeal", "fill", "eat", "drink"] as const) s = command(s, action);
+  assert.equal(s.objective, initial);
+  assert.equal(s.state.food, food - 1);
+  assert.equal(s.state.meals, 0);
+  assert.equal(s.eventIds.length, 0, "The later warning has not occurred");
+  const provisions = mission.objectives.filter(o => ["takeMeal", "fill", "eat", "drink"].includes(o.action || ""));
+  assert.equal(provisions.length, 8);
+  for (const task of provisions) assert.ok(s.observations.achieved.includes(task.id));
+  const second = mission.objectives.indexOf(provisions[4]);
+  s.objective = second;
+  s = command(s, "inspectStorage");
+  assert.ok(s.objective >= second + 4, "Each genuine early operation keeps its distinct receipt");
+});
+
+test("equipping and recharging a suit preserve saved physical wear including zero", () => {
+  const mission = missions[1];
+  for (const wear of [43, 0]) {
+    const progress = qualified();
+    progress.equipmentCondition = { suit: wear };
+    let s = createSession(mission, design, life, mission.requiredEquipment, progress);
+    s = stand(s, "equipment");
+    s = command(s, "equipSuit");
+    assert.equal(s.suit.condition, wear);
+    assert.equal(s.suit.power, 1);
+    assert.equal(s.suit.oxygen, 0.35);
+    s.suit.condition = Math.max(0, wear - 3);
+    s.suit.power = 0.01;
+    s = worldAction(s, { kind: "stowSuit" });
+    const storedWear = s.world.equipment.suit;
+    s = command(s, "equipSuit");
+    assert.equal(s.suit.condition, storedWear);
+    assert.equal(s.suit.power, 1, "Consumable charging still works independently of physical wear");
+    s.report = makeReport(s, false);
+    const saved = recordReport(progress, s);
+    assert.equal(saved.equipmentCondition?.suit, storedWear);
+  }
 });

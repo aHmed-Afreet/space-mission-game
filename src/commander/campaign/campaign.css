@@ -1742,6 +1742,21 @@
  .cmd-session .cmd-touch-actions .cmd-work {width:86px;height:86px;min-height:86px;}
  .campaign-flight .campaign-interaction {right:8px;bottom:192px;width:min(290px,85vw);}
 }
+.cmd-session .cmd-world-orbital .cmd-touch-actions {
+ right:max(22px,calc(env(safe-area-inset-right) + 12px));
+ bottom:calc(var(--cmd-thruster-bottom) + var(--cmd-thruster-height) + var(--cmd-touch-row-gap));
+}
+.campaign-flight .cmd-world-orbital ~ .campaign-interaction {
+ --cmd-interaction-bottom:calc(var(--cmd-thruster-bottom) + var(--cmd-thruster-height) + var(--cmd-touch-row-gap) + var(--cmd-touch-action-height) + 12px);
+ bottom:var(--cmd-interaction-bottom);
+}
+.campaign-flight .cmd-world-orbital ~ .campaign-interaction .cmd-action-menu {
+ max-height:min(36vh,calc(100dvh - var(--cmd-interaction-bottom) - max(12px,env(safe-area-inset-top)) - 9px));
+ overscroll-behavior:contain;
+}
+@media(max-width:700px) {
+ .cmd-session .cmd-world-orbital .cmd-touch-actions {right:max(12px,calc(env(safe-area-inset-right) + 8px));}
+}
 
 
 /* Independent navigation map: its full room names match objective names. */

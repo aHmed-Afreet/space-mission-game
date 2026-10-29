@@ -431,6 +431,11 @@ export function decodeStore(raw: string): Store {
   }
   return v as Store;
 }
+function newerSave(raw: string | null) {
+  if (!raw) return false;
+  try { return JSON.parse(raw)?.version > 3; } catch { return false; }
+}
+
 export function loadStore(storage: Pick<Storage, "getItem">): {
   store: Store;
   warning: string;
@@ -448,31 +453,33 @@ export function loadStore(storage: Pick<Storage, "getItem">): {
   } catch {
     /* Leave an old unknown save untouched. */
   }
-  try {
-    const raw = storage.getItem(SAVE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.version > 3)
-        return {
-          store: newStore(),
-          warning:
-            "A newer campaign save exists. It has not been changed. Use the newer app version to continue.",
-          readOnly: true,
-          legacy,
-        };
-      return { store: decodeStore(raw), warning: "", readOnly: false, legacy };
-    }
-  } catch {
+  let raw: string | null = null, backup: string | null = null;
+  let unreadable = false;
+  try { raw = storage.getItem(SAVE_KEY); } catch { unreadable = true; }
+  try { backup = storage.getItem(SAVE_KEY + ".backup"); } catch { unreadable = true; }
+  if (newerSave(raw) || newerSave(backup))
+    return {
+      store: newStore(),
+      warning:
+        "A newer campaign save exists. It has not been changed. Use the newer app version to continue.",
+      readOnly: true,
+      legacy,
+    };
+  if (raw) {
+    try { return { store: decodeStore(raw), warning: "", readOnly: false, legacy }; }
+    catch { unreadable = true; }
+  }
+  if (backup) {
     try {
-      const backup = storage.getItem(SAVE_KEY + ".backup");
-      if (backup)
-        return {
-          store: decodeStore(backup),
-          warning: "Your previous valid campaign backup was restored.",
-          readOnly: false,
-          legacy,
-        };
-    } catch {}
+      return {
+        store: decodeStore(backup),
+        warning: "Your previous valid campaign backup was restored.",
+        readOnly: false,
+        legacy,
+      };
+    } catch { unreadable = true; }
+  }
+  if (unreadable) {
     return {
       store: newStore(),
       warning:
@@ -541,25 +548,55 @@ export function loadStore(storage: Pick<Storage, "getItem">): {
 export function persist(
   storage: Pick<Storage, "getItem" | "setItem">,
   store: Store,
-) {
+): string {
   const encoded = JSON.stringify(store);
   decodeStore(encoded);
-  const previous = storage.getItem(SAVE_KEY);
-  if (previous) {
-    let version = 0;
-    try {
-      version = JSON.parse(previous).version;
-    } catch {
-      /* Replace corrupt data only after validating the new checkpoint. */
-    }
-    if (version > 3)
-      throw Error("A newer campaign save cannot be overwritten.");
-    try {
-      decodeStore(previous);
-      storage.setItem(SAVE_KEY + ".backup", previous);
-    } catch {}
-  }
+  const previous = writableSave(storage);
+  // A failed primary write must leave both existing copies untouched.
   storage.setItem(SAVE_KEY, encoded);
+  if (previous) {
+    try { decodeStore(previous); }
+    catch { return ""; /* Never replace a valid backup with corrupt data. */ }
+    try { storage.setItem(SAVE_KEY + ".backup", previous); }
+    catch {
+      return "Progress was saved, but the recovery backup could not be updated. An older backup may remain on this device.";
+    }
+  }
+  return "";
+}
+
+function writableSave(storage: Pick<Storage, "getItem">) {
+  const previous = storage.getItem(SAVE_KEY);
+  const backup = storage.getItem(SAVE_KEY + ".backup");
+  if (newerSave(previous) || newerSave(backup))
+    throw Error("A newer campaign save cannot be overwritten.");
+  return previous;
+}
+
+export function resetStore(storage: Pick<Storage, "getItem" | "setItem" | "removeItem">): {
+  store: Store;
+  warning: string;
+} {
+  const store = newStore();
+  const encoded = JSON.stringify(store);
+  decodeStore(encoded);
+  writableSave(storage);
+  // Commit the replacement before touching recovery data or live game state.
+  storage.setItem(SAVE_KEY, encoded);
+  try {
+    storage.setItem(SAVE_KEY + ".backup", encoded);
+    return { store, warning: "" };
+  } catch {
+    try {
+      storage.removeItem(SAVE_KEY + ".backup");
+      return { store, warning: "Campaign reset was saved, but a recovery backup could not be created." };
+    } catch {
+      return {
+        store,
+        warning: "Campaign reset was saved, but the older recovery backup could not be cleared. It may be restored if the current save becomes unreadable.",
+      };
+    }
+  }
 }
 export function toggleGear(gear: EquipmentId[], id: EquipmentId) {
   return gear.includes(id) ? gear.filter((g) => g !== id) : [...gear, id];

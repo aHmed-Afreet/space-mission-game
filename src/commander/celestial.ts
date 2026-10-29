@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 /** Procedural, deterministic educational planet material, generated offline in the browser.
  * Uses no external textures or network requests and keeps memory small for iPads. */
-export type PlanetKind="earth"|"moon"|"mars"|"venus"|"jupiter"|"saturn"|"mercury"|"neptune"|"uranus"|"pluto";
+export type PlanetKind="earth"|"moon"|"mars"|"venus"|"jupiter"|"saturn"|"mercury"|"neptune"|"uranus"|"pluto"|"asteroid"|"comet"|"outer-planets"|"unknown";
 function hash(x:number,y:number,seed:number){
  let n=Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(seed,1274126177);
  n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295;
@@ -20,6 +20,9 @@ function fractal(x:number,y:number,seed:number){
 }
 export function planetKind(destination:string):PlanetKind{
  const t=destination.toLowerCase();
+ if(/asteroid|bennu/.test(t))return "asteroid";
+ if(/comet|67p|tempel/.test(t))return "comet";
+ if(/outer planets|giant planets/.test(t))return "outer-planets";
  if(/moon|lunar/.test(t))return "moon";
  if(/mars/.test(t))return "mars";
  if(/venus/.test(t))return "venus";
@@ -29,7 +32,8 @@ export function planetKind(destination:string):PlanetKind{
  if(/neptune/.test(t))return "neptune";
  if(/uranus/.test(t))return "uranus";
  if(/pluto/.test(t))return "pluto";
- return "earth";
+ if(/earth|low orbit|leo/.test(t))return "earth";
+ return "unknown";
 }
 function toByte(n:number){return Math.max(0,Math.min(255,Math.round(n)))}
 function textureFor(kind:PlanetKind,clouds=false){
@@ -82,7 +86,31 @@ function textureFor(kind:PlanetKind,clouds=false){
  return tex;
 }
 export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THREE.Group{
+ if(kind==="outer-planets"){
+  const group=new THREE.Group();group.userData.destinationKind=kind;
+  // A survey of several planets is represented by several bodies, not Earth.
+  for(const [index,planet] of (["jupiter","saturn","uranus","neptune"] as const).entries()){
+   const body=makePlanet(planet,radius*.36,false);
+   body.position.set((index-1.5)*radius*.85,Math.sin(index)*radius*.15,0);group.add(body);
+  }
+  return group;
+ }
  const g=new THREE.Group(),geometry=new THREE.SphereGeometry(radius,48,32);
+ g.userData.destinationKind=kind;
+ if(kind==="unknown"){
+  geometry.dispose();
+  const marker=new THREE.Mesh(new THREE.SphereGeometry(radius*.65,16,10),new THREE.MeshBasicMaterial({color:0x7899aa,wireframe:true,transparent:true,opacity:.45}));
+  marker.name="Unspecified destination schematic";g.add(marker);return g;
+ }
+ if(kind==="asteroid"||kind==="comet"){
+  const body=new THREE.Mesh(new THREE.IcosahedronGeometry(radius,2),new THREE.MeshStandardMaterial({color:kind==="comet"?0x77746e:0x77695b,roughness:1}));
+  body.scale.set(kind==="comet"?1.3:1,.72,.86);g.add(body);geometry.dispose();
+  if(kind==="comet"){
+   const lobe=new THREE.Mesh(new THREE.IcosahedronGeometry(radius*.58,1),body.material);
+   lobe.position.set(radius*.9,radius*.2,0);g.add(lobe);
+  }
+  return g;
+ }
  const map=textureFor(kind);
  const material=new THREE.MeshStandardMaterial({map,roughness:kind==="earth"?.85:1,metalness:0});
  const surface=new THREE.Mesh(geometry,material);g.add(surface);
@@ -121,7 +149,7 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
  return g;
 }
 export function disposePlanet(g:THREE.Group){
- g.userData.disposed=true;
+ g.traverse(obj=>{obj.userData.disposed=true;});
  g.traverse(obj=>{
   if(!(obj instanceof THREE.Mesh))return;
   obj.geometry.dispose();
