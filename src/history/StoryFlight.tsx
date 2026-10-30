@@ -12,6 +12,7 @@ import { createForegroundClock } from "../commander/foregroundTime";
 import { containModalFocus } from "../commander/modalFocus";
 import { readHistoryProgressStrict } from "./historyProgress";
 import { storyScienceExercise, type StoryScienceRecord } from "./storyScience";
+import { createStoryThrust } from "./storyThrust";
 import "./storyFlight.css";
 
 const displayName:Record<Station,string>={
@@ -80,6 +81,11 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
  const completed=stage>=scenario.tasks.length;
  const pauseRef=useRef(false);
  pauseRef.current=paused||!!procedure||completed||showGuide||evaPanel;
+ const thrust=useRef<ReturnType<typeof createStoryThrust>|null>(null);
+ if(!thrust.current)thrust.current=createStoryThrust({
+  flush:()=>advanceRef.current(),active:()=>!pauseRef.current,
+  publish:value=>{verticalTouch.current=value;},
+ });
  const simulationPaused=pauseRef.current;
  useEffect(()=>{
   const dialogs=root.current?.querySelectorAll<HTMLElement>(".story-fps-dialog");
@@ -108,7 +114,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
  useEffect(()=>{
   if(!simulationPaused)return;
   keys.current.clear();stick.current=null;lookPointer.current=null;sprintPointer.current=null;
-  sprint.current=false;verticalTouch.current=0;setJoystick(null);
+  sprint.current=false;thrust.current?.clear();setJoystick(null);
  },[simulationPaused]);
  const actRef=useRef<()=>void>(()=>{});
  actRef.current=()=>{
@@ -189,7 +195,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
    keys.current.add(e.key.toLowerCase());
   };
   const up=(e:KeyboardEvent)=>{advanceRef.current();keys.current.delete(e.key.toLowerCase());};
-  const blur=()=>{advanceRef.current();keys.current.clear();sprint.current=false;stick.current=null;lookPointer.current=null;sprintPointer.current=null;verticalTouch.current=0;setJoystick(null);persistRef.current();};
+  const blur=()=>{advanceRef.current();keys.current.clear();sprint.current=false;stick.current=null;lookPointer.current=null;sprintPointer.current=null;thrust.current?.clear();setJoystick(null);persistRef.current();};
   const visibility=()=>{blur();clock.reset();};
   const pagehide=()=>persistRef.current();
   window.addEventListener("keydown",down);
@@ -295,7 +301,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
   const next=!evaOutside;
   world.current.setExcursion(next);
   evaOutsideRef.current=next;setEvaOutside(next);setEvaPanel(false);
-  setHatchPrepared(false);verticalTouch.current=0;
+  setHatchPrepared(false);thrust.current?.clear();
   setEvaDistance(world.current.distanceToHatch());
   if(task?.fieldAction==="egress"&&next){setLogged(a=>[...a,task.complete]);setStage(s=>s+1);}
   if(task?.fieldAction==="return"&&!next){setLogged(a=>[...a,task.complete]);setStage(s=>s+1);}
@@ -364,12 +370,12 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     {scenario.setting==="moon"||scenario.setting==="mars"
       ? <button type="button" onClick={()=>world.current?.jump()} aria-label="Jump in low gravity">JUMP</button>
       : <>
-       <button type="button" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);verticalTouch.current=1;}}
-         onPointerUp={()=>verticalTouch.current=0} onPointerCancel={()=>verticalTouch.current=0}
-         onLostPointerCapture={()=>verticalTouch.current=0} aria-label="Ascend in zero gravity">↑ UP</button>
-       <button type="button" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);verticalTouch.current=-1;}}
-         onPointerUp={()=>verticalTouch.current=0} onPointerCancel={()=>verticalTouch.current=0}
-         onLostPointerCapture={()=>verticalTouch.current=0} aria-label="Descend in zero gravity">↓ DOWN</button>
+       <button type="button" onPointerDown={e=>{if(pauseRef.current)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);thrust.current?.press(e.pointerId,1);}}
+         onPointerUp={e=>thrust.current?.release(e.pointerId)} onPointerCancel={e=>thrust.current?.release(e.pointerId)}
+         onLostPointerCapture={e=>thrust.current?.release(e.pointerId)} aria-label="Ascend in zero gravity">↑ UP</button>
+       <button type="button" onPointerDown={e=>{if(pauseRef.current)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);thrust.current?.press(e.pointerId,-1);}}
+         onPointerUp={e=>thrust.current?.release(e.pointerId)} onPointerCancel={e=>thrust.current?.release(e.pointerId)}
+         onLostPointerCapture={e=>thrust.current?.release(e.pointerId)} aria-label="Descend in zero gravity">↓ DOWN</button>
       </>}
    </div>}
   <div className="story-fps-actions">
