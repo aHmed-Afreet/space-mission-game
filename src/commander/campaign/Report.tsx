@@ -1,6 +1,9 @@
 import { money, technologies } from "./economy";
 import type { Report as Result } from "./engine";
-import { missionById } from "./definitions";
+import ScientificReadings from "./ScientificReadings";
+import { equipment } from "./equipment";
+import { faultCatalog } from "./ship";
+import { missionForSession, missionById } from "./definitions";
 import { campaignForMission, campaignLevel } from "./campaignTypes";
 export default function Report({
   result,
@@ -13,6 +16,9 @@ export default function Report({
   onNext?: () => void;
   onRetry?: () => void;
 }) {
+  const mission = result.missionRevision === undefined ? missionById(result.missionId)
+    : missionForSession({ missionId: result.missionId, revision: result.missionRevision });
+  const snapshot = result.conditionSnapshot;
   return (
     <div className="campaign-report">
       <div className="campaign-report-title">
@@ -27,9 +33,10 @@ export default function Report({
                 ? "Partial success."
                 : "Mission failed."}
           </h1>
-          <p>{missionById(result.missionId).title}</p>
-          {missionById(result.missionId).historical && <p className="campaign-real-mission">
-            Inspired by {missionById(result.missionId).historical!.inspiration} · historically informed, fictional simulation.
+          <p>{mission.title}</p>
+          {result.missionId === "mission-7" && (result.missionRevision ?? 3) === 3 && <p>Legacy Mission 7 revision 3: 58 required tasks. Temperature was not required by that checklist; only readings actually retained are shown.</p>}
+          {mission.historical && <p className="campaign-real-mission">
+            Inspired by {mission.historical!.inspiration} · historically informed, fictional simulation.
           </p>}
         </div>
         <div className="score">
@@ -102,7 +109,7 @@ export default function Report({
           { name: "Mission success", value: result.success ? 100 : 0 },
           { name: "Science", value: result.science },
           { name: "Resource management", value: result.resources },
-          { name: "Spacecraft condition", value: result.condition },
+          { name: result.metricVersion === 2 ? "Spacecraft condition · v2" : "Legacy condition metric", value: result.condition },
           { name: "Crew readiness", value: result.crew },
           { name: "Power management", value: result.power },
           { name: "Fuel efficiency", value: result.fuel },
@@ -120,6 +127,19 @@ export default function Report({
           </article>
         ))}
       </section>
+      {snapshot ? <section className="panel">
+        <h2>End-of-flight hardware snapshot</h2>
+        <p>Condition v2 = mean physical component condition ({snapshot.componentMean.toFixed(2)}%) minus {snapshot.faultPenalty} points: 5 per unverified fault, active bus warning and broken camp connector. Equipment wear is listed separately and remains due for service.</p>
+        <table><thead><tr><th>Component</th><th>Condition</th></tr></thead><tbody>
+          {Object.entries(snapshot.components).map(([name, value]) => <tr key={name}><th>{name}</th><td>{value.toFixed(2)}%</td></tr>)}
+        </tbody></table>
+        <p>Unverified faults: {snapshot.unresolvedFaults.length ? snapshot.unresolvedFaults.map(f => `${faultCatalog[f.kind].name}${f.repaired ? " (replacement done; verification pending)" : ""}`).join("; ") : "none"}.</p>
+        {snapshot.powerWarning && <p>Power bus warning remained active.</p>}
+        {snapshot.campConnectorBroken && <p>Research camp connector remained faulted.</p>}
+        <p>Equipment: {Object.entries(snapshot.equipment).map(([id, value]) => `${equipment[id as keyof typeof equipment].name} ${value!.toFixed(2)}%`).join("; ") || "none carried"}.</p>
+        <p>Existing paid service estimates: components {money(snapshot.estimatedComponentService)}; equipment {money(snapshot.estimatedEquipmentService)}. These are maintenance estimates, separate from the agency settlement above; no repairs or extra charges were applied by this report.</p>
+      </section> : <section className="panel"><p>Legacy report: the original condition metric and score are retained. Component, fault and equipment snapshots were not stored; present-day hardware has not been substituted.</p></section>}
+      <ScientificReadings readings={result.measurements} />
       {!!result.sampleManifest?.length && (
         <section className="panel">
           <h2>Sample manifest</h2>

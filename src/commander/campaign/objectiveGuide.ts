@@ -1,6 +1,7 @@
 import { atSite, currentObjective, maneuverFuelRequired, outside, satelliteRepairBlocker, sitePosition, type Session } from "./engine";
-import { missionById, type Site } from "./definitions";
+import { missionForSession, type Site } from "./definitions";
 import { faultCatalog } from "./ship";
+import { fieldToolUse, fieldToolCostText } from "./fieldTools";
 import { recoveryMission } from "./recovery";
 
 /** Context-aware, player-facing instructions. No mission state is changed here. */
@@ -11,7 +12,7 @@ export type ObjectiveGuide = { steps: GuideStep[]; next: string; recoveryStation
 function systemRecoveryGuide(s: Session): ObjectiveGuide | null {
   const action = currentObjective(s)?.action;
   if (!action || !["approach","land","returnBurn","course","science","powerScience"].includes(action)) return null;
-  const name = (site: Site) => sitePosition(site, missionById(s.missionId).destination).name;
+  const name = (site: Site) => sitePosition(site, missionForSession(s).destination).name;
   const live = s.world.faults.filter(f=>!f.verified);
   const navigation = ["approach","land","returnBurn","course"].includes(action);
   const fault = live.find(f=>
@@ -76,7 +77,7 @@ function systemRecoveryGuide(s: Session): ObjectiveGuide | null {
 export function objectiveGuide(s: Session): ObjectiveGuide {
   const o = currentObjective(s);
   if (!o) return { steps: [], next: "Review your mission report." };
-  const mission = missionById(s.missionId);
+  const mission = missionForSession(s);
   const here = !o.site || atSite(s, o.site);
   const steps: GuideStep[] = [];
   if (o.site) steps.push({
@@ -233,8 +234,8 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
       done: s.state.parts >= 1,
     });
     steps.push({
-      text: "Keep at least 5% EVA suit battery. Then tap Replace satellite connector to complete the objective.",
-      done: s.suit.power >= 0.05,
+      text: fieldToolCostText(fieldToolUse(s, "repairSatellite")!) + " Then tap Replace satellite connector.",
+      done: !fieldToolUse(s, "repairSatellite")?.problem,
     });
     const blocker = satelliteRepairBlocker(s);
     return { steps, next: blocker ?? "Ready: tap Replace satellite connector." };
@@ -251,6 +252,12 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
       done: false,
     });
     return { steps, next: here ? "Select a task option." : "Reach the indicated location." };
+  }
+  if (o.type === "WAIT" && (o.condition === "vacuum" || o.condition === "pressurized")) {
+    const inbound = o.condition === "pressurized";
+    steps.push({ text: inbound ? "Keep the outside hatch closed and let the refill pump reach 101.3 kPa. Open the inside hatch only after the pump stops."
+      : "Keep both hatches closed and let the vent pump reach 0 kPa before opening the outside hatch.", done: false });
+    return { steps, next: `Let the current airlock ${inbound ? "refill" : "vent"} cycle finish; current pressure ${s.airlock.pressure.toFixed(1)} kPa.` };
   }
   if (o.type === "WAIT") {
     steps.push({ text: "Keep the simulation running while the required mission time passes. No INTERACT button is needed.", done: false });
@@ -274,6 +281,8 @@ export function objectiveGuide(s: Session): ObjectiveGuide {
     return { steps, next: "Wake up." };
   }
   if (o.action) {
+    const use = fieldToolUse(s, o.action);
+    if (use) steps.push({ text: fieldToolCostText(use), done: !use.problem });
     steps.push({ text: "At the required station, tap the objective action below. You can also press INTERACT at its console to use the station menu.", done: false });
     if (o.action === "repair" || o.action === "eventReset")
       steps.push({ text: "Inspect the fault, gather a toolkit and parts, and follow the maintenance/isolation requirements before repair.", done: false });

@@ -1118,9 +1118,42 @@ for (const mission of missions) {
   const index=(group.missionIds as readonly string[]).indexOf(mission.id);
   mission.prerequisites=index===0?[]:[group.missionIds[index-1]];
 }
+/** Active flights retain their original procedure. Never renumber task-N IDs:
+ * these IDs also identify persisted receipts, events and completed tasks. */
+const legacyRadiationMission = missions.find(m => m.id === "mission-7")!;
+export const TEMPERATURE_OBJECTIVE_ID = "mission-7-temperature-v4";
+const temperatureObjective: Objective = {
+  id: TEMPERATURE_OBJECTIVE_ID,
+  type: "INTERACT",
+  title: "Measure surface temperature at the survey site.",
+  instruction: "Use the environmental sensor at the survey marker to record a calibrated, simulated surface-temperature observation before returning. The reading and its illumination assumptions are retained with mission science.",
+  site: "survey",
+  action: "measureTemperature",
+  phase: "HIGHLAND GEOLOGY",
+};
+const temperatureIndex = legacyRadiationMission.objectives.findIndex(o => o.action === "photo");
+missions[missions.indexOf(legacyRadiationMission)] = {
+  ...legacyRadiationMission,
+  revision: 4,
+  objectives: [
+    ...legacyRadiationMission.objectives.slice(0, temperatureIndex),
+    temperatureObjective,
+    ...legacyRadiationMission.objectives.slice(temperatureIndex),
+  ],
+};
 export const missionById = (id: string): MissionDefinition => {
   const m =
     missions.find((m) => m.id === id) || oldMissions.find((m) => m.id === id);
   if (!m) throw Error("Unknown mission: " + id);
   return m;
 };
+/** Resolve every live checklist from the saved revision, not the newest launch
+ * definition. Older earned reports and active revision-3 Mission 7 flights stay
+ * usable without inventing a temperature observation or rewinding their state. */
+export function missionForSession(s: {missionId: string; revision: number}): MissionDefinition {
+  const current = missionById(s.missionId);
+  if (s.revision === current.revision) return current;
+  if (s.missionId === legacyRadiationMission.id && s.revision === legacyRadiationMission.revision)
+    return legacyRadiationMission;
+  throw new Error(`Unsupported ${s.missionId} procedure revision ${s.revision}; saved data has not been changed.`);
+}

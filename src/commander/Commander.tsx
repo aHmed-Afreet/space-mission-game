@@ -39,6 +39,9 @@ import {
 } from "./campaign/save";
 import type { Technology } from "./campaign/economy";
 import type { EquipmentId } from "./campaign/equipment";
+import { createCommanderTimeBudget, createForegroundClock } from "./foregroundTime";
+import { useModalFocus } from "./modalFocus";
+import { SimulationClockContext } from "./simulationClockContext";
 import "./commander.css";
 import "./campaign/campaign.css";
 export default function Commander({
@@ -68,6 +71,12 @@ export default function Commander({
   }, [storage, preferences]);
   const latest = useRef(store);
   latest.current = store;
+  const timeBudget = useRef(createCommanderTimeBudget());
+  const simulationClock = useRef<ReturnType<typeof createForegroundClock> | null>(null);
+  const resourceFrame = useRef<(now:number)=>void>(() => {});
+  const advanceResourceClock = useCallback((now:number) => resourceFrame.current(now), []);
+  const setupDialog = useRef<HTMLDivElement>(null);
+  useModalFocus({ dialog:setupDialog, active:!device || laptopIntro, onClose:!device ? onExit : () => setLaptopIntro(false) });
   const save = useCallback(() => {
     if (loaded.readOnly) return;
     if (!storage) { setSaveError(UNSAVED_WARNING); return; }
@@ -83,17 +92,13 @@ export default function Commander({
     const id = setInterval(save, 1500);
     const hide = () => {
       if (document.hidden) {
-        setStore((v) =>
-          v.session
-            ? {
-                ...v,
-                session: {
-                  ...v.session,
-                  state: { ...v.session.state, paused: true },
-                },
-              }
-            : v,
-        );
+        const steps = timeBudget.current.takeSteps(true);
+        simulationClock.current?.reset();
+        setStore((v) => {
+          if (!v.session) return v;
+          const session = steps.reduce((session, minutes) => tickSession(session, minutes), v.session);
+          return { ...v, session:{ ...session, state:{ ...session.state, paused:true } } };
+        });
         save();
       }
     };
@@ -119,17 +124,40 @@ export default function Commander({
   );
   useEffect(() => {
     if (mode !== "flight") return;
-    const id = setInterval(() => {
-      if (!document.hidden)
+    const clock = createForegroundClock();
+    simulationClock.current = clock;
+    let frame = 0;
+    const advance = (now:number) => {
+      const session = latest.current.session;
+      const accepted = clock.advance(now, {
+        active:!!session && !session.state.paused && !session.state.ended && !session.report,
+        visible:!document.hidden,
+      }, () => {});
+      if (session) timeBudget.current.add(accepted.acceptedSeconds, session.simRate);
+      // Keep React updates bounded while retaining every accepted interval.
+      // Actions and pause/visibility transitions flush the fractional budget.
+      if (timeBudget.current.seconds >= .25 - 1e-9) {
+        const steps = timeBudget.current.takeSteps();
         setStore((v) => {
           if (!v.session) return v;
-          const next = tickSession(v.session, 0.5 * v.session.simRate);
+          const next = steps.reduce((session, minutes) => tickSession(session, minutes), v.session);
           return next === v.session
             ? v
             : { ...v, session: next, progress: recordReport(v.progress, next) };
         });
-    }, 1000);
-    return () => clearInterval(id);
+      }
+    };
+    resourceFrame.current = advance;
+    const loop = () => {
+      advance(performance.now());
+      frame = requestAnimationFrame(loop);
+    };
+    frame = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(frame);
+      simulationClock.current = null;
+      resourceFrame.current = () => {};
+    };
   }, [mode]);
   useEffect(() => {
     if (!store.session?.report) return;
@@ -140,23 +168,31 @@ export default function Commander({
     });
   }, [store.session?.report]);
   const updateSession = useCallback(
-    (fn: (s: Session) => Session) =>
+    (fn: (s: Session) => Session) => {
+      const steps = timeBudget.current.takeSteps(true);
       setStore((v) => {
         if (!v.session) return v;
-        const next = fn(v.session);
+        const next = fn(steps.reduce((session, minutes) => tickSession(session, minutes), v.session));
         return next === v.session
           ? v
           : { ...v, session: next, progress: recordReport(v.progress, next) };
-      }),
+      });
+    },
     [],
   );
   const onMove = useCallback(
-    (p: Position) => updateSession((s) => moveSession(s, p)),
-    [updateSession],
+    (p: Position) => setStore(v => {
+      if (!v.session) return v;
+      const next = moveSession(v.session, p);
+      return next === v.session ? v : { ...v, session:next, progress:recordReport(v.progress, next) };
+    }),
+    [],
   );
   const pause = useCallback(
-    (paused: boolean) =>
-      updateSession((s) => ({ ...s, state: { ...s.state, paused } })),
+    (paused: boolean) => {
+      simulationClock.current?.reset(performance.now());
+      updateSession((s) => ({ ...s, state: { ...s.state, paused } }));
+    },
     [updateSession],
   );
   const onCommand = useCallback(
@@ -182,6 +218,7 @@ export default function Commander({
   const retryFinished = () => {
     const s=store.session;
     if(!s?.report || loaded.readOnly)return;
+    // Retry intentionally starts a new flight under the latest definition.
     const m=missionById(s.missionId);
     setStore(v=>!v.session?.report?v:{...v,progress:recordReport(v.progress,v.session),session:null});
     setCampaignRoute(campaignForMission(m.id)?.id??null);
@@ -218,7 +255,8 @@ export default function Commander({
     setMode("prepare");
   };
   const deviceValue = device || "ipad";
-  const openSettings = () => { if (mode === "flight") pause(true); setSettingsOpen(true); };
+  const openSettings = useCallback(() => { if (mode === "flight") pause(true); setSettingsOpen(true); }, [mode, pause]);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const resetProgress = () => {
     if (loaded.readOnly) return;
     if (!storage) {
@@ -244,11 +282,11 @@ export default function Commander({
   };
   const settingsView = settingsOpen ? (
     <GameSettings value={preferences} onChange={setPreferences} device={deviceValue}
-      onDevice={setDevice} onClose={() => setSettingsOpen(false)}
+      onDevice={setDevice} onClose={closeSettings}
       onReset={resetProgress} readonly={loaded.readOnly}/>
   ) : null;
   if (!device || laptopIntro) return (
-    <div className="cmd-device-setup" role="dialog" aria-modal="true" aria-label="Commander control setup">
+    <div ref={setupDialog} className="cmd-device-setup" role="dialog" aria-modal="true" aria-label="Commander control setup">
       <section className="cmd-device-panel">
         <small>ORBITAL / COMMANDER MODE</small>
         {laptopIntro ? <>
@@ -364,6 +402,7 @@ export default function Commander({
       : undefined;
     return (
       <>
+      <SimulationClockContext.Provider value={advanceResourceClock}>
       <Flight
         device={device}
         preferences={preferences}
@@ -411,6 +450,7 @@ export default function Commander({
         }
         saveError={saveError}
       />
+      </SimulationClockContext.Provider>
       {settingsView}
       </>
     );

@@ -5,6 +5,7 @@ import { designTradeoffs, relativeSolarFlux, oneWayLightTimeSeconds,
   scienceReference, scienceSources, EARTH_IRRADIANCE_W_M2,
   MEAN_EARTH_MOON_DISTANCE_KM, MARS_MEAN_SOLAR_DISTANCE_AU } from "./missionScience";
 import type { Design } from "../../game";
+import {strategyEnergyAssumptions, strategyResources} from '../../strategyEnergy';
 
 const smallCraft: Design = {
   counts:{solar:1,spectrometer:1,battery:1,antenna:1,tank:1},
@@ -72,4 +73,19 @@ test("decision lab uses the active challenge budget rather than the general allo
     const info=designTradeoffs("mars",smallCraft,{...metrics,cost:cap+1},cap);
     assert.equal(info.budgetMargin,-1);assert.ok(info.risks.some(r=>r.includes("spending")));
   }
+});
+
+test('Strategy v2 solar comparison preserves its Mars rating and finite-energy assumptions without changing Commander',()=>{
+  const energy=strategyResources(smallCraft),assumptions=strategyEnergyAssumptions;
+  const model={version:2 as const,arrayRatedW:assumptions.arrayW,referenceFluxWm2:assumptions.solarFluxWm2,
+    generationW:energy.generationW,loadW:energy.loadW,chargeWh:energy.chargeWh,capacityWh:energy.capacityWh,
+    operatingHours:assumptions.operatingHours,dispatchableReserveW:energy.power};
+  const planning=designTradeoffs('mars',smallCraft,metrics,220,model);
+  assert.ok(Math.abs(planning.arrayAtEarth-196.076271)<1e-6);
+  assert.ok(planning.atDestination!>84&&planning.atDestination!<86);
+  assert.match(planning.note,/590 W\/m²/);
+  assert.match(planning.note,/Finite battery storage/);
+  assert.equal(designTradeoffs('mars',smallCraft,metrics).arrayAtEarth,85,'legacy Commander presentation remains stable');
+  const low=designTradeoffs('mars',smallCraft,metrics,220,{...model,dispatchableReserveW:9});
+  assert.ok(low.risks.some(issue=>issue.includes('2 hours')));
 });

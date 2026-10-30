@@ -6,7 +6,9 @@ import {
   categories,
   faultCatalog,
 } from "./ship";
-import { emptyObservations } from "./observations";
+import { emptyObservations, validAirlockProcedure } from "./observations";
+import { validScientificMeasurement } from "./scientificResults";
+import { validConditionSnapshot } from "./reportMetrics";
 import { decodeStore as decodeLegacy } from "./legacySave";
 import { technologies } from "./economy";
 import {
@@ -16,7 +18,7 @@ import {
   type LifeSupport,
 } from "../simulation";
 import { components, rockets, trajectories, type Design } from "../../game";
-import { missions, missionById } from "./definitions";
+import { missions, missionById, missionForSession } from "./definitions";
 import { equipment, type EquipmentId } from "./equipment";
 import {
   emptyProgress,
@@ -126,8 +128,22 @@ function report(r: any): r is Report {
     Array.isArray(r.good) &&
     r.good.every((v: unknown) => typeof v === "string") &&
     Array.isArray(r.improve) &&
-    r.improve.every((v: unknown) => typeof v === "string")
+    r.improve.every((v: unknown) => typeof v === "string") &&
+    (r.missionRevision === undefined || validProcedureRevision(r.missionId, r.missionRevision)) &&
+    (r.metricVersion === undefined || r.metricVersion === 2) &&
+    (r.conditionSnapshot === undefined || validConditionSnapshot(r.conditionSnapshot)) &&
+    (r.metricVersion !== 2 || validConditionSnapshot(r.conditionSnapshot)) &&
+    (r.measurements === undefined || validMeasurements(r.measurements))
   );
+}
+function validProcedureRevision(missionId: string, revision: unknown): boolean {
+  if (!Number.isSafeInteger(revision) || (revision as number) < 1) return false;
+  try { missionForSession({missionId, revision: revision as number}); return true; }
+  catch { return false; }
+}
+function validMeasurements(value: unknown): boolean {
+  return Array.isArray(value) && value.every(validScientificMeasurement) &&
+    new Set(value.map(reading => reading.id)).size === value.length;
 }
 export function decodeStore(raw: string): Store {
   const v = JSON.parse(raw);
@@ -199,7 +215,7 @@ export function decodeStore(raw: string): Store {
       throw Error("Invalid saved outpost");
   if (v.session) {
     const s = v.session as Session;
-    const m = missionById(s.missionId);
+    const m = missionForSession(s);
     if (!s.world) {
       s.world = newShip(s.selectedGear);
       for (const gate of Object.values(s.world.doors)) gate.open = true;
@@ -281,6 +297,10 @@ export function decodeStore(raw: string): Store {
       !finite(s.observations.transmitted)
     )
       throw Error("Invalid operational observations");
+    if (s.observations.airlockProcedure !== undefined && !validAirlockProcedure(s.observations.airlockProcedure))
+      throw Error("Invalid airlock procedure evidence");
+    if (s.measurements !== undefined && !validMeasurements(s.measurements))
+      throw Error("Invalid scientific measurement records");
     for (const flag of [
       "exterior",
       "vacuum",
@@ -433,7 +453,19 @@ export function decodeStore(raw: string): Store {
 }
 function newerSave(raw: string | null) {
   if (!raw) return false;
-  try { return JSON.parse(raw)?.version > 3; } catch { return false; }
+  try {
+    const value = JSON.parse(raw);
+    if (value?.version > 3) return true;
+    if (value?.version !== 3) return false;
+    const newerProcedure = (record: any, revision: unknown) => {
+      if (!record || !Number.isSafeInteger(revision) || (revision as number) < 1) return false;
+      try { return (revision as number) > missionById(record.missionId).revision; }
+      catch { return typeof record.missionId === "string"; }
+    };
+    if (newerProcedure(value.session, value.session?.revision)) return true;
+    return [...Object.values(value.progress?.completed || {}), ...(value.progress?.history || [])]
+      .some((r: any) => newerProcedure(r, r?.missionRevision) || r?.metricVersion > 2);
+  } catch { return false; }
 }
 
 export function loadStore(storage: Pick<Storage, "getItem">): {

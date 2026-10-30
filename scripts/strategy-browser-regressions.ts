@@ -10,8 +10,10 @@ import {createRequire} from 'node:module';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {addDelta,components,events,outcome,report,resources,rockets,trajectories,zero,type Design,type Delta,type MissionEvent} from '../src/game';
+import {addDelta,components,events,rockets,trajectories,zero,type Design,type Delta,type MissionEvent} from '../src/game';
 import {STRATEGY_SAVE_KEY,strategyChallenges,strategyGoalMet,strategyStarter,type StrategyChallenge} from '../src/strategyChallenges';
+import {strategyResources as resources,strategyOutcome as outcome,strategyReport as report,strategyChoiceEnabled,launchStrategyEnergy,advanceStrategyEnergy,strategyEnergyAssumptions,type StrategyEnergy} from '../src/strategyEnergy';
+import {STRATEGY_ATTEMPT_KEY} from '../src/strategyAttempt';
 
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
@@ -51,16 +53,61 @@ const loadouts:[number[],number?,number?][]=[
 const designs=loadouts.map(([counts,rocket=0,trajectory=2]):Design=>({counts:Object.fromEntries(components.map((c,i)=>[c.id,counts[i]])),rocket,trajectory}));
 assert.deepEqual(designs[0],{...strategyStarter,counts:Object.fromEntries(components.map(c=>[c.id,strategyStarter.counts[c.id]||0]))});
 
-function available(design:Design,delta:Delta,event:MissionEvent){
- const current=resources(design,delta);
- return event.choices.filter(choice=>!choice.need||current[choice.need]>=(choice.amount||0));
+function available(design:Design,delta:Delta,event:MissionEvent,energy:StrategyEnergy){
+ return event.choices.filter(choice=>strategyChoiceEnabled(choice,design,delta,energy));
 }
 // This is an online policy: unknown future events are universally quantified.
 // It never reads the browser's deck or predicts the next actual event.
-function canWinEveryFuture(design:Design,challenge:StrategyChallenge,delta:Delta,seen:string[],remaining:number):boolean{
- if(remaining===0)return strategyGoalMet(design,challenge,delta,report(design,delta).score);
- return events.filter(event=>!seen.includes(event.id)).every(event=>available(design,delta,event).some(choice=>
-  canWinEveryFuture(design,challenge,addDelta(delta,outcome(choice,event,design)),[...seen,event.id],remaining-1)));
+function canWinEveryFuture(design:Design,challenge:StrategyChallenge,delta:Delta,seen:string[],remaining:number,energy=launchStrategyEnergy(design)):boolean{
+ if(remaining===0)return strategyGoalMet(design,challenge,delta,report(design,delta,energy).score,energy);
+ return events.filter(event=>!seen.includes(event.id)).every(event=>available(design,delta,event,energy).some(choice=>{
+  const next=addDelta(delta,outcome(choice,event,design,energy));
+  return canWinEveryFuture(design,challenge,next,[...seen,event.id],remaining-1,advanceStrategyEnergy(design,next,energy,strategyEnergyAssumptions.eventHours));
+ }));
+}
+
+// Independent arithmetic for rendered telemetry. Do not use the implementation's
+// energy integration or resource function to establish conservation here.
+type ElectricalLedger={hours:number;charge:number;generated:number;demand:number;discarded:number;unmet:number};
+const count=(d:Design,id:string)=>d.counts[id]||0;
+function electricalRates(design:Design,delta:Delta){
+ return {generation:40+85*count(design,'solar'),load:Math.max(20,20+12*count(design,'camera')+25*count(design,'spectrometer')+30*count(design,'radar')+15*count(design,'antenna')-delta.power)};
+}
+function integrateElectrical(design:Design,delta:Delta,previous:ElectricalLedger,hours:number):ElectricalLedger{
+ const {generation,load}=electricalRates(design,delta),capacity=140*count(design,'battery'),rate=35*count(design,'battery');
+ const surplus=Math.max(0,(generation-load)*hours),deficit=Math.max(0,(load-generation)*hours);
+ const charge=Math.min(surplus,capacity-previous.charge,rate*hours),draw=Math.min(deficit,previous.charge,rate*hours);
+ return {hours:previous.hours+hours,charge:previous.charge+charge-draw,generated:previous.generated+generation*hours,
+  demand:previous.demand+load*hours,discarded:previous.discarded+surplus-charge,unmet:previous.unmet+deficit-draw};
+}
+async function assertElectricalUI(design:Design,delta:Delta,ledger:ElectricalLedger){
+ const readings=await page.locator('.strategy-energy dl>div').evaluateAll((rows:Element[])=>Object.fromEntries(rows.map(row=>[row.querySelector('dt')?.textContent,row.querySelector('dd')?.textContent])));
+ const {generation,load}=electricalRates(design,delta),net=generation-load;
+ assert.deepEqual(readings,{
+  'Generation / load':`${generation} W / ${load} W`,
+  'Net generation':`${net>=0?'+':''}${net} W`,
+  'Battery energy':`${ledger.charge.toFixed(1)} / ${140*count(design,'battery')} Wh`,
+  'Operating time':`${ledger.hours.toFixed(2)} / 2 h`,
+  'Integrated generation / load':`${ledger.generated.toFixed(1)} / ${ledger.demand.toFixed(1)} Wh`,
+  'Discarded / unmet energy':`${ledger.discarded.toFixed(1)} / ${ledger.unmet.toFixed(1)} Wh`,
+ });
+ assert.ok(Math.abs(140*count(design,'battery')+ledger.generated+ledger.unmet-ledger.demand-ledger.charge-ledger.discarded)<1e-8,'independent conservation: initial storage + generation + unmet = demand + final storage + discard');
+}
+
+async function attemptSnapshot(stage:number,choices:number){
+ await page.waitForFunction(({key,stage,choices}:{key:string;stage:number;choices:number})=>{try{const a=JSON.parse(localStorage.getItem(key)||'null');return a?.stage===stage&&a?.choices?.length===choices;}catch{return false;}},{key:STRATEGY_ATTEMPT_KEY,stage,choices});
+ return page.evaluate((key:string)=>JSON.parse(localStorage.getItem(key)!),STRATEGY_ATTEMPT_KEY);
+}
+// Reading an already-earned checkpoint establishes restoration only. Its future
+// deck never enters the online policy, which receives visible event IDs alone.
+async function reloadAndResume(stage:number,choices:number){
+ const before=await attemptSnapshot(stage,choices);
+ const eventTitle=stage===5?await page.locator('.event>h2').innerText():null;
+ await page.reload({waitUntil:'domcontentloaded'});await enterStrategy();
+ await page.getByRole('button',{name:/^Resume saved attempt/}).click();
+ if(eventTitle)await page.locator('.event>h2').filter({hasText:eventTitle}).waitFor();
+ else await page.getByRole('heading',{name:'✓ All astronaut preflight checks passed',exact:true}).waitFor();
+ assert.deepEqual(await attemptSnapshot(stage,choices),before,'reload restores the exact design, drawn deck, choices, resources, energy and log');
 }
 
 async function enterStrategy(target=page){
@@ -106,12 +153,17 @@ async function injectWriteFailure(){
 }
 async function fly(index:number,design:Design,{failSave=false,deliberateFailure=false}={}){
  const challenge=await prepare(index,design);
+ let ledger:ElectricalLedger={hours:0,charge:140*count(design,'battery'),generated:0,demand:0,discarded:0,unmet:0};
+ await assertElectricalUI(design,zero,ledger);
+ if(index===0&&!deliberateFailure)await reloadAndResume(3,0);
  await page.getByRole('heading',{name:'✓ All astronaut preflight checks passed',exact:true}).waitFor();
  const launch=page.getByRole('button',{name:`AUTHORIZE PILOT LAUNCH · LEVEL ${challenge.level} ↗`,exact:true});
  assert.equal(await launch.isEnabled(),true);
  await launch.click();
  const seen:string[]=[],choices:string[]=[];
- let delta={...zero};
+ let delta={...zero},energy=launchStrategyEnergy(design);
+ ledger=integrateElectrical(design,delta,ledger,1);
+ await assertElectricalUI(design,delta,ledger);
  for(let n=0;n<3;n++){
   await page.locator('.event').waitFor({state:'visible'});
   const title=await page.locator('.event>h2').innerText();
@@ -119,26 +171,34 @@ async function fly(index:number,design:Design,{failSave=false,deliberateFailure=
   assert.ok(event,`Recognize the currently visible event: ${title}`);
   assert.equal(seen.includes(event.id),false,'Mission events do not repeat');
   seen.push(event.id);
-  const enabled=available(design,delta,event);
-  const choice=deliberateFailure?enabled.at(-1):enabled.find(choice=>canWinEveryFuture(design,challenge,addDelta(delta,outcome(choice,event,design)),seen,2-n));
+  const enabled=available(design,delta,event,energy);
+  const choice=deliberateFailure?enabled.at(-1):enabled.find(choice=>{
+   const next=addDelta(delta,outcome(choice,event,design,energy));
+   return canWinEveryFuture(design,challenge,next,seen,2-n,advanceStrategyEnergy(design,next,energy,strategyEnergyAssumptions.eventHours));
+  });
   assert.ok(choice,`Level ${challenge.level}: an online winning decision exists for the visible ${event.id} event`);
   const button=page.locator('.event-choice').filter({has:page.getByRole('heading',{name:choice.name,exact:true})});
   assert.equal(await button.isEnabled(),true);
   if(failSave&&n===2)await injectWriteFailure();
   choices.push(choice.name);
-  delta=addDelta(delta,outcome(choice,event,design));
+  delta=addDelta(delta,outcome(choice,event,design,energy));
+  energy=advanceStrategyEnergy(design,delta,energy,strategyEnergyAssumptions.eventHours);
+  ledger=integrateElectrical(design,delta,ledger,1/3);
   await button.click();
   if(n<2)await page.waitForFunction((previous:string)=>document.querySelector('.event>h2')?.textContent!==previous,title);
+  else await page.locator('.report-hero').waitFor();
+  await assertElectricalUI(design,delta,ledger);
+  if(index===0&&n===0&&!deliberateFailure){await reloadAndResume(5,1);await assertElectricalUI(design,delta,ledger);}
  }
  await page.locator('.report-hero').waitFor();
- const modeled=report(design,delta),score=Number((await page.locator('.score>strong').innerText()).replace('%',''));
+ const modeled=report(design,delta,energy),score=Number((await page.locator('.score>strong').innerText()).replace('%',''));
  assert.equal(score,modeled.score,'Rendered score matches decisions actually submitted');
  assert.equal(await page.locator('.score>span').innerText(),'PERFORMANCE SCORE');
  const budgetMetric=page.locator('.report-metric').filter({hasText:'Budget management'});
  assert.match(await budgetMetric.locator('p').innerText(),new RegExp(`Spent \\$${modeled.r.cost}M of \\$${challenge.budgetCap}M`));
  assert.equal(await page.locator('.log p').count(),3,'All three visible decisions appear in the report');
  if(deliberateFailure){
-  assert.equal(strategyGoalMet(design,challenge,delta,score),false);
+  assert.equal(strategyGoalMet(design,challenge,delta,score,energy),false);
   assert.ok(score>=50,'This specifically covers a high-score failed mission');
   assert.equal(await page.locator('.strategy-result>strong').innerText(),'MISSION REQUIREMENTS NOT MET');
   assert.equal(await page.locator('.report-hero h2').innerText(),'Mission needs refinement.');
@@ -150,7 +210,7 @@ async function fly(index:number,design:Design,{failSave=false,deliberateFailure=
   await page.getByRole('alert').filter({hasText:'Progress has not been saved.'}).waitFor();
   const old=await savedProgress();
   assert.equal(old['strategy-1'],results[0].score,'Earlier completion survives failed writes');
-  assert.equal(old[challenge.id],undefined,'Unsaved completion is not falsely claimed in persistent storage');
+  assert.equal(old[challenge.id],undefined,'The failed compatibility-summary write does not claim a committed summary; immutable receipts remain available to retry');
   await page.screenshot({path:join(artifacts,'storage-write-failure.png')});
   await page.evaluate(()=>(window as any).__restoreStrategyWrites());
   await page.getByRole('button',{name:'Retry save',exact:true}).click();
@@ -215,7 +275,7 @@ try{
  console.log('PASS denied localStorage getter still opens a fresh Strategy campaign');
 
  assert.deepEqual(pageErrors,[]);
- const summary={completed:results.length,decisions:results.length*3,scores:results.map(r=>r.score),reloadVerified:true,writeFailureRetryVerified:true,actualBudgetVerified:true,highScoreFailureVerified:true,storageGetterVerified:true,pageErrors,results};
+ const summary={completed:results.length,decisions:results.length*3,scores:results.map(r=>r.score),modelVersion:2,independentElectricalUIVerified:true,planningAndDecisionResumeVerified:true,reloadVerified:true,writeFailureRetryVerified:true,actualBudgetVerified:true,highScoreFailureVerified:true,storageGetterVerified:true,pageErrors,results};
  await writeFile(join(artifacts,'results.json'),JSON.stringify(summary,null,2));
  console.log('STRATEGY_BROWSER_SUMMARY '+JSON.stringify(summary));
 }catch(error){

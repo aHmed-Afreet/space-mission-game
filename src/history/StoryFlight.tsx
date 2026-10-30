@@ -6,6 +6,12 @@ import {createStoryScenario,type Station,type StoryTask,type FieldAction} from "
 import { officialFilmFor } from "./officialFilms";
 import {startStoryWorld,type StoryWorld} from "./storyWorld";
 import { storyFrameDue, storyFrame, refillStoryOxygen } from "./storyRuntime";
+import { storyFieldEligibility } from "./storyFieldActions";
+import { readStoryAttempt, saveStoryAttempt, type StoryAttempt } from "./storyAttempt";
+import { createForegroundClock } from "../commander/foregroundTime";
+import { containModalFocus } from "../commander/modalFocus";
+import { readHistoryProgressStrict } from "./historyProgress";
+import { storyScienceExercise, type StoryScienceRecord } from "./storyScience";
 import "./storyFlight.css";
 
 const displayName:Record<Station,string>={
@@ -14,10 +20,24 @@ const displayName:Record<Station,string>={
 type PointerState={id:number,x:number,y:number};
 function observeLimit(v:number){return Math.max(-1,Math.min(1,v));}
 export default function StoryFlight({mission,onExit,onReadHistory,onComplete,saveError=""}:{
- mission:HistoryMission;onExit:()=>void;onReadHistory:()=>void;onComplete:(correct:boolean)=>void;saveError?:string;
+ mission:HistoryMission;onExit:()=>void;onReadHistory:()=>void;onComplete:(correct:boolean,runId:string)=>void;saveError?:string;
 }){
  const scenario=createStoryScenario(mission);
  const matchingFilm=officialFilmFor(mission.title);
+ const [initialCheckpoint]=useState(()=>{
+  try{const checkpoint=readStoryAttempt(localStorage,scenario);
+   if(checkpoint.kind==="valid"&&checkpoint.attempt.stage===scenario.tasks.length){
+    try{if(readHistoryProgressStrict(localStorage)[mission.id]===2)return {kind:"missing" as const};}catch{/* Preserve the actual attempt when completion storage cannot be read. */}
+   }
+   return checkpoint;}catch{return {kind:"unavailable" as const,message:"Browser storage is unavailable. This exercise cannot be saved yet."};}
+ });
+ const resumed=initialCheckpoint.kind==="valid"?initialCheckpoint.attempt:null;
+ const [runId]=useState(()=>resumed?.runId??(globalThis.crypto?.randomUUID?.()??`story-${Date.now()}-${Math.random().toString(36).slice(2)}`));
+ const [attemptNotice,setAttemptNotice]=useState(initialCheckpoint.kind==="invalid"||initialCheckpoint.kind==="unavailable"?initialCheckpoint.message:resumed?"Saved exercise restored. Oxygen and movement resume only after you continue.":"");
+ const attemptClock=useRef(resumed?.updatedAt??0);
+ const persistRef=useRef<()=>boolean>(()=>false);
+ const advanceRef=useRef<()=>void>(()=>{});
+ const root=useRef<HTMLDivElement>(null);
  const canvas=useRef<HTMLCanvasElement>(null);
  const world=useRef<StoryWorld|null>(null);
  const keys=useRef(new Set<string>());
@@ -29,26 +49,30 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
  const [aim,setAim]=useState<Station|null>(null);
  const [hatchAim,setHatchAim]=useState(false);
  const aimRef=useRef<Station|null>(null);
- const [stage,setStage]=useState(0);
- const [procedure,setProcedure]=useState<StoryTask|null>(null);
- const [confirmed,setConfirmed]=useState(false);
- const [powerVerified,setPowerVerified]=useState(false);
- const [telemetryVerified,setTelemetryVerified]=useState(false);
- const [operationArmed,setOperationArmed]=useState(false);
- const [measurement,setMeasurement]=useState(false);
- const [logged,setLogged]=useState<string[]>([]);
+ const [stage,setStage]=useState(resumed?.stage??0);
+ const [procedure,setProcedure]=useState<StoryTask|null>(resumed?.procedure?scenario.tasks[resumed.stage]:null);
+ const [confirmed,setConfirmed]=useState(resumed?.procedure?.confirmed??false);
+ const [powerVerified,setPowerVerified]=useState(resumed?.procedure?.powerVerified??false);
+ const [telemetryVerified,setTelemetryVerified]=useState(resumed?.procedure?.telemetryVerified??false);
+ const [operationArmed,setOperationArmed]=useState(resumed?.procedure?.operationArmed??false);
+ const [measurement,setMeasurement]=useState(resumed?.procedure?.measurement??false);
+ const [logged,setLogged]=useState<string[]>(resumed?.logged??[]);
+ const [interpretation,setInterpretation]=useState<number|null>(resumed?.procedure?.interpretation??null);
+ const [scienceRecords,setScienceRecords]=useState<StoryScienceRecord[]>(resumed?.scienceRecords??[]);
+ const scienceExercise=storyScienceExercise(mission);
  const [paused,setPaused]=useState(false);
- const [showGuide,setShowGuide]=useState(true);
+ const [showGuide,setShowGuide]=useState(!(resumed&&resumed.stage>=scenario.tasks.length));
  const [error,setError]=useState("");
  const [evaPanel,setEvaPanel]=useState(false);
- const [evaOutside,setEvaOutside]=useState(false);
- const evaOutsideRef=useRef(false);
- const [suitEquipped,setSuitEquipped]=useState(false);
- const [suitOxygen,setSuitOxygen]=useState(100);
- const oxygenRef=useRef(100);
+ const [evaOutside,setEvaOutside]=useState(resumed?.world.outside??false);
+ const evaOutsideRef=useRef(resumed?.world.outside??false);
+ const [suitEquipped,setSuitEquipped]=useState(resumed?.suitEquipped??false);
+ const [suitOxygen,setSuitOxygen]=useState(Math.round(resumed?.oxygen??100));
+ const oxygenRef=useRef(resumed?.oxygen??100);
  const [evaNote,setEvaNote]=useState("");
- const [hatchPrepared,setHatchPrepared]=useState(false);
+ const [hatchPrepared,setHatchPrepared]=useState(resumed?.hatchPrepared??false);
  const [evaDistance,setEvaDistance]=useState(0);
+ const [fieldFeedback,setFieldFeedback]=useState("");
  const verticalTouch=useRef(0);
  const suitReadout=useRef(0);
  const task=scenario.tasks[stage]??null;
@@ -57,6 +81,30 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
  const pauseRef=useRef(false);
  pauseRef.current=paused||!!procedure||completed||showGuide||evaPanel;
  const simulationPaused=pauseRef.current;
+ useEffect(()=>{
+  const dialogs=root.current?.querySelectorAll<HTMLElement>(".story-fps-dialog");
+  const dialog=dialogs?.[dialogs.length-1];
+  if(!dialog)return;
+  return containModalFocus({dialog,boundary:dialog.parentElement??dialog,onClose:()=>{
+   if(error||completed)return;
+   if(showGuide){setShowGuide(false);return;}
+   if(paused){setPaused(false);return;}
+   if(procedure){setProcedure(null);return;}
+   setEvaPanel(false);
+  }});
+ },[showGuide,!!procedure,evaPanel,completed,paused,!!error]);
+ const fieldReady=task?.fieldAction?storyFieldEligibility(task.fieldAction,evaOutside,evaDistance):null;
+ persistRef.current=()=>{
+  if(!world.current)return false;
+  const checkpoint:StoryAttempt={version:1,missionId:mission.id,runId,
+   updatedAt:Math.max(Date.now(),attemptClock.current+1),taskIds:scenario.tasks.map(t=>t.id),stage,
+   completedTaskIds:scenario.tasks.slice(0,stage).map(t=>t.id),logged,
+   procedure:procedure?{taskId:procedure.id,confirmed,powerVerified,telemetryVerified,operationArmed,measurement,interpretation}:null,
+   suitEquipped,oxygen:oxygenRef.current,hatchPrepared,world:world.current.snapshot(),scienceRecords};
+  try{saveStoryAttempt(localStorage,scenario,checkpoint);attemptClock.current=checkpoint.updatedAt;setAttemptNotice("");return true;}
+  catch(e){setAttemptNotice(e instanceof Error?e.message:"Exercise could not be saved. Keep this tab open and retry.");return false;}
+ };
+ useEffect(()=>{persistRef.current();},[stage,procedure,confirmed,powerVerified,telemetryVerified,operationArmed,measurement,interpretation,scienceRecords,suitEquipped,hatchPrepared,evaOutside]);
  useEffect(()=>{
   if(!simulationPaused)return;
   keys.current.clear();stick.current=null;lookPointer.current=null;sprintPointer.current=null;
@@ -70,21 +118,24 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     setEvaNote("");setEvaPanel(true);return;
   }
   if(st&&task&&!task.fieldAction&&st===task.station&&!evaOutsideRef.current){
-   setProcedure(task);setConfirmed(false);setPowerVerified(false);setTelemetryVerified(false);setOperationArmed(false);setMeasurement(false);
+   setProcedure(task);setConfirmed(false);setPowerVerified(false);setTelemetryVerified(false);setOperationArmed(false);setMeasurement(false);setInterpretation(null);
   }
  };
  const onLook=useCallback((dx:number,dy:number)=>world.current?.look(dx,dy),[]);
  useEffect(()=>{
   if(!canvas.current)return;
   let instance:StoryWorld;
-  try{instance=startStoryWorld(canvas.current,scenario);world.current=instance;}
+  try{instance=startStoryWorld(canvas.current,scenario);world.current=instance;
+   if(resumed&&!instance.restore(resumed.world)){
+    setError("The saved exercise position is invalid for this mission. Its original checkpoint has been preserved.");
+    instance.dispose();world.current=null;return;
+   }
+   setEvaDistance(instance.distanceToHatch());
+  }
   catch(e){setError("3D graphics are unavailable in this browser. Try another browser with WebGL enabled.");return;}
-  let frame=0,last=0,lastAim:Station|null=null,lastHatchAim=false;
-  const tick=(time:number)=>{
-   frame=requestAnimationFrame(tick);
-   if(!storyFrameDue(time,last))return;
-   const step=storyFrame(oxygenRef.current,evaOutsideRef.current,pauseRef.current,(time-last)/1000);last=time;
-   const delta=step.delta;
+  let frame=0,last=0,lastCheckpoint=0,lastAim:Station|null=null,lastHatchAim=false;
+  const clock=createForegroundClock({stepSeconds:1/120,maxFrameSeconds:2});
+  const advance=(time:number)=>{
    let x=0,y=0;
    if(!pauseRef.current){
     if(keys.current.has("w")||keys.current.has("arrowup"))y++;
@@ -94,16 +145,23 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     if(stick.current){const s=joystickVector(stick.current.dx,stick.current.dy,59);x+=s.x;y-=s.y;}
    }
    const vertical=pauseRef.current?0:(keys.current.has(" ")||keys.current.has("pageup")?1:0)-(keys.current.has("control")||keys.current.has("pagedown")?1:0)+verticalTouch.current;
-   const aimed=instance.update(observeLimit(x),observeLimit(y),sprint.current||keys.current.has("shift"),delta,activeStation.current,observeLimit(vertical));
-
+   let aimed=lastAim,emergencyReturn=false;
+   const elapsed=clock.advance(time,{active:!pauseRef.current,visible:!document.hidden},delta=>{
+    const step=storyFrame(oxygenRef.current,evaOutsideRef.current,false,delta);
+    oxygenRef.current=step.oxygen;emergencyReturn ||= step.emergencyReturn;
+    aimed=instance.update(observeLimit(x),observeLimit(y),sprint.current||keys.current.has("shift"),step.delta,activeStation.current,observeLimit(vertical));
+   });
+   if(elapsed.steps===0)aimed=instance.update(0,0,false,0,activeStation.current,0);
+   if(time-lastCheckpoint>=5000){persistRef.current();lastCheckpoint=time;}
    if(evaOutsideRef.current){
-    oxygenRef.current=step.oxygen;
-    suitReadout.current+=delta;
+    suitReadout.current+=elapsed.acceptedSeconds;
+    const trueDistance=instance.distanceToHatch();
+    setEvaDistance(d=>Math.abs(d-trueDistance)>.001?trueDistance:d);
     if(suitReadout.current>=.5){
-     setSuitOxygen(Math.round(oxygenRef.current));setEvaDistance(Math.round(instance.distanceToHatch()));
+     setSuitOxygen(Math.round(oxygenRef.current));
      suitReadout.current=0;
     }
-    if(step.emergencyReturn){
+    if(emergencyReturn){
      evaOutsideRef.current=false;instance.setExcursion(false);setEvaOutside(false);
      setSuitOxygen(0);setHatchPrepared(false);
      setEvaNote("Emergency training return: suit oxygen depleted. Restore reserves before another EVA.");
@@ -114,26 +172,37 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
    const nowHatchAim=scenario.role==="astronaut"&&instance.aimingAtHatch();
    if(nowHatchAim!==lastHatchAim){lastHatchAim=nowHatchAim;setHatchAim(nowHatchAim);}
   };
+  advanceRef.current=()=>advance(performance.now());
+  const tick=(time:number)=>{
+   frame=requestAnimationFrame(tick);
+   if(!storyFrameDue(time,last))return;
+   last=time;advance(performance.now());
+  };
   const resize=()=>instance.resize();
   const down=(e:KeyboardEvent)=>{
-   if(e.key==="Escape"){e.preventDefault();setPaused(p=>!p);return;}
+   advanceRef.current();
+   if(e.key==="Escape"){if(pauseRef.current)return;e.preventDefault();setPaused(true);return;}
    if(pauseRef.current)return;
    if(e.key.toLowerCase()==="e"&&!e.repeat){e.preventDefault();actRef.current();}
    if((e.key===" "||e.key==="Spacebar")&&!e.repeat)world.current?.jump();
    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
    keys.current.add(e.key.toLowerCase());
   };
-  const up=(e:KeyboardEvent)=>keys.current.delete(e.key.toLowerCase());
-  const blur=()=>{keys.current.clear();sprint.current=false;stick.current=null;verticalTouch.current=0;};
+  const up=(e:KeyboardEvent)=>{advanceRef.current();keys.current.delete(e.key.toLowerCase());};
+  const blur=()=>{advanceRef.current();keys.current.clear();sprint.current=false;stick.current=null;lookPointer.current=null;sprintPointer.current=null;verticalTouch.current=0;setJoystick(null);persistRef.current();};
+  const visibility=()=>{blur();clock.reset();};
+  const pagehide=()=>persistRef.current();
   window.addEventListener("keydown",down);
   window.addEventListener("keyup",up);
   window.addEventListener("blur",blur);
   window.addEventListener("resize",resize);
+  window.addEventListener("pagehide",pagehide);document.addEventListener("visibilitychange",visibility);
   frame=requestAnimationFrame(tick);
   return ()=>{
-   cancelAnimationFrame(frame);instance.dispose();world.current=null;
+   cancelAnimationFrame(frame);advanceRef.current=()=>{};instance.dispose();world.current=null;
    keys.current.clear();window.removeEventListener("keydown",down);window.removeEventListener("keyup",up);
    window.removeEventListener("blur",blur);window.removeEventListener("resize",resize);
+   window.removeEventListener("pagehide",pagehide);document.removeEventListener("visibilitychange",visibility);
   };
  },[mission.id]);
  const beginStick=(e:ReactPointer<HTMLDivElement>)=>{
@@ -183,18 +252,30 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
   (procedure.station==="science"&&measurement)
  );
  const completeField=(action:FieldAction)=>{
-  if(!task||task.fieldAction!==action||!evaOutsideRef.current)return;
-  const distance=world.current?.distanceToHatch() ?? 0;
-  if(distance<(action==="walk"?3:2))return;
+  advanceRef.current();
+  if(!task||task.fieldAction!==action)return;
+  const eligibility=storyFieldEligibility(action,evaOutsideRef.current,world.current?.distanceToHatch()??NaN);
+  if(!eligibility.ready){setFieldFeedback(eligibility.feedback);setEvaDistance(world.current?.distanceToHatch()??0);return;}
+  setFieldFeedback("");
   setLogged(a=>[...a,task.complete]);
   setStage(s=>s+1);
+ };
+ const captureScience=()=>{
+  if(!procedure||procedure.station!=="science")return;
+  setMeasurement(true);
+  setScienceRecords(records=>[...records.filter(r=>r.taskId!==procedure.id),{version:1,taskId:procedure.id,exercise:scienceExercise,interpretation:interpretation as 0|1|null}]);
+ };
+ const chooseInterpretation=(choice:0|1)=>{
+  setInterpretation(choice);
+  if(procedure&&measurement)setScienceRecords(records=>records.map(r=>r.taskId===procedure.id?{...r,interpretation:choice}:r));
  };
  const finishTask=()=>{
   if(!task||!canFinish)return;
   setLogged(a=>[...a,task.complete]);
   setStage(s=>s+1);setProcedure(null);setConfirmed(false);
  };
- const quit=()=>{sprint.current=false;onExit();};
+ const quit=()=>{sprint.current=false;persistRef.current();onExit();};
+ const readHistory=()=>{persistRef.current();onReadHistory();};
  const canEva=scenario.role==="astronaut";
  const refillSuit=()=>{
   if(evaOutsideRef.current||!world.current?.nearHatch())return;
@@ -215,11 +296,14 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
   world.current.setExcursion(next);
   evaOutsideRef.current=next;setEvaOutside(next);setEvaPanel(false);
   setHatchPrepared(false);verticalTouch.current=0;
-  setEvaDistance(Math.round(world.current.distanceToHatch()));
+  setEvaDistance(world.current.distanceToHatch());
   if(task?.fieldAction==="egress"&&next){setLogged(a=>[...a,task.complete]);setStage(s=>s+1);}
   if(task?.fieldAction==="return"&&!next){setLogged(a=>[...a,task.complete]);setStage(s=>s+1);}
  };
- return <div className="story-fps-root">
+ return <div ref={root} className="story-fps-root"
+  onPointerDownCapture={()=>advanceRef.current()} onPointerMoveCapture={()=>advanceRef.current()}
+  onPointerUpCapture={()=>advanceRef.current()} onPointerCancelCapture={()=>advanceRef.current()}
+  onLostPointerCaptureCapture={()=>advanceRef.current()} onClickCapture={()=>advanceRef.current()}>
   <canvas ref={canvas} className="story-fps-canvas" aria-label={"First person interactive 3D training scene for "+mission.title}/>
   <header className="story-fps-top">
    <button type="button" onClick={()=>setPaused(true)}>← Missions</button>
@@ -231,17 +315,33 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     <button type="button" onClick={()=>setPaused(true)}>II MENU</button>
    </div>
   </header>
+  <div className="story-fps-panels">
   {evaOutside&&<div className="story-fps-suit-hud" role="status">
     <strong>● SUIT SEALED · {scenario.setting==="moon"?"LUNAR SURFACE":scenario.setting==="mars"?"SURFACE EVA":"ORBITAL EVA"}</strong>
-    <span>O₂ {suitOxygen}% · SUIT SEALED · {evaDistance} m FROM HATCH</span>
-    <small>{scenario.setting==="moon"?"LOW GRAVITY · JUMP AND WALK":scenario.setting==="mars"?"MARS GRAVITY · JUMP AND WALK":"ZERO-G THRUSTERS · UP / DOWN · 24 m TETHER"} · RETURN TO HATCH</small>
+    <span>O₂ {suitOxygen}% · SUIT SEALED · {evaDistance.toFixed(1)} m FROM HATCH</span>
+    <small>{scenario.setting==="moon"?"LOW GRAVITY · JUMP AND WALK":scenario.setting==="mars"?"MARS GRAVITY · JUMP AND WALK":"ORBITAL THRUSTERS · UP / DOWN · 24 m TETHER"} · RETURN TO HATCH</small>
    </div>}
   <div className="story-fps-objective">
    <small>{task?.fieldAction?"APOLLO 11 · DOCUMENTED MOONWALK RECREATION":evaOutside?"OPTIONAL EVA TRAINING — ORIGINAL MISSION TASKS REMAIN INSIDE":scenario.role==="astronaut"?"ASTRONAUT TRAINING":"REMOTE OPERATIONS / NO CREW ABOARD"}</small>
    <h2>{completed?"History exercise complete":task.heading}</h2>
-   <p>{completed?mission.outcome:task.procedure}</p>
+   <details className="story-fps-objective-detail"><summary>Read mission instructions</summary><p>{completed?mission.outcome:task.procedure}</p></details>
    <span>{task?.fieldAction?"HISTORICAL ACTION":"PROCEDURE"} {Math.min(stage+1,scenario.tasks.length)} / {scenario.tasks.length} · {task?.fieldAction?"DOCUMENTED NASA EVA SEQUENCE":scenario.profile.visual}</span>
+   {attemptNotice&&<p className="story-fps-save-status" role="status">{attemptNotice}</p>}
    <div className="story-fps-progress">{scenario.tasks.map((s,i)=><i key={s.id} className={i<stage?"done":i===stage?"current":""}/>)}</div>
+  </div>
+  {task?.fieldAction&&evaOutside&&task.fieldAction!=="egress"&&task.fieldAction!=="return"&&
+    <div className="story-fps-historical-action">
+      <small>DOCUMENTED NASA EVA TASK · {stage+1}/{scenario.tasks.length}</small>
+      <strong>{task.heading}</strong>
+      <p role="status">{fieldFeedback||fieldReady?.feedback}</p>
+      <button type="button" disabled={!fieldReady?.ready}
+        onClick={()=>completeField(task.fieldAction!)}>{
+          task.fieldAction==="walk"?"EXAMINE LUNAR SOIL":
+          task.fieldAction==="photo"?"TAKE FIELD PHOTOGRAPH":
+          task.fieldAction==="sample"?"COLLECT CONTINGENCY SAMPLE":
+          "DEPLOY FLAG WITH CREW"}</button>
+      <details><summary>About this reconstruction</summary><small>Equipment interaction is a simplified teaching model, not an exact recreation of the astronaut's hand movements.</small></details>
+    </div>}
   </div>
   {!completed&&<div className="story-fps-target" aria-live="polite">
    <div className="story-fps-crosshair">+</div>
@@ -250,24 +350,9 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
   <div className="story-fps-instruction">{task?.fieldAction?
     task.fieldAction==="egress"?"EQUIP SUIT · GO TO HATCH · ENTER SURFACE":
     task.fieldAction==="return"?"RETURN TO EAGLE · OPEN AIRLOCK · ENTER":
-    `WALK ON THE LUNAR SURFACE · ${evaDistance} m FROM EAGLE`:
+    `WALK ON THE LUNAR SURFACE · ${evaDistance.toFixed(1)} m FROM EAGLE`:
     evaOutside?"EXPLORE THE ENVIRONMENT · RETURN TO HATCH FOR ORIGINAL TASKS":
     `FIND ${task?displayName[task.station].toUpperCase():"MISSION COMPLETE"} · AIM + INTERACT`}</div>
-  {task?.fieldAction&&evaOutside&&task.fieldAction!=="egress"&&task.fieldAction!=="return"&&
-    <div className="story-fps-historical-action">
-      <small>DOCUMENTED NASA EVA TASK · {stage+1}/{scenario.tasks.length}</small>
-      <strong>{task.heading}</strong>
-      <p>{evaDistance<(task.fieldAction==="walk"?3:2)?
-        `Move away from Eagle. Distance: ${evaDistance} m.`:
-        "Ready. Carry out the historical surface action below."}</p>
-      <button type="button" disabled={evaDistance<(task.fieldAction==="walk"?3:2)}
-        onClick={()=>completeField(task.fieldAction!)}>{
-          task.fieldAction==="walk"?"EXAMINE LUNAR SOIL":
-          task.fieldAction==="photo"?"TAKE FIELD PHOTOGRAPH":
-          task.fieldAction==="sample"?"COLLECT CONTINGENCY SAMPLE":
-          "DEPLOY FLAG WITH CREW"}</button>
-      <small>Equipment interaction is a simplified teaching model, not an exact recreation of the astronaut's hand movements.</small>
-    </div>}
   <div className="story-fps-look" onPointerDown={beginLook} onPointerMove={moveLook} onPointerUp={endLook} onPointerCancel={endLook} onLostPointerCapture={endLook} aria-label="Drag to look around"/>
   <div className="story-fps-movement" onPointerDown={beginStick} onPointerMove={moveStick}
     onPointerUp={stopStick} onPointerCancel={stopStick} onLostPointerCapture={stopStick} aria-label="Touch to move">
@@ -317,7 +402,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     </button>
     <button type="button" className="story-fps-minor" onClick={()=>setEvaPanel(false)}>BACK TO GAME</button>
    </section></div>}
-  {showGuide&&<div className="story-fps-shade"><section className="story-fps-dialog">
+  {showGuide&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission guide">
     <small>REAL HISTORY · FIRST-PERSON OPERATIONS</small>
     <h1>{mission.title}</h1><p>{scenario.historicalNote}</p>
     <p><strong>Spacecraft represented:</strong> {scenario.craft}</p><p><strong>Recognizable hardware:</strong> {scenario.profile.visual}. {scenario.profile.hardware}.</p>
@@ -326,10 +411,11 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     {matchingFilm&&<p><strong>Official video:</strong> <a href={matchingFilm.url} rel="noopener noreferrer" target="_blank">{matchingFilm.title} · NASA ↗</a>. The following tasks represent documented actions in chronological order; some movement and controls are simplified.</p>}
     {task?.fieldAction&&<p><strong>Apollo 11 EVA:</strong> Wear the suit, use the hatch, walk on the lunar surface, perform the field actions in order and return to Eagle. This is a selected segment of the moonwalk, not the entire three-hour EVA.</p>}
     <p>Move with WASD or the floating joystick; drag to look. Outside, use UP/DOWN (Space/Ctrl) to steer in zero gravity or JUMP on a surface. To leave, visit the airlock, equip a suit and close the inner hatch before depressurizing. Return through the exterior hatch. {scenario.tasks.some(t=>t.fieldAction)?"Complete the required surface tasks and return to Eagle. Replenish suit oxygen inside if necessary.":"EVA training is optional and does not change real history."}</p>
-    <button type="button" onClick={()=>setShowGuide(false)}>BEGIN 3D MISSION →</button>
-    <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ REAL HISTORY</button>
+    {attemptNotice&&<p role="status">{attemptNotice}</p>}
+    <button type="button" onClick={()=>setShowGuide(false)}>{resumed?"RESUME SAVED 3D MISSION →":"BEGIN 3D MISSION →"}</button>
+    <button type="button" className="story-fps-minor" onClick={readHistory}>READ REAL HISTORY</button>
   </section></div>}
-  {procedure&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission procedure">
+  {procedure&&!showGuide&&!paused&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission procedure">
     <small>MISSION CONTROL PROCEDURE · {displayName[procedure.station].toUpperCase()}</small>
     <h2>{procedure.heading}</h2>
     <p>{procedure.procedure}</p>
@@ -354,8 +440,16 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
           {operationArmed?"✓ MISSION SEQUENCE ARMED":"ARM "+procedure.action.toUpperCase()}</button>
       </>}
       {procedure.station==="science"&&<>
-        <p><strong>Historical observation:</strong> {scenario.profile.observation}</p><p>Review this real result and file the simulated observation for mission control.</p>
-        <button type="button" className={measurement?"story-fps-armed":"story-fps-minor"} onClick={()=>setMeasurement(true)}>
+        <p><strong>Historical observation goal:</strong> {scenario.profile.observation}</p>
+        <p><strong>SYNTHETIC TRAINING DATA · MODEL v{scienceExercise.modelVersion}</strong> These invented examples teach interpretation. They are not measurements from NASA or this historical mission.</p>
+        <h3>{scienceExercise.title}</h3>
+        <table className="story-fps-science-table"><tbody>{scienceExercise.rows.map(row=><tr key={row.label}><th scope="row">{row.label}</th><td>{row.value} {row.unit}</td></tr>)}</tbody></table>
+        <p>{scienceExercise.question}</p>
+        {scienceExercise.choices.map((choice,index)=><button type="button" key={choice} className={interpretation===index?"story-fps-armed":"story-fps-minor"} aria-pressed={interpretation===index} onClick={()=>chooseInterpretation(index as 0|1)}>{choice}</button>)}
+        {interpretation!==null&&<p role="status">{interpretation===scienceExercise.correct?"Correct interpretation. ":"Recheck the interpretation. "}{scienceExercise.explanation}</p>}
+        <p>Interpretation practice is optional; it adds no required task or reward. Capture files the example and your actual answer.</p>
+        <a href={scienceExercise.source} target="_blank" rel="noopener noreferrer">Mission context and historical records ↗</a>
+        <button type="button" className={measurement?"story-fps-armed":"story-fps-minor"} onClick={captureScience}>
           {measurement?"✓ OBSERVATION CAPTURED":"CAPTURE SCIENCE READING"}</button>
       </>}
     </div>
@@ -374,19 +468,25 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     <p><strong>Historical challenge:</strong> {mission.challenge}</p>
     <p><strong>Skill practiced:</strong> {mission.skill}</p>
     <ul>{logged.map((entry,i)=><li key={i}>{entry}</li>)}</ul>
+    {scienceRecords.length>0&&<details><summary>Captured training observations ({scienceRecords.length})</summary>
+     <p>Synthetic training data, model v1. These are the examples you captured; no historical spacecraft measurements are implied.</p>
+     {scienceRecords.map(record=><article key={record.taskId}><h3>{record.exercise.title}</h3><ul>{record.exercise.rows.map(row=><li key={row.label}>{row.label}: {row.value} {row.unit}</li>)}</ul><p>Interpretation: {record.interpretation===null?"not answered":record.exercise.choices[record.interpretation]}</p></article>)}
+    </details>}
     <p>The spacecraft shapes and workstations are educational approximations, not flight-ready layouts. Procedures are simplified; historical outcomes remain unchanged.</p>
     {saveError&&<p role="alert">{saveError}</p>}
-    <button type="button" onClick={()=>onComplete(true)}>{saveError?"RETRY SAVE COMPLETION & RETURN":"SAVE COMPLETION & RETURN"}</button>
-    <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ THE ACTUAL HISTORY</button>
+    <button type="button" onClick={()=>{persistRef.current();onComplete(true,runId);}}>{saveError?"RETRY SAVE COMPLETION & RETURN":"SAVE COMPLETION & RETURN"}</button>
+    <button type="button" className="story-fps-minor" onClick={readHistory}>READ THE ACTUAL HISTORY</button>
     <a href={mission.source} target="_blank" rel="noopener noreferrer">Official mission archive ↗</a>
   </section></div>}
-  {paused&&!showGuide&&!completed&&<div className="story-fps-shade"><section className="story-fps-dialog">
+  {paused&&!showGuide&&!completed&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission paused">
     <small>MISSION PAUSED</small><h2>{mission.title}</h2>
-    <p>Your current progress is retained while you remain in this story. Leaving closes the current training exercise.</p>
+    <p>Your task, procedure, suit oxygen and position are saved separately from earned story completions. Return to this story to resume.</p>
+    {attemptNotice&&<p role="alert">{attemptNotice}</p>}
+    <button type="button" className="story-fps-minor" onClick={()=>persistRef.current()}>SAVE EXERCISE CHECKPOINT</button>
     <button type="button" onClick={()=>setPaused(false)}>RESUME MISSION</button>
-    <button type="button" className="story-fps-minor" onClick={onReadHistory}>READ HISTORY</button>
+    <button type="button" className="story-fps-minor" onClick={readHistory}>READ HISTORY</button>
     <button type="button" className="story-fps-minor" onClick={quit}>BACK TO MISSION LIST</button>
   </section></div>}
-  {error&&<div className="story-fps-shade"><section className="story-fps-dialog"><h2>3D unavailable</h2><p>{error}</p><button onClick={onReadHistory}>Read mission history</button></section></div>}
+  {error&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="3D unavailable"><h2>3D unavailable</h2><p>{error}</p><button onClick={readHistory}>Read mission history</button></section></div>}
  </div>;
 }

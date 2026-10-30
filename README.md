@@ -249,7 +249,7 @@ Commander received an additional geometry-focused visual pass, not only CSS chan
 
 **Limits:** This is a procedural realism upgrade rather than photorealism. Materials, lighting and terrain remain artistically simplified, and real iPad Safari frame rate must be measured manually. No claim is made that movement or orbital physics were changed by the artwork.
 
-## Mission 2 rendezvous navigation and NASA visual reference
+## Mission 2 rendezvous navigation and optional telescope reference
 
 Mission 2 now uses a genuinely operable, touch-friendly training navigation
 computer. When the current objective is "Match orbital approach geometry",
@@ -260,16 +260,20 @@ resume it before operating instruments. Flight manoeuvre still checks actual
 simulation fuel, battery, orbit and cabin readiness. The original objectives
 and saved progress are preserved.
 
-The optional official NASA **Hubble Space Telescope (A)** GLB model, credited
+The optional NASA-hosted **Hubble Space Telescope (A)** GLB model, credited
 to DigitalSpace Corporation via NASA's public 3D resource repository, is used
-as *visual inspiration* for the fictional relay service satellite in Mission 2.
+as a reference for the fictional telescope worksite in Mission 8.
 The model is loaded lazily in the EVA worksite only; if unavailable, the
-original low-cost locally built satellite remains available and gameplay
+original low-cost locally built telescope remains available and gameplay
 continues. NASA does not sponsor or endorse this independent game.
 
 Visual asset: https://science.nasa.gov/3d-resources/hubble-space-telescope-a/
 Original hosted asset:
-https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20%28A%29
+https://github.com/nasa/NASA-3D-Resources/tree/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Hubble%20Space%20Telescope%20%28A%29
+
+The [October 29 presentation notes](docs/PRESENTATION-2026-10-29.md) record
+the pinned asset/hash and asset-specific provenance review, new mission
+profiles, geometry budgets and remaining imagery-rights/device checks.
 
 Cabin material improvement: offline-generated brushed-metal bump and roughness
 maps, textile seat harnesses, curved utility cables, mechanical gauges, and

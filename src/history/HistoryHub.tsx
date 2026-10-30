@@ -3,7 +3,10 @@ import { historyMissions, type HistoryMission } from "./missionHistory";
 import StoryFlight from "./StoryFlight";
 import StoryBriefingVideo from "./StoryBriefingVideo";
 import { officialFilmFor } from "./officialFilms";
-import { readHistoryProgress, saveHistoryProgress, type HistoryProgress } from "./historyProgress";
+import { readHistoryProgress, readHistoryProgressStrict, mergeHistoryProgress, HISTORY_PROGRESS_KEY, HISTORY_RECEIPT_PREFIX, saveHistoryProgress, type HistoryProgress } from "./historyProgress";
+import { readStoryAttempt, clearCompletedStoryAttempt } from "./storyAttempt";
+import { createStoryScenario } from "./storyScenarios";
+import { storyReferenceFor } from "./storyReferences";
 import "./history.css";
 
 const readHistory=():HistoryProgress=>{
@@ -46,10 +49,20 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   const shown=list.slice(0,page*12);
   const step=stageOrder.indexOf(stage);
   useEffect(()=>{setPage(1)},[query,era,category]);
+  useEffect(()=>{
+    const reconcile=(event:StorageEvent)=>{
+      if(event.key!==HISTORY_PROGRESS_KEY&&!event.key?.startsWith(HISTORY_RECEIPT_PREFIX))return;
+      try{const saved=readHistoryProgressStrict(localStorage);setResults(current=>mergeHistoryProgress(current,saved));}
+      catch{setSaveError("Story progress changed in another tab but could not be read. Saved data was retained; restore storage before retrying.");}
+    };
+    window.addEventListener("storage",reconcile);return()=>window.removeEventListener("storage",reconcile);
+  },[]);
   const open=(m:HistoryMission,mode:EntryView)=>{
     setSaveError("");
     setChosen(m);setView(mode);setStage("context");setAnswer(null);
-    setFilmOpened(false);setFilmConfirmed(false);
+    setFilmOpened(false);
+    try{setFilmConfirmed(mode==="live"&&readStoryAttempt(localStorage,createStoryScenario(m)).kind==="valid");}
+    catch{setFilmConfirmed(false);}
     window.scrollTo({top:0,behavior:"smooth"});
   };
   const close=()=>{setChosen(null);setAnswer(null);setStage("context");setFilmOpened(false);setFilmConfirmed(false)};
@@ -73,6 +86,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   };
   const choice=chosen?preferences[chosen.category]:null;
   const officialFilm=chosen?officialFilmFor(chosen.title):undefined;
+  const sourceReference=chosen?storyReferenceFor(chosen.id):undefined;
   // Watch verified video on the publisher's own site; never rehost agency footage.
   if(chosen&&view==="live"&&!filmConfirmed)return <main className="history-hub history-film-screen">
     <header className="history-header">
@@ -94,6 +108,8 @@ export default function HistoryHub({onExit,startIn="archive"}:{
         <h3>Recreate these documented actions in order</h3>
         <ol className="history-film-steps">{officialFilm.order.map(item=><li key={item}>{item}</li>)}</ol>
         <a className="history-film-record" href={officialFilm.record} target="_blank" rel="noopener noreferrer">Read the official historical timeline / mission record ↗</a>
+        <p className="history-training-note">If the publisher cannot play this film, you can still study the linked mission record and continue. Video availability and playback depend on the publisher.</p>
+        <button type="button" className="history-secondary" onClick={()=>setFilmConfirmed(true)}>VIDEO UNAVAILABLE · CONTINUE WITH MISSION RECORD →</button>
         <button className="history-film-continue" disabled={!filmOpened}
           onClick={()=>setFilmConfirmed(true)}>I WATCHED THE VIDEO · START LIVING THE MISSION →</button>
         {!filmOpened&&<p className="history-training-note">Open the verified NASA video first to unlock this mission's replay.</p>}
@@ -110,8 +126,10 @@ export default function HistoryHub({onExit,startIn="archive"}:{
     saveError={saveError}
     onExit={close}
     onReadHistory={()=>{setView("archive");setStage("context");setAnswer(null)}}
-    onComplete={()=>{
-      if(recordCompletion(chosen.id,2))close();
+    onComplete={(_correct,runId)=>{
+      if(!recordCompletion(chosen.id,2))return;
+      try{clearCompletedStoryAttempt(localStorage,createStoryScenario(chosen),runId);close();}
+      catch{setSaveError("Completion has been saved, but the exercise checkpoint could not be cleared. Keep this tab open, restore browser storage and retry. Your earned completion is retained.");}
     }}
   />;
   return <main className="history-hub">
@@ -140,7 +158,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
         <label>PERIOD<select value={era} onChange={e=>setEra(e.target.value)}>{eras.map(x=><option key={x}>{x}</option>)}</select></label>
         <label>TYPE<select value={category} onChange={e=>setCategory(e.target.value)}>{["All types","Crewed","Robotic","Space station","Telescope"].map(x=><option key={x}>{x}</option>)}</select></label>
       </div>
-      <p className="history-result-count">{list.length} missions found · Historical dates and outcomes reflect actual events. Some linked sources open broader archive pages.</p>
+      <p className="history-result-count">{list.length} missions found · Historical dates and outcomes reflect actual events. Each source states its scope; experience dates identify a launch, encounter, landing or other milestone.</p>
       <div className="history-grid">
         {shown.map(m=><article key={m.id} className="history-card">
           <div className="history-card-date"><span>{m.year}</span><small>{m.category.toUpperCase()}</small></div>
@@ -163,6 +181,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
           <small>REAL SPACE MISSION · {chosen.year} · {chosen.category.toUpperCase()}</small>
           <h1>{chosen.title}</h1>
           <p>{chosen.agency} · {chosen.destination}</p>
+          {sourceReference&&<p>{sourceReference.eventLabel}: {chosen.year}</p>}
           <div className="history-story-actions">
             <button type="button" onClick={()=>{setView("archive");setStage("context");setAnswer(null)}} aria-pressed={view==="archive"}>Read real history</button>
             <button type="button" onClick={()=>{setView("live");setStage("context");setAnswer(null)}} aria-pressed={view==="live"}>Live the story</button>
@@ -174,8 +193,9 @@ export default function HistoryHub({onExit,startIn="archive"}:{
           <article><small>03 / A REAL CHALLENGE</small><h2>The difficult part</h2><p>{chosen.challenge}</p></article>
           <article><small>04 / HISTORICAL OUTCOME</small><h2>What actually happened</h2><p>{chosen.outcome}</p></article>
           <article><small>05 / SKILLS & LEGACY</small><h2>What we can learn</h2><p>{chosen.skill}. This mission contributed to the techniques, scientific understanding or experience that informed later exploration.</p></article>
-          <article><small>06 / PRIMARY SOURCE</small><h2>Explore the records</h2><p>Official histories and mission archives can provide technical background and mission details beyond this introduction.</p>
-            <a href={chosen.source} rel="noopener noreferrer" target="_blank">Open historical source ↗</a></article>
+          <article><small>06 / PRIMARY SOURCE</small><h2>Explore the records</h2><p>Agency histories and mission archives provide technical background. Source destination and title were reviewed on 29 October 2026; this is not a certification of every claim.</p>
+            <a href={chosen.source} rel="noopener noreferrer" target="_blank">Open historical source ↗</a>
+            {sourceReference&&<p>{sourceReference.publisher} · {sourceReference.title}<br/>Scope: {sourceReference.scope} · {sourceReference.eventLabel}: {sourceReference.year}</p>}</article>
           <div className="history-story-cta"><button type="button" onClick={()=>{setView("live");setStage("context");setAnswer(null)}}>Live the story →</button></div>
         </div>:
         <div className="history-live">

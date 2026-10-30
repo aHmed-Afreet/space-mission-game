@@ -96,3 +96,57 @@
 .story-fps-historical-action button{display:block;width:100%;border-radius:8px;border:1px solid #c3e3c4;background:#2f7365;color:#fff;font-size:12px;font-weight:750;padding:14px;margin:13px 0}
 .story-fps-historical-action button:disabled{background:#243c48;color:#b8cacb;opacity:.66}
 @media(max-width:700px){.story-fps-historical-action{top:auto;bottom:110px;left:11px;right:auto;width:min(310px,58vw);padding:11px}.story-fps-historical-action strong{font-size:13px}.story-fps-historical-action p{font-size:11px}.story-fps-historical-action button{min-height:45px;padding:10px}}
+
+/* Reserve distinct viewport regions. Cards never occupy the permanent controls. */
+.story-fps-root{--story-header:80px;--story-controls:170px;--story-edge:12px}
+.story-fps-panels{position:absolute;z-index:8;top:calc(var(--story-header) + env(safe-area-inset-top));bottom:calc(var(--story-controls) + env(safe-area-inset-bottom));left:max(var(--story-edge),env(safe-area-inset-left));right:max(var(--story-edge),env(safe-area-inset-right));display:grid;grid-template-columns:minmax(0,350px) minmax(12px,1fr) minmax(0,345px);grid-template-rows:auto minmax(0,1fr);gap:10px;pointer-events:none;min-height:0}
+.story-fps-panels>.story-fps-objective,.story-fps-panels>.story-fps-suit-hud,.story-fps-panels>.story-fps-historical-action{position:static;inset:auto;width:auto;max-width:none;max-height:100%;min-height:0;margin:0;box-sizing:border-box;overflow:auto;pointer-events:auto;touch-action:pan-y;overscroll-behavior:contain}
+.story-fps-panels>.story-fps-objective{grid-column:1;grid-row:1/3;align-self:start}
+.story-fps-panels>.story-fps-suit-hud{grid-column:3;grid-row:1;padding:9px 12px}
+.story-fps-panels>.story-fps-historical-action{grid-column:3;grid-row:2;align-self:start;padding:12px}
+.story-fps-objective-detail summary,.story-fps-historical-action summary{font-size:11px;line-height:1.5;cursor:pointer;color:#d8eee4}
+.story-fps-panels .story-fps-objective p{max-height:none;overflow:visible}
+.story-fps-historical-action strong{margin:6px 0;font-size:15px}
+.story-fps-historical-action p{margin:7px 0;line-height:1.4}
+.story-fps-historical-action button{min-height:44px;margin:8px 0;padding:10px}
+.story-fps-historical-action details{font-size:10px}
+.story-fps-instruction{left:max(12px,env(safe-area-inset-left));right:260px;transform:none;white-space:normal;max-width:60%;font-size:9px}
+.story-fps-actions{bottom:max(18px,env(safe-area-inset-bottom))}
+.story-fps-eva-vertical{bottom:calc(98px + env(safe-area-inset-bottom))}
+@media(max-width:700px){
+ .story-fps-root{--story-header:76px;--story-controls:160px;--story-edge:9px}
+ .story-fps-panels{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+ .story-fps-panels>.story-fps-suit-hud,.story-fps-panels>.story-fps-historical-action{grid-column:2}
+ .story-fps-top{gap:6px}
+ .story-fps-top>div{max-width:none}
+ .story-fps-top>div:not(.story-fps-top-actions){flex:1}
+ .story-fps-top-actions{flex-wrap:wrap;justify-content:flex-end;max-width:145px}
+ .story-fps-top small{display:none}
+ .story-fps-panels>.story-fps-objective,.story-fps-panels>.story-fps-historical-action{padding:10px}
+ .story-fps-historical-action strong{font-size:12px}
+ .story-fps-historical-action button{font-size:10px;letter-spacing:0}
+ .story-fps-instruction{right:180px;max-width:45%;font-size:8px}
+}
+@media(max-height:540px){
+ .story-fps-root{--story-header:65px;--story-controls:124px}
+ .story-fps-panels{grid-template-columns:minmax(0,1fr) minmax(16px,.55fr) minmax(0,1fr);gap:6px}
+ .story-fps-panels>.story-fps-suit-hud,.story-fps-panels>.story-fps-historical-action{grid-column:3;padding:8px}
+ .story-fps-panels>.story-fps-objective{padding:10px}
+ .story-fps-objective h2{font-size:15px;margin:7px 0}
+ .story-fps-objective>small,.story-fps-objective>span{font-size:9px;letter-spacing:0}
+ .story-fps-progress{margin-top:8px}
+ .story-fps-suit-hud strong{font-size:9px;letter-spacing:0}
+ .story-fps-suit-hud span{font-size:10px}
+ .story-fps-suit-hud small{display:none}
+ .story-fps-historical-action>small,.story-fps-historical-action>strong,.story-fps-historical-action>details{display:none}
+ .story-fps-historical-action p{font-size:10px;margin:0 0 5px}
+ .story-fps-historical-action button{font-size:10px;margin:0;min-height:44px;padding:7px}
+ .story-fps-actions button{min-height:48px;min-width:74px;padding:9px 12px;font-size:10px}
+ .story-fps-eva-vertical{bottom:calc(74px + env(safe-area-inset-bottom))}
+ .story-fps-eva-vertical button{min-height:44px;padding:8px;font-size:10px}
+}
+.story-fps-science-table{border-collapse:collapse;width:100%;font-size:12px;color:#d0e6de}
+.story-fps-science-table th,.story-fps-science-table td{padding:9px;border-bottom:1px solid #67948860;text-align:left;line-height:1.5}
+.story-fps-science-table th{font-weight:500}
+.story-fps-science-table td{font-variant-numeric:tabular-nums}
+@media(max-width:700px){.story-fps-top-actions>button:last-child{display:none}}

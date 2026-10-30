@@ -20,7 +20,7 @@ export function createInterior(
   const geometries: T.BufferGeometry[] = [],
     materials: T.Material[] = [],
     textures: T.Texture[] = [];
-  const box = new RoundedBoxGeometry(1, 1, 1, 1, 0.035),
+  const box = options.graphics==="battery"?new T.BoxGeometry(1,1,1):new RoundedBoxGeometry(1, 1, 1, 1, 0.035),
     cylinder = new T.CylinderGeometry(1, 1, 1, 12),
     sphere = new T.SphereGeometry(1, 20, 12),
     plane = new T.PlaneGeometry(1, 1);
@@ -36,8 +36,8 @@ export function createInterior(
     materials.push(m);
     return m;
   };
-  const shell = mat("#2c3844", 0.56, 0.39),
-    panel = mat("#526574", 0.44, 0.42),
+  const shell = mat("#5c6668", 0.4, 0.56),
+    panel = mat("#88928f", 0.27, 0.62),
     dark = mat("#101b27", 0.24, 0.56),
     floor = mat("#222e38", 0.36, 0.68),
     silver = mat("#a0b0b8", 0.72, 0.31),
@@ -571,7 +571,7 @@ export function createInterior(
     );
   }
   // Rich instanced spacecraft structure and cockpit, without moving gameplay stations.
-  installShipArchitecture(part,pipe,screen,label,mat,options.graphics||"balanced");
+  const disposeArchitecture=installShipArchitecture(part,pipe,screen,label,mat,options.graphics||"balanced");
   // Interactive edges are almost invisible until in reach.
   const highlights = new Map<Area, T.MeshStandardMaterial>();
   for (const id of Object.keys(deck) as Area[]) {
@@ -604,6 +604,9 @@ export function createInterior(
   const aftFill = new T.DirectionalLight("#dfd4bd", 0.75);
   aftFill.position.set(0, 3, 8);
   scene.add(aftFill);
+  const busIndicators=[mat("#608c78",.1,.6,"#427d61"),mat("#608c78",.1,.6,"#427d61")];
+  for(const [index,indicator] of busIndicators.entries())dynamic(-2.4+index*.4,1.48,.88,.17,.07,.03,indicator);
+  label("BUS A       BUS B",-2.2,1.63,.9,.72,.09);
   // Flush all repeated fittings into instanced draw calls.
   for (const b of batch.values()) {
     const mesh = new T.InstancedMesh(b.geometry, b.material, b.matrices.length);
@@ -689,6 +692,14 @@ export function createInterior(
       planet.visible = !landed;
       groundedWindow.visible = landed;
       evaHands.visible=suited&&pos.z>10.4;
+      if(world){
+        const powered=world.switches.busA||world.switches.busB;
+        practical.intensity=powered?12:1.6;
+        for(const [index,indicator] of busIndicators.entries()){
+          const on=world.switches[index===0?"busA":"busB"];
+          indicator.color.set(on?"#79a78c":"#756b56");indicator.emissiveIntensity=on?.5:0;
+        }
+      }
       if (fx && fx.id !== lastFx) {
         lastFx = fx.id;
         fxStart = t;
@@ -736,10 +747,11 @@ export function createInterior(
       glove.visible = handGroup.visible;
       if (Math.floor(t * 1.5) !== lastScreen) {
         lastScreen = Math.floor(t * 1.5);
-        displays.draw(telemetry, t, pos);
+        displays.draw(telemetry, t, pos, world);
       }
     },
     dispose() {
+      disposeArchitecture();
       disposeCockpitFinishing();
       disposeDetails();
       geometries.forEach((g) => g.dispose());

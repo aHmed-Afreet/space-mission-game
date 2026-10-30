@@ -1,4 +1,4 @@
-import { missionById } from "./definitions";
+import { missionForSession } from "./definitions";
 import { environments } from "./environments";
 import type { Session, Progress } from "./engine";
 import { deck } from "../layout";
@@ -525,8 +525,8 @@ export function tickShip(s: Session, minutes: number): Session {
     if (
       w.rng / 4294967296 <
       0.1 +
-        missionById(s.missionId).level * 0.015 +
-        environments[missionById(s.missionId).destination].radiation * 0.002 +
+        missionForSession(s).level * 0.015 +
+        environments[missionForSession(s).destination].radiation * 0.002 +
         (100 - quality) / 160
     ) {
       const kinds = Object.keys(faultCatalog) as FaultKind[];

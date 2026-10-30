@@ -1,3 +1,5 @@
+import ScientificReadings from "./ScientificReadings";
+import { fieldToolUse, fieldToolCostText } from "./fieldTools";
 import { sound } from "./audio";
 import StationControls from "./StationControls";
 import RendezvousConsole from "./RendezvousConsole";
@@ -21,7 +23,7 @@ import {
   type Session,
   type Progress,
 } from "./engine";
-import { missionById, type CampaignAction, type Site } from "./definitions";
+import { missionForSession, type CampaignAction, type Site } from "./definitions";
 import { environments } from "./environments";
 import CampaignTablet, { type CampaignTab } from "./CampaignTablet";
 import NavigationMap from "./NavigationMap";
@@ -137,11 +139,12 @@ export default function Flight({
   const resumedAfterGuide = useRef(false),
     lastTutorial = useRef(""),
     lastLog = useRef("");
-  const m = missionById(s.missionId),
+  const m = missionForSession(s),
     o = currentObjective(s),
     guide = objectiveGuide(s),
     recovery = recoveryMission(s),
     area = nearby(s.position.x, s.position.z);
+  const objectiveTool = o?.action ? fieldToolUse(s, o.action) : null;
   const audioPosition = useRef(s.position),
     audioDoors = useRef(""),
     audioRadio = useRef(0);
@@ -622,7 +625,7 @@ export default function Flight({
                     !(m.id==="mission-2"&&o.action==="approach") &&
                     o.action!=="land" &&
                     o.action!=="eat" && o.action!=="drink" && o.action!=="wake" &&
-                    <button type="button" className="primary" onClick={()=>run(o.action!)}>Perform: {o.title}</button>}
+                    <button type="button" className="primary" disabled={!!objectiveTool?.problem} onClick={()=>run(o.action!)}>Perform: {o.title}{objectiveTool && <small>{objectiveTool.reason ?? fieldToolCostText(objectiveTool)}</small>}</button>}
                   {!launching && !!area && !actions && <button type="button" onClick={()=>setActions(true)}>Show station controls</button>}
                 </>}
           </div>
@@ -703,6 +706,7 @@ export default function Flight({
               aria-label="Station operations"
             >
               <StationControls s={s} onWorld={onWorld} onCommand={run} />
+              {area === "science" && <ScientificReadings readings={s.measurements} compact />}
               {actionable &&
                 o?.choices &&
                 o.choices.map((c) => (
@@ -720,19 +724,20 @@ export default function Flight({
                 ))}
               {!recovery && actionable && o?.action && !o.choices && !inventoryTask && (
                 <button
-                  disabled={s.state.paused}
+                  disabled={s.state.paused || !!objectiveTool?.problem}
                   onClick={()=>{
                     if(m.id==="mission-2"&&o.action==="approach"){openRendezvous();}
                     else run(o.action!);
                   }}
                 >
-                  {o.title}
+                  <span>{o.title}{objectiveTool && <small>{objectiveTool.reason ?? fieldToolCostText(objectiveTool)}</small>}</span>
                   <Icon name="chevron" size={14} />
                 </button>
               )}
-              {extras.map((a) => (
-                <button
-                  disabled={s.state.paused}
+              {extras.map((a) => {
+                const use = fieldToolUse(s, a.action);
+                return <button
+                  disabled={s.state.paused || !!use?.problem}
                   key={a.action}
                   onClick={()=>{
                     if(m.id==="mission-2"&&o?.action==="approach"&&a.action==="approach"){
@@ -740,10 +745,10 @@ export default function Flight({
                     }else run(a.action);
                   }}
                 >
-                  {a.label}
+                  <span>{a.label}{use && <small>{use.reason ?? fieldToolCostText(use)}</small>}</span>
                   <Icon name="chevron" size={13} />
-                </button>
-              ))}
+                </button>;
+              })}
             </div>
           )}
         </div>

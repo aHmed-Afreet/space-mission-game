@@ -74,24 +74,37 @@ export function scienceReference(destination: Destination): ScienceReference {
 }
 
 export type GameMetrics = { mass:number; cost:number; power:number; fuel:number };
-export function designTradeoffs(destination: Destination, design: Design, metrics: GameMetrics, budgetCap = BUDGET) {
+export type PlanningEnergyModel = {
+  version: 2; arrayRatedW: number; referenceFluxWm2: number;
+  generationW: number; loadW: number; chargeWh: number; capacityWh: number;
+  operatingHours: number; dispatchableReserveW: number;
+};
+export function designTradeoffs(destination: Destination, design: Design, metrics: GameMetrics, budgetCap = BUDGET, powerModel?: PlanningEnergyModel) {
   const facts=scienceReference(destination);
   const selected=rockets[design.rocket];
   if (!selected) throw Error("Unknown rocket");
   const solar=components.find(c=>c.id==="solar")!;
   const count=Number(design.counts.solar||0);
-  const arrayAtEarth=Math.max(0,count)*solar.power;
+  // The legacy Commander catalog and Strategy v2 have different rating
+  // reference conditions. Never scale a Mars-rated array as if rated at 1 AU.
+  const arrayAtEarth=Math.max(0,count)*(powerModel
+    ? powerModel.arrayRatedW * EARTH_IRRADIANCE_W_M2 / powerModel.referenceFluxWm2
+    : solar.power);
   const atDestination=facts.sunlightFraction===null ? null : arrayAtEarth*facts.sunlightFraction;
   const capacityMargin=selected.payload-metrics.mass;
   const budgetMargin=budgetCap-metrics.cost;
   const risks=[
     ...(capacityMargin<0?[`Reduce payload by at least ${Math.ceil(-capacityMargin)} kg or choose a larger launcher.`]:[]),
     ...(budgetMargin<0?[`Reduce estimated game spending by ${Math.ceil(-budgetMargin)} million credits.`]:[]),
-    ...(metrics.power<10?["The game's power-margin check is below its 10 W minimum."]:[]),
+    ...((powerModel?.dispatchableReserveW??metrics.power)<10?[powerModel
+      ? `Dispatchable reserve over ${powerModel.operatingHours} hours is below the 10 W preflight minimum.`
+      : "The game's power-margin check is below its 10 W minimum."]:[]),
     ...(metrics.fuel<10?["The game's fuel-reserve check is below its 10-unit minimum."]:[]),
   ];
   return {facts,capacityMargin,budgetMargin,arrayAtEarth,atDestination,risks,
     note: atDestination===null
       ? "Solar-array output cannot be extrapolated without specifying the target object's distance from the Sun."
-      : `The same idealized array receives ~${(100*facts.sunlightFraction!).toFixed(0)}% of Earth-orbit sunlight at this destination. This is a teaching comparison, NOT the flight engine's electrical generation forecast.`};
+      : powerModel
+        ? `The reference comparison uses the same hardware at each solar distance. Strategy v2 operates at the chosen ${powerModel.referenceFluxWm2} W/m² flux and ${powerModel.arrayRatedW} W per array; the NASA mean-distance comparison may differ slightly. Finite battery storage, generation and load determine its electrical balance.`
+        : `The same idealized array receives ~${(100*facts.sunlightFraction!).toFixed(0)}% of Earth-orbit sunlight at this destination. This is a teaching comparison, NOT the flight engine's electrical generation forecast.`};
 }

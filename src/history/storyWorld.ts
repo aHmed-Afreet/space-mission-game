@@ -4,6 +4,9 @@ import {createHistoricVehicle} from "./historicVehicles";
 import {makePlanet,planetKind} from "../commander/celestial";
 import {installStoryBridge} from "./storyBridge";
 import { storyPixelRatio } from "./storyRuntime";
+import { storyPresentation } from "../presentation/missionPresentation";
+import { disposeObjectResources } from "../presentation/resources";
+import { installSurfaceScenery } from "../commander/campaign/surfaceScenery";
 
 const stationLocations:Record<Station,[number,number]>={
  brief:[-3,2.5],systems:[3,2.5],operations:[-3,-2.5],science:[3,-2.5],
@@ -42,13 +45,15 @@ function badge(text:string){
  const mat=new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide});
  return new THREE.Mesh(new THREE.PlaneGeometry(2.35,.58),mat);
 }
-function createScene(scenario:StoryScenario){
+export function createStoryScene(scenario:StoryScenario){
  const scene=new THREE.Scene();
- const inField=scenario.role==="astronaut"&&(scenario.setting==="moon"||scenario.setting==="mars");
-  const sky=inField?(scenario.setting==="mars"?0x422b28:0x11171e):0x050f1e;
+ const presentation=storyPresentation(scenario);
+ scene.userData.presentation=presentation;
+ const inField=presentation.playerContext==="surface";
+ const sky=inField&&scenario.setting==="mars"?0x422b28:0x000000;
  scene.background=new THREE.Color(sky);
  scene.fog=scenario.setting==="mars"?new THREE.FogExp2(sky,.006):null;
- scene.add(new THREE.HemisphereLight(0xc6eaf8,0x43556a,2.1));
+ scene.add(new THREE.HemisphereLight(0xd8ded9,inField?0x181717:0x43556a,inField?.52:1.75));
  const sun=new THREE.DirectionalLight(0xfff4d4,2.7);sun.position.set(-8,13,-6);scene.add(sun);
  const floorColor=inField?(scenario.setting==="mars"?0x805039:0x747b79):0x182b3d;
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:floorColor,metalness:scenario.setting==="orbit"?.35:.02,roughness:.94}));
@@ -166,33 +171,12 @@ function createScene(scenario:StoryScenario){
  }
  hatchAssembly.visible=scenario.role==="astronaut";
  const exterior=new THREE.Group();scene.add(exterior);exterior.visible=false;
- const dusty=scenario.setting==="moon"||scenario.setting==="mars";
+ const dusty=inField;
  const isMars=scenario.setting==="mars";
  if(dusty){
-  // Low relief, rocks and impact sites give scale without blocking motion.
-  const terrain=new THREE.PlaneGeometry(100,110,58,58);
-  terrain.rotateX(-Math.PI/2);
-  const p=terrain.attributes.position;
-  for(let i=0;i<p.count;i++){
-   const x=p.getX(i),z=p.getZ(i),rough=(Math.sin(x*.34+z*.12)*Math.cos(z*.26)+Math.sin(z*.81+x*.44)*.28)*.13;
-   p.setY(i,Math.abs(x)<3&&Math.abs(z-17)<13?-.12:rough-.12);
-  }
-  terrain.computeVertexNormals();
-  const soil=new THREE.MeshStandardMaterial({color:isMars?0xb07152:0x858786,roughness:1});
-  const floor=new THREE.Mesh(terrain,soil);floor.position.z=25;exterior.add(floor);
-  const boulder=new THREE.DodecahedronGeometry(1,0),rockMaterial=new THREE.MeshStandardMaterial({color:isMars?0x7a4736:0x666862,roughness:1});
-  const rocks=new THREE.InstancedMesh(boulder,rockMaterial,160),dummy=new THREE.Object3D();
-  for(let i=0;i<160;i++){
-   const x=Math.sin(i*37.19)*39,z=9+(i*13.73)%65;
-   dummy.position.set(Math.abs(x)<3?x+5:x,.01,z);
-   dummy.rotation.set(i*.3,i*.4,0);const scale=.18+(i%8)*.11;
-   dummy.scale.set(scale,scale*.4,scale*.85);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
-  }
-  exterior.add(rocks);
-  const crater=new THREE.Mesh(new THREE.TorusGeometry(3,.18,7,48),rockMaterial);
-  crater.rotation.x=Math.PI/2;crater.position.set(-7,-.09,25);exterior.add(crater);
-  const earth=makePlanet("earth",isMars?1.9:1.3);
-  earth.position.set(-22,20,-55);exterior.add(earth);
+  // Shared deterministic geology keeps scales and lunar illumination coherent.
+  // This layer owns visuals only; hatch range and movement bounds stay unchanged.
+  installSurfaceScenery(exterior,isMars?"mars":"moon",[{x:0,z:10},{x:0,z:17}],"balanced");
  }else{
   // A large textured Earth for low-Earth orbit; other destinations have their own globe.
   const planet=makePlanet(planetKind(scenario.destination),18);
@@ -241,6 +225,27 @@ function createScene(scenario:StoryScenario){
  const pts=new THREE.Points(stars,new THREE.PointsMaterial({color:0xbbdce1,size:.19,sizeAttenuation:true}));scene.add(pts);
  return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether};
 }
+export type StoryWorldSnapshot={
+ version:1;outside:boolean;position:[number,number,number];yaw:number;pitch:number;
+ motion:[number,number,number];jumpHeight:number;jumpSpeed:number;
+ movement?:[number,number];
+};
+/** Validate without applying any pose. A resume cannot place a controller
+ * outside, tunnel past the training bounds, or manufacture a giant jump. */
+export function validStoryWorldSnapshot(value:unknown,scenario:Pick<StoryScenario,"role"|"setting">):value is StoryWorldSnapshot{
+ if(!value||typeof value!=="object")return false;
+ const p=value as StoryWorldSnapshot;
+ const vector=(v:unknown,length:number):v is number[]=>Array.isArray(v)&&v.length===length&&v.every(n=>typeof n==="number"&&Number.isFinite(n));
+ if(p.version!==1||typeof p.outside!=="boolean"||!vector(p.position,3)||!vector(p.motion,3)||
+ ![p.yaw,p.pitch,p.jumpHeight,p.jumpSpeed].every(n=>typeof n==="number"&&Number.isFinite(n))||
+ (p.movement!==undefined&&(!vector(p.movement,2)||Math.hypot(...p.movement)>1.01)))return false;
+ if(Math.abs(p.pitch)>1.15||Math.hypot(...p.motion)>3.26||p.jumpHeight<0||p.jumpHeight>4||Math.abs(p.jumpSpeed)>9)return false;
+ const [x,y,z]=p.position,dusty=scenario.setting==="moon"||scenario.setting==="mars";
+ if(!p.outside)return Math.abs(x)<=5.6&&z>=-5.65&&z<=6.65&&Math.abs(y-1.65)<.001&&p.jumpHeight===0&&p.jumpSpeed===0&&Math.hypot(...p.motion)<.001;
+ if(scenario.role!=="astronaut")return false;
+ if(dusty)return Math.abs(x)<=23&&z>=9.9&&z<=64&&Math.abs(y-(1.65+p.jumpHeight))<.001&&Math.hypot(...p.motion)<.001;
+ return y>=-10&&y<=18&&Math.hypot(x,y-1.65,z-9.05)<=24.01&&p.jumpHeight===0&&p.jumpSpeed===0;
+}
 export type StoryWorld={
  canvas:HTMLCanvasElement;
  look:(dx:number,dy:number,sensitivity?:number)=>void;
@@ -252,6 +257,8 @@ export type StoryWorld={
  aimingAtHatch:()=>boolean;
  resize:()=>void;
  dispose:()=>void;
+ snapshot:()=>StoryWorldSnapshot;
+ restore:(value:unknown)=>boolean;
 };
 export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario):StoryWorld{
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:"high-performance"});
@@ -261,7 +268,7 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
  renderer.toneMappingExposure=1.13;
- const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether}=createScene(scenario);
+ const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether}=createStoryScene(scenario);
  const camera=new THREE.PerspectiveCamera(72,1,.04,170);camera.position.set(0,1.65,6.25);
  let yaw=0,pitch=0,t=0,outside=false;
  const motion=new THREE.Vector3(),AIRLOCK=new THREE.Vector3(0,1.65,9.05);
@@ -282,6 +289,7 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  };
  camera.add(suitView);scene.add(camera);suitView.visible=false;
  const setExcursion=(next:boolean)=>{
+  if(next&&scenario.role!=="astronaut")return;
   outside=next;
   motion.set(0,0,0);jumpSpeed=0;jumpHeight=0;
   deck.visible=!next;floor.visible=!next;hatchAssembly.visible=!next;workMount.visible=!next;
@@ -291,7 +299,17 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
   camera.position.set(0,1.65,next?10.55:5.9);
   yaw=next?Math.PI:0;pitch=0;
   scene.fog=scenario.setting==="mars"?new THREE.FogExp2(0x7e5a47,next?.004:.008):null;
-  scene.background=new THREE.Color(next&&scenario.setting==="mars"?0xa47e62:0x050f1e);
+  scene.background=new THREE.Color(next&&scenario.setting==="mars"?0xa47e62:0x000000);
+ };
+ const snapshot=():StoryWorldSnapshot=>({version:1,outside,position:camera.position.toArray() as [number,number,number],yaw,pitch,motion:motion.toArray() as [number,number,number],jumpHeight,jumpSpeed,movement:[movement.x,movement.z]});
+ const restore=(value:unknown)=>{
+  if(!validStoryWorldSnapshot(value,scenario))return false;
+  setExcursion(value.outside);camera.position.set(...value.position);
+  yaw=value.yaw;pitch=value.pitch;motion.set(...value.motion);
+  jumpHeight=value.jumpHeight;jumpSpeed=value.jumpSpeed;
+  movement.x=value.movement?.[0]??0;movement.z=value.movement?.[1]??0;
+  camera.rotation.order="YXZ";camera.rotation.set(pitch,yaw,0,"YXZ");
+  return true;
  };
  const resize=()=>{
   const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
@@ -312,7 +330,8 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
   movement.x+=(moveX-movement.x)*damping;
   movement.z+=(moveZ-movement.z)*damping;
   if(outside&&!dusty){
-   // No gravity in vacuum: directional bursts change velocity and inertia persists.
+   // A bounded relative-motion trainer: thrust and assistance change velocity.
+   // Orbital free fall still occurs in a gravitational field.
    motion.x+=(movement.x*3.7-motion.x*.64)*time;
    motion.z+=(movement.z*3.7-motion.z*.64)*time;
    motion.y+=(Math.max(-1,Math.min(1,vertical))*3.7-motion.y*.64)*time;
@@ -382,15 +401,8 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
   return candidate;
  };
  const dispose=()=>{
-  scene.traverse(obj=>{
-   if(!(obj instanceof THREE.Mesh||obj instanceof THREE.Points))return;
-   obj.geometry.dispose();
-   const mats=Array.isArray(obj.material)?obj.material:[obj.material];
-   for(const m of mats){
-    const tex=(m as THREE.MeshBasicMaterial).map;if(tex)tex.dispose();
-    m.dispose();
-   }
-  });renderer.dispose();
+  if(scene.userData.disposed)return;
+  disposeObjectResources(scene);renderer.dispose();
  };
- return {canvas,look,update,resize,dispose,setExcursion,nearHatch,aimingAtHatch,jump,distanceToHatch};
+ return {canvas,look,update,resize,dispose,setExcursion,nearHatch,aimingAtHatch,jump,distanceToHatch,snapshot,restore};
 }

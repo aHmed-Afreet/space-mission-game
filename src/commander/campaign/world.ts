@@ -1,12 +1,18 @@
 import * as T from "three";
 import {makePlanet,disposePlanet} from "../celestial";
 import { fieldSites, type Session } from "./engine";
-import { environments, type Destination } from "./environments";
+import { type Destination } from "./environments";
+import { commanderPresentation } from "../../presentation/missionPresentation";
+import { createOrbitalWorksite } from "../../presentation/orbitalWorksite";
+import { acceptDownloadedScene, disposeObjectResources } from "../../presentation/resources";
+import { assetManifest } from "../../presentation/assetManifest";
 import { installSurfaceScenery, type SurfaceQuality } from "./surfaceScenery";
 /** Mission-specific 3D environments have offline fallbacks; NASA reference models are optional lazy downloads. */
 export function createFieldWorld(scene: T.Scene, destination: Destination, missionId?: string, quality:SurfaceQuality="balanced") {
-  const env = environments[destination],
-    group = new T.Group();
+  const presentation = commanderPresentation(missionId, destination);
+  const group = new T.Group();
+  group.name = "Commander mission environment";
+  group.userData.presentation = presentation;
   scene.add(group);
   const geometries: T.BufferGeometry[] = [],
     materials: T.Material[] = [],
@@ -65,6 +71,16 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   }
   const inner = box(0, 1.25, 7.75, 1.42, 2.46, 0.1, white),
     outer = box(0, 1.25, 10.25, 1.42, 2.46, 0.1, white);
+  inner.name="inner pressure hatch";outer.name="outer pressure hatch";
+  // All hardware moves with its leaf. Normalized dimensions compensate for
+  // the existing scaled hatch meshes, retaining their exact closure planes.
+  for(const leaf of [inner,outer])for(const face of [-1,1]){
+    for(const x of [-.43,.43])box(x,0,face*.66,.025,.91,.14,dark,leaf);
+    for(const y of [-.45,.45])box(0,y,face*.66,.88,.014,.14,dark,leaf);
+    box(-.22,0,face*.85,.035,.19,.2,alloy,leaf);
+    for(const y of [-.1,.1])box(-.18,y,face*.85,.08,.018,.2,alloy,leaf);
+    box(.11,.33,face*.7,.24,.035,.13,gold,leaf);
+  }
   // Each pressure hatch has the same physical button inside and outside,
   // letting the player reach it after exiting the spacecraft.
   const buttons:{mesh:T.Mesh;side:"inner"|"outer"}[]=[];
@@ -88,6 +104,16 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     }
   for (let z = -6; z < 7; z += 2)
     for (const x of [-3.48, 3.48]) box(x, 1.4, z, 0.06, 2.5, 0.08, alloy);
+  // Chamfered pressure-shell shoulders, restrained foil seams and external
+  // radiator fins replace the box silhouette without entering the cabin.
+  for(const side of [-1,1]){
+    const shoulder=box(side*3.2,2.89,.2,.72,.09,15.5,alloy);
+    shoulder.rotation.z=side*-.51;
+    for(let z=-5.8;z<6.6;z+=1.2){
+      box(side*3.51,1.65,z,.04,1.8,.95,white);
+      if(quality!=="battery")for(let k=0;k<5;k++)box(side*3.54,.93+k*.34,z,.025,.022,.87,dark);
+    }
+  }
   // Reinforced external pressure-shell ribs, hatch-flange screws, radiator pipes.
   // Shallow surface details are outside the walkable hull, not solid walls.
   const gasket=material("#18242c",.22,.84),
@@ -179,7 +205,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     for(const x of [1.54,1.8,2.06])
       box(x,1.22,13.75,.075,.025,.095,suitLight);
     box(1.8,.83,13.78,.4,.04,.12,gold);
-  } else {
+  } else if (presentation.playerContext === "surface") {
     // Layered geological scenery is visual only: preserve physical interaction
     // markers, landing site positions and collision/pathfinding exactly.
     surfaceScenery=installSurfaceScenery(group,destination,Object.values(fieldSites),quality);
@@ -188,95 +214,43 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
       box(p.x, 0.48, p.z, 0.27, 0.12, 0.03, gold);
     }
   }
-  const satellite = new T.Group();
+  const worksite = presentation.worksite === "none" ? null : createOrbitalWorksite(presentation.worksite, quality);
+  const satellite = worksite?.group ?? new T.Group();
   satellite.position.set(2.4, 0, 15);
   group.add(satellite);
-  // Detailed cylindrical spacecraft bus. The original collision footprint,
-  // repair-panel position and electrical interaction targets remain unchanged.
-  const busGeo=new T.CylinderGeometry(.41,.41,1.04,24);
-  geometries.push(busGeo);
-  const bus=new T.Mesh(busGeo,white);
-  bus.position.set(0,1.2,0);bus.rotation.x=Math.PI/2;
-  satellite.add(bus);
-  const busRingGeo=new T.TorusGeometry(.42,.039,8,28);
-  geometries.push(busRingGeo);
-  for(const z of [-.48,.48]){
-    const ring=new T.Mesh(busRingGeo,gold);
-    ring.position.set(0,1.2,z);satellite.add(ring);
-  }
-  const opticsGeo=new T.CylinderGeometry(.2,.26,.21,20);
-  geometries.push(opticsGeo);
-  const optics=new T.Mesh(opticsGeo,dark);
-  optics.rotation.x=Math.PI/2;optics.position.set(0,1.2,-.59);
-  satellite.add(optics);
-  for(const offset of [-.18,0,.18]){
-    box(offset,1.51,.08,.036,.035,.72,alloy,satellite);
-  }
-  box(0, 1.2, 0, 3.7, 0.04, 0.8, solar, satellite);
-  box(0, 1.9, 0, 0.035, 0.7, 0.035, alloy, satellite);
-  const dishGeometry = new T.SphereGeometry(.42,24,12,0,Math.PI*2,0,Math.PI*.43);
-  geometries.push(dishGeometry);
-  const dish = new T.Mesh(dishGeometry, white);
-  dish.position.set(0, 2.24, 0);
-  dish.rotation.x = -.28;
-  satellite.add(dish);
-  const dishLip=new T.TorusGeometry(.41,.018,6,30);
-  geometries.push(dishLip);
-  const lip=new T.Mesh(dishLip,alloy);
-  lip.position.set(0,2.24,0);lip.rotation.x=Math.PI/2-.28;
-  satellite.add(lip);
-  const serviceMaterial = new T.MeshBasicMaterial({ color: "#d0a265" });
-  materials.push(serviceMaterial);
-  const maintenanceStatus=box(-0.42,1.2,0.2,.04,.12,.12,serviceMaterial,satellite);
-  // Solar arrays are made of segmented photovoltaic cells rather than
-  // untextured rectangles, with a radiator, connector panel and edge rails.
-  const cellMat=material("#1c536f",.5,.28),
-    borderMat=material("#9aaebb",.78,.32);
-  for(const wing of [-1,1]){
-    for(let i=0;i<5;i++)for(let j=0;j<3;j++){
-      box(wing*(.58+i*.285),1.24,-.28+j*.28,.25,.02,.235,cellMat,satellite);
-    }
-    for(const z of [-.42,.42])
-      box(wing*1.22,1.26,z,1.5,.035,.026,borderMat,satellite);
-    // Electrical traces, bus couplers and solid array edge rails.
-    box(wing*.55,1.25,0,.07,.18,.13,alloy,satellite);
-    for(let i=0;i<5;i++)
-      box(wing*(.58+i*.285),1.268,0,.012,.014,.78,borderMat,satellite);
-  }
-  box(0,1.15,.53,.56,.64,.08,white,satellite);
-  box(0,1.13,.59,.37,.42,.035,gasket,satellite);
-  for(const x of [-.19,.19])for(const y of [.94,1.32]){
-    box(x,y,.62,.055,.055,.033,rivet,satellite);
-  }
-  for(const y of [.85,1.58])box(0,y,.5,.83,.035,.035,borderMat,satellite);
-  box(0,1.21,-.46,.75,.14,.09,gold,satellite);
-   // NASA official public 3D Hubble model (visual reference to STS-125).
-   // Mission 2's fictional relay scenario and existing simulation stay intact.
+  // The same service target is used by all three existing orbital EVA missions.
+  // Procedural spacecraft remain available without any network download.
+   // Optional existing NASA-hosted Hubble reference; asset-specific DigitalSpace
+   // terms are tracked in the asset manifest. It is never required for play.
    let disposed=false;
    let referenceModel:T.Group|null=null;
-   if(destination==="earth" && missionId==="mission-2"){
-     const nasaUrl="https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/3D%20Models/Hubble%20Space%20Telescope%20(A)/Hubble%20Space%20Telescope%20(A).glb";
+   if(typeof window!=="undefined" && destination==="earth" && presentation.worksite==="telescope"){
+     const nasaUrl=assetManifest.hubble.runtimeUrl;
      void import("three/examples/jsm/loaders/GLTFLoader.js").then(({GLTFLoader})=>{
        if(disposed)return;
        new GLTFLoader().load(nasaUrl,gltf=>{
-         if(disposed)return;
          const model=gltf.scene;
+         if(!acceptDownloadedScene(group,model))return;
          const bounds=new T.Box3().setFromObject(model);
          const size=bounds.getSize(new T.Vector3()),centre=bounds.getCenter(new T.Vector3());
          const diagonal=Math.max(size.x,size.y,size.z);
-         if(diagonal<=0)return;
+         if(!Number.isFinite(diagonal)||diagonal<=0){disposeObjectResources(model);return;}
          const scale=3.1/diagonal;
          model.position.copy(centre).multiplyScalar(-scale);
          model.scale.setScalar(scale);
          const pivot=new T.Group();pivot.position.y=1.35;
          pivot.add(model);satellite.add(pivot);
          referenceModel=pivot;
-         for(const object of [...satellite.children])
-           if(object!==pivot && object!==maintenanceStatus)object.visible=false;
+         // Keep the original reachable service panel and its live indicator.
+         // The reference model is mounted behind the procedural service face.
+         pivot.position.z=1.4;
+         for(const object of satellite.children)if(object!==pivot&&!object.userData.serviceFace)object.visible=false;
        },undefined,()=>{/* Offline: original low-cost model remains visible. */});
      }).catch(()=>{/* No network dependency for mission progress. */});
    }
   const camp = new T.Group();
+  camp.name="Unpressurized instrument camp";
+  camp.visible=presentation.playerContext==="surface";
   camp.position.set(fieldSites.camp.x, 0, fieldSites.camp.z);
   group.add(camp);
   const parts: Record<string, T.Object3D> = {};
@@ -320,7 +294,35 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   parts.antenna = antenna;
   parts.storage = box(0, 0.3, 1.6, 0.8, 0.6, 0.45, gold, camp);
   parts.sensor = box(1, 0.7, 1.6, 0.1, 1.4, 0.1, alloy, camp);
+  for(const [id,object] of Object.entries(parts))object.name=`Camp ${id}`;
   const result = box(0, 0.9, 1.07, 0.45, 0.07, 0.3, solar, camp);
+  const connectorMaterial=material("#c79b54",.25,.6);
+  const connector=box(-1.12,.31,.48,.24,.21,.17,connectorMaterial,camp);
+  connector.name="Camp power connector";
+  const harnesses: {id:"solar"|"battery"|"sensor"|"antenna";mesh:T.Mesh}[]=[];
+  for(const [id,end] of [
+    ["solar",[2.2,.08,0]], ["battery",[-1.6,.08,0]],
+    ["sensor",[1,.08,1.6]], ["antenna",[-1.7,.08,-1]],
+  ] as const){
+    const curve=new T.CatmullRomCurve3([new T.Vector3(-1.12,.13,.48),new T.Vector3(end[0]*.45,.045,end[2]*.5+.28),new T.Vector3(...end)]);
+    const geometry=new T.TubeGeometry(curve,quality==="battery"?6:12,.021,5,false);
+    geometries.push(geometry);
+    const cable=new T.Mesh(geometry,gasket);cable.name=`Camp ${id} cable`;camp.add(cable);harnesses.push({id,mesh:cable});
+  }
+  for(let k=0;k<3;k++)box(0,.08,-.36+k*.33,.81,.041,.041,alloy,parts.battery);
+  box(0,.46,0,3.6,.05,3,white,parts.sensor);
+  // The shelter is equipment protection, never a pressurized crew habitat.
+  const placardCanvas=document.createElement("canvas");placardCanvas.width=256;placardCanvas.height=64;
+  const placardContext=placardCanvas.getContext("2d");
+  if(placardContext){
+    placardContext.fillStyle="#292b28";placardContext.fillRect(0,0,256,64);
+    placardContext.fillStyle="#e5d7a8";placardContext.font="bold 17px sans-serif";
+    placardContext.fillText("INSTRUMENT SHELTER",10,25);placardContext.fillText("UNPRESSURIZED",10,50);
+    const texture=new T.CanvasTexture(placardCanvas);textures.push(texture);
+    const placardMaterial=new T.MeshBasicMaterial({map:texture});materials.push(placardMaterial);
+    const geometry=new T.PlaneGeometry(.92,.23);geometries.push(geometry);
+    const placard=new T.Mesh(geometry,placardMaterial);placard.position.set(0,1.3,.84);shelter.add(placard);
+  }
   return {
     update(s: Session) {
       for(const btn of buttons){
@@ -328,38 +330,26 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
        if(btn.mesh.material instanceof T.MeshStandardMaterial)
         btn.mesh.material.color.set(isOpen?"#73e4bf":"#d3ae6c");
       }
-      satellite.visible = s.missionId === "mission-2";
-      serviceMaterial.color.set(
-        s.systems.satelliteOnline
-          ? "#a5d3ba"
-          : s.systems.satelliteRepaired
-            ? "#aac6d5"
-            : "#d0a265",
-      );
+      satellite.visible = commanderPresentation(s.missionId,destination).worksite !== "none";
+      worksite?.update(s.systems);
+      camp.visible = presentation.playerContext === "surface";
       inner.position.x +=
         ((s.airlock.inner ? -1.5 : 0) - inner.position.x) * 0.12;
       outer.position.x +=
         ((s.airlock.outer ? -1.5 : 0) - outer.position.x) * 0.12;
       for (const [id, obj] of Object.entries(parts))
         obj.visible = !!s.camp[id as keyof typeof s.camp];
+      connector.visible=s.camp.shelter&&(s.camp.solar||s.camp.battery);
+      connectorMaterial.color.set(s.camp.broken?"#c56740":s.camp.power>0?"#79a88a":"#c79b54");
+      for(const harness of harnesses)harness.mesh.visible=s.camp.shelter&&s.camp[harness.id];
       result.visible = s.camp.science > 0;
     },
     dispose() {
+      if(disposed)return;
       disposed=true;
-      if(referenceModel){
-        (referenceModel as T.Group).traverse(object=>{
-          if(object instanceof T.Mesh){
-            object.geometry.dispose();
-            const mats=Array.isArray(object.material)?object.material:[object.material];
-            mats.forEach(mat=>{
-              const pbr=mat as T.MeshStandardMaterial;
-              for(const key of ["map","normalMap","roughnessMap","metalnessMap","emissiveMap"] as const)
-                pbr[key]?.dispose();
-              mat.dispose();
-            });
-          }
-        });
-      }
+      group.userData.disposed=true;
+      if(referenceModel)disposeObjectResources(referenceModel);
+      worksite?.dispose();
       scene.remove(group);
       surfaceScenery?.dispose();
       geometries.forEach((g) => g.dispose());

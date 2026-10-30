@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { useModalFocus } from "../modalFocus";
 const explanations: Record<string, { title: string; text: string }> = {
   navigation: {
     title: "Using a station",
@@ -64,21 +66,20 @@ export default function Tutorial({
   onClose: () => void;
 }) {
   const t = explanations[id] || explanations.navigation;
+  const dialog=useRef<HTMLDivElement>(null),close=useRef<HTMLButtonElement>(null);
+  useModalFocus({dialog,initialFocus:close,onClose});
   return (
     <div
       className="campaign-tutorial"
+      ref={dialog}
       role="dialog"
-      onKeyDown={(e) => {
-        if (e.key === "Tab") e.preventDefault();
-        if (e.key === "Escape") onClose();
-      }}
       aria-modal="true"
       aria-label={t.title}
     >
       <span className="eyebrow">QUICK GUIDE / MISSION PAUSED</span>
       <h2>{t.title}</h2>
       <p>{t.text}</p>
-      <button autoFocus onClick={onClose}>
+      <button ref={close} onClick={onClose}>
         Got it →
       </button>
     </div>

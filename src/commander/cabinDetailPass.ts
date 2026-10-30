@@ -1,8 +1,7 @@
 import * as T from "three";
 import {RoundedBoxGeometry} from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
-// PBR-quality panel and cloth finishes, locally generated, no network,
-// authored as photographic-scale fine surface structure rather than flat colours.
+// Restrained procedural panel and cloth finishes, locally generated, no network.
 export function installCabinDetail(
  scene:T.Scene,
  materials:{hull:T.MeshStandardMaterial;panel:T.MeshStandardMaterial;
@@ -58,11 +57,11 @@ export function installCabinDetail(
   mesh.rotation.set(rx,ry,rz);scene.add(mesh);return mesh;
  }
  function bar(x:number,y:number,z:number,w:number,h:number,d:number,mat:T.Material,rot=0){
-  return add(new RoundedBoxGeometry(1,1,1,2,.13),mat,x,y,z,w,h,d,0,0,rot);
+  return add(graphics==="battery"?new T.BoxGeometry(1,1,1):new RoundedBoxGeometry(1,1,1,2,.13),mat,x,y,z,w,h,d,0,0,rot);
  }
  function hose(points:[number,number,number][],radius:number,mat:T.Material,segments=20){
   const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));
-  add(new T.TubeGeometry(curve,segments,radius,6,false),mat,0,0,0);
+  add(new T.TubeGeometry(curve,graphics==="battery"?Math.min(8,segments):segments,radius,graphics==="battery"?4:6,false),mat,0,0,0);
  }
  // Foredeck: tactile rotary dials and industrial bevel-rimmed instrument pods.
  for(const x of [-1.35,-.93,-.51,0,.51,.93,1.35]){

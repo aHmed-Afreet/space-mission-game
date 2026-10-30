@@ -1,7 +1,9 @@
 import { atSite, currentObjective, maneuverFuelRequired, outside, sitePosition, type Session } from "./engine";
-import { missionById, type CampaignAction, type Site } from "./definitions";
-import { equipment, packMass, PACK_CAPACITY, type EquipmentId } from "./equipment";
+import { missionForSession, type Site } from "./definitions";
+import { equipment, packMass, PACK_CAPACITY } from "./equipment";
 import { equipmentLocker, lockers, faultCatalog } from "./ship";
+
+import { fieldGear, fieldToolUse, fieldToolCostText } from "./fieldTools";
 
 /**
  * An independent, derived emergency checklist. It DOES NOT advance, replace, or
@@ -18,15 +20,8 @@ export type RecoveryMission = {
   next: string;
   retry?: boolean;
 };
-const fieldGear: Partial<Record<CampaignAction, EquipmentId>> = {
-  scan: "scanner", sample: "containers", drill: "drill", photo: "camera",
-  measureRadiation: "radiation", measureTemperature: "sensor",
-  experiment: "experiment", repairCamp: "repair",
-  deployShelter: "shelter", deploySolar: "solar", deployBattery: "battery",
-  deployAntenna: "antenna", deployStorage: "storage", deploySensor: "sensor",
-};
 const name = (s: Session, site: Site) =>
-  sitePosition(site, missionById(s.missionId).destination).name;
+  sitePosition(site, missionForSession(s).destination).name;
 function rescue(
   s: Session, id: string, title: string, cause: string, station: Site | undefined,
   steps: RecoveryStep[], next: string, retry = false,
@@ -43,6 +38,26 @@ const step = (text: string, done = false): RecoveryStep => ({ text, done });
 export function recoveryMission(s: Session): RecoveryMission | null {
   const o = currentObjective(s);
   if (!o || s.report || s.state.ended) return null;
+  // Legacy U14 checkpoints can already be past falsely credited controls.
+  // Recover using real hatch and pump controls without rewinding earned tasks.
+  if (o.type === "WAIT" && ["vacuum", "pressurized"].includes(o.condition ?? "")) {
+    const inbound = o.condition === "pressurized";
+    const wanted = inbound ? "pressurize" : "vent";
+    const ready = inbound ? s.airlock.pressure >= 101.3 : s.airlock.pressure === 0;
+    if (s.airlock.outer || s.airlock.inner && !ready || !ready && s.airlock.cycling !== wanted)
+      return rescue(s, "airlock-cycle-" + wanted,
+        inbound ? "Restore a safe airlock return" : "Complete airlock depressurization",
+        "The checklist needs the current chamber state. Earlier excursion receipts cannot start this pressure cycle.",
+        "airlock", [
+          step("Enter the chamber and use the physical airlock controls.", atSite(s, "airlock")),
+          step("Close the outside hatch.", !s.airlock.outer),
+          step("Close the inside hatch before starting the pump.", !s.airlock.inner),
+          step(inbound ? "Press Repressurize airlock. This uses 0.02 kg oxygen and 0.01 kWh." : "With your checked suit on, press Depressurize airlock.", s.airlock.cycling === wanted || ready),
+          step(inbound ? "Wait for 101.3 kPa and the pump to stop, then open the inside hatch." : "Wait for 0 kPa and the pump to stop before opening the outside hatch.", ready && !s.airlock.cycling),
+        ], fromStation(s, "airlock", s.airlock.outer ? "Close the outside hatch using station controls."
+          : s.airlock.inner && !ready ? "Close the inside hatch using station controls."
+            : inbound ? "Press Repressurize airlock, then wait for breathable air." : "Press Depressurize airlock, then wait for vacuum."));
+  }
   // Never interrupt launch itself or objective-free roaming with field recovery.
   const action = o.action;
   if (!action) return null;
@@ -90,9 +105,17 @@ export function recoveryMission(s: Session): RecoveryMission | null {
         step("At Equipment Storage, open the EVA suit locker."),
         step("Equip the suit, verify oxygen and battery, then return outside."),
       ],fromStation(s,"equipment","Open the EVA suit locker and equip the suit."));
-  if (item && s.suit.power < equipment[item].power)
+  const use = fieldToolUse(s, action);
+  if (use?.problem === "broken") return rescue(s, "broken-tool-" + item,
+    "Broken field equipment needs paid service", use.reason!, undefined, [
+      step("Return through the airlock safely; keep the damaged instrument stored."),
+      step("Save and finish or end this flight, then open Equipment service at the campaign."),
+      step("Pay the listed service charge and launch a new flight with the serviced equipment."),
+    ], "Return safely, then use the campaign's paid Equipment service before a new flight.", true);
+  if (use?.problem === "power")
     return rescue(s,"eva-battery","Restore EVA suit battery",
-      "Suit power is insufficient for this equipment operation.","equipment",[
+      `${use.reason} ${fieldToolCostText(use)}`,"equipment",[
+        step(fieldToolCostText(use)),
         step("Return through the airlock into the pressurized spacecraft.", !outside(s) && s.position.z <= 7.7),
         step("At Equipment Storage, open the EVA suit locker.", s.world.lockers.eva),
         step("Stow the depleted suit, then equip it again to refill oxygen and recharge its battery. Charging requires spacecraft oxygen and 0.15 kWh battery reserve."),

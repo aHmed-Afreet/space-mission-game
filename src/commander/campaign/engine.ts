@@ -1,3 +1,6 @@
+import { fieldGear, fieldToolUse } from "./fieldTools";
+import { captureScientificResult, queueScientificResults, type ScientificMeasurement } from "./scientificResults";
+import { conditionMetrics, type ConditionSnapshot } from "./reportMetrics";
 import { previousInCampaign } from "./campaignTypes";
 import {
   newShip,
@@ -41,7 +44,7 @@ import {
 import { deck, spawn, nearby, walkable, type Position } from "../layout";
 import { rockets, type Design } from "../../game";
 import {
-  missionById,
+  missionForSession,
   missions,
   type CampaignAction,
   type MissionDefinition,
@@ -128,6 +131,7 @@ export type Session = {
     scientificValue?: string;
   }[];
   experiments: string[];
+  measurements?: ScientificMeasurement[];
   pendingTransmit: number;
   landed: boolean;
   eventIds: string[];
@@ -156,6 +160,10 @@ export type Session = {
   };
 };
 export type Report = {
+  missionRevision?: number;
+  metricVersion?: 2;
+  conditionSnapshot?: ConditionSnapshot;
+  measurements?: ScientificMeasurement[];
   missionId: string;
   runId: string;
   success: boolean;
@@ -234,7 +242,7 @@ export function atSite(s: Session, site: Site) {
   return (
     distance(
       s.position,
-      sitePosition(site, missionById(s.missionId).destination),
+      sitePosition(site, missionForSession(s).destination),
     ) < (site === "airlock" ? 1.1 : site in deck ? 1.85 : 2)
   );
 }
@@ -248,7 +256,7 @@ export function maneuverFuelRequired(s: Session, action: CampaignAction): number
 }
 /** Exact on-screen prerequisites for Mission 2's exterior connector replacement. */
 export function satelliteRepairBlocker(s: Session): string | null {
-  const m = missionById(s.missionId);
+  const m = missionForSession(s);
   if (!m.eva || m.surface)
     return "Satellite connector replacement is only available during orbital EVA.";
   if (!s.suit.equipped)
@@ -263,8 +271,8 @@ export function satelliteRepairBlocker(s: Session): string | null {
     return "Repair toolkit not carried. Return inside to Equipment storage, open the Repair cabinet and TAKE the repair toolkit; then return to the satellite.";
   if (s.state.parts < 1)
     return "No spare connector part carried. Return inside to Equipment storage, open the Repair cabinet and choose Take spare part; then return to the satellite.";
-  if (s.suit.power < 0.05)
-    return "Suit battery below 5%: return to recharge your EVA suit before connector replacement.";
+  const use = fieldToolUse(s, "repairSatellite");
+  if (use?.reason) return use.reason;
   return null;
 }
 export function canStart(m: MissionDefinition, p: Progress) {
@@ -365,12 +373,13 @@ export function createSession(
         : emptyCamp(),
     samples: [],
     experiments: [],
+    measurements: [],
     pendingTransmit: 0,
     landed: m.startsLanded,
     eventIds: [],
     completionMessage: "",
     notice: state.notice,
-    observations: emptyObservations(),
+    observations: { ...emptyObservations(), airlockProcedure: { version: 1, epoch: 0, zone: "cabin", leg: "outbound", receipts: {}, legacy: false } },
     world: newShip(gear, p.condition),
     finance: launchFinance(
       m,
@@ -455,14 +464,14 @@ export function preflight(
   return errors;
 }
 export function currentObjective(s: Session) {
-  return missionById(s.missionId).objectives[s.objective];
+  return missionForSession(s).objectives[s.objective];
 }
 /**
  * Old checkpoints can activate later scripted repairs before their actual
  * checklist. Preserve genuine hardware faults and independent timed hazards.
  */
 function reschedulePrematureFaultEvents(s: Session): Session {
-  const m = missionById(s.missionId);
+  const m = missionForSession(s);
   const future = m.objectives.filter((o, i) =>
     i > s.objective && (o.event === "power" || o.event === "campPower") &&
     s.eventIds.includes(o.id));
@@ -542,7 +551,7 @@ function logged(s: Session, message: string) {
   return n;
 }
 function advance(s: Session): Session {
-  const m = missionById(s.missionId),
+  const m = missionForSession(s),
     o = currentObjective(s);
   if (!o) return s;
   let n = {
@@ -569,7 +578,7 @@ function advance(s: Session): Session {
 export function evaluate(s: Session): Session {
   if (s.report || s.state.paused || s.state.ended) return s;
   let n = observe(s);
-  const limit = missionById(n.missionId).objectives.length;
+  const limit = missionForSession(n).objectives.length;
   for (let i = 0; i < limit && !n.report; i++) {
     const o = currentObjective(n);
     if (!o || !satisfied(n, o)) break;
@@ -579,7 +588,7 @@ export function evaluate(s: Session): Session {
 }
 function applyEvents(s: Session) {
   let n = s;
-  for (const e of missionById(s.missionId).hazards) {
+  for (const e of missionForSession(s).hazards) {
     const id = e.type + e.at;
     if (s.state.minutes >= e.at && !n.eventIds.includes(id)) {
       n = {
@@ -601,7 +610,7 @@ function applyEvents(s: Session) {
       );
     }
   }
-  const scheduledMission = missionById(n.missionId);
+  const scheduledMission = missionForSession(n);
   for (const taskEvent of scheduledMission.objectives.filter(
     (o) => o.event,
   )) {
@@ -663,7 +672,7 @@ export function tickSession(s: Session, minutes = 1): Session {
         (waiting.value || 1) - (s.state.minutes - s.objectiveStarted),
       ),
     );
-  const env = environments[missionById(s.missionId).destination];
+  const env = environments[missionForSession(s).destination];
   let n = {
     ...s,
     state: tick(
@@ -702,7 +711,7 @@ export function tickSession(s: Session, minutes = 1): Session {
     Math.min(
       s.life.batteries,
       n.state.battery +
-        ((solarDelta - (missionById(s.missionId).eva ? 10 : 0)) * minutes) /
+        ((solarDelta - (missionForSession(s).eva ? 10 : 0)) * minutes) /
           60000,
     ),
   );
@@ -865,7 +874,7 @@ export function campaignWalkable(x: number, z: number, s: Session) {
     }
     return walkable(x, z);
   }
-  if (!missionById(s.missionId).eva) return false;
+  if (!missionForSession(s).eva) return false;
   if (z < 10.45) {
     if (Math.abs(x) > 0.62) return false;
     if (Math.abs(z - 7.75) < 0.22 && !s.airlock.inner) return false;
@@ -875,12 +884,12 @@ export function campaignWalkable(x: number, z: number, s: Session) {
   if (
     s.flight &&
     (s.flight.status !== "orbit" ||
-      (missionById(s.missionId).surface && !s.landed))
+      (missionForSession(s).surface && !s.landed))
   )
     return false;
   if (!s.suit.equipped || (s.airlock.pressure > 1 && s.airlock.outer))
     return false;
-  const dest = missionById(s.missionId).destination;
+  const dest = missionForSession(s).destination;
   if (dest === "earth") {
     // The EVA suit stays on the physical hull work-platform. The service
     // satellite's central body is solid; approach its forward service face.
@@ -921,28 +930,12 @@ const baseActions = new Set<string>([
   "science",
   "course",
 ]);
-const gearFor: Partial<Record<CampaignAction, EquipmentId>> = {
-  scan: "scanner",
-  sample: "containers",
-  drill: "drill",
-  photo: "camera",
-  measureRadiation: "radiation",
-  measureTemperature: "sensor",
-  experiment: "experiment",
-  deployShelter: "shelter",
-  deploySolar: "solar",
-  deployBattery: "battery",
-  deployAntenna: "antenna",
-  deployStorage: "storage",
-  deploySensor: "sensor",
-  repairCamp: "repair",
-};
 export function command(s: Session, action: CampaignAction): Session {
   s = reschedulePrematureFaultEvents(withObservations(s));
   if (s.report || s.state.paused || s.state.ended) return s;
   if (s.state.sleeping && action !== "wake")
     return say(s, "Wake up before using equipment.");
-  const m = missionById(s.missionId),
+  const m = missionForSession(s),
     o = currentObjective(s);
   if (!o) return s;
   const matching =
@@ -1135,29 +1128,18 @@ export function command(s: Session, action: CampaignAction): Session {
     if (action === "drink" || action === "dispenser")
       n.lastDrink = s.state.minutes;
   } else {
-    const req = gearFor[action];
-    if (req && !s.pack.includes(req))
-      return fail(
-        `You need the ${equipment[req].name.toLowerCase()}. Prepare it at the equipment locker before leaving.`,
-      );
+    const use = fieldToolUse(s, action);
+    const req = fieldGear[action];
+    if (use?.reason) return fail(use.reason);
     if (req && (!outside(s) || !s.suit.equipped))
       return fail(
         "This field equipment is used outside while wearing your suit.",
       );
-    if (req && s.suit.power < equipment[req].power)
-      return fail("Suit battery is too low. Return to the spacecraft.");
-    if (req) {
-      const condition = s.world.equipment[req] || 100;
-      n.suit.power = Math.max(
-        0,
-        n.suit.power - equipment[req].power * (1 + (100 - condition) / 100),
-      );
-      n.world = {
+    if (use) {
+      n.suit.power = s.suit.power - use.powerCost;
+      if (req) n.world = {
         ...n.world,
-        equipment: {
-          ...n.world.equipment,
-          [req]: Math.max(5, condition - 0.15),
-        },
+        equipment: { ...n.world.equipment, [req]: use.condition >= 5 ? Math.max(5, use.condition - 0.15) : Math.max(0, use.condition - 0.15) },
       };
     }
     switch (action) {
@@ -1442,7 +1424,6 @@ export function command(s: Session, action: CampaignAction): Session {
         const problem = satelliteRepairBlocker(s);
         if (problem) return fail(problem);
         n.state.parts--;
-        n.suit.power = Math.max(0, n.suit.power - 0.05);
         n.systems.satelliteRepaired = true;
         break;
       }
@@ -1450,12 +1431,10 @@ export function command(s: Session, action: CampaignAction): Session {
         if (
           !outside(s) ||
           !atSite(s, "survey") ||
-          !s.systems.satelliteRepaired ||
-          s.suit.power < 0.02
+          !s.systems.satelliteRepaired
         )
           return fail("Repair the satellite connector first.");
         n.systems.satelliteOnline = true;
-        n.suit.power -= 0.02;
         n.state.science = Math.min(100, n.state.science + 30);
         break;
 
@@ -1521,6 +1500,7 @@ export function command(s: Session, action: CampaignAction): Session {
           return fail("Enter the airlock and close both hatches.");
         if (!s.suit.equipped || !s.suit.oxygenChecked || !s.suit.powerChecked)
           return fail("Equip your suit and check its oxygen and power first.");
+        if (s.airlock.cycling) return fail("Airlock pressure cycle is already running. Wait for it to finish.");
         n.airlock.cycling = "vent";
         break;
       case "openOuter":
@@ -1543,6 +1523,7 @@ export function command(s: Session, action: CampaignAction): Session {
       case "pressurize":
         if (!atSite(s, "airlock") || s.airlock.outer || s.airlock.inner)
           return fail("Close both hatches before adding air.");
+        if (s.airlock.cycling) return fail("Airlock pressure cycle is already running. Wait for it to finish.");
         if (s.state.oxygen < 0.02 || s.state.battery < 0.01)
           return fail(
             "Refilling the airlock needs 0.02 kg oxygen and 0.01 kWh. Return reserves are too low.",
@@ -1750,6 +1731,7 @@ export function command(s: Session, action: CampaignAction): Session {
       },
     };
   if (success) {
+    n = captureScientificResult(n, action);
     if (action === "comms" || action === "campTransmit") {
       n = receipt(n, action);
       if (s.state.science <= 0 && action === "comms")
@@ -1765,6 +1747,7 @@ export function command(s: Session, action: CampaignAction): Session {
         Math.max(1.5, environments[m.destination].communicationDelay / 10) /
           (Math.max(1, s.design.counts.antenna || 1) *
             (s.upgrades.includes("highGain") ? 1.5 : 1));
+      n = queueScientificResults(n);
       return evaluate(say(n, "Data queued. Awaiting acknowledgement."));
     }
     n = receipt(n, action);
@@ -1775,7 +1758,7 @@ export function command(s: Session, action: CampaignAction): Session {
 export function makeReport(s: Session, success: boolean): Report {
   const clamp = (n: number) => Math.max(0, Math.min(100, n));
   const science = clamp(
-    missionById(s.missionId).experiments.length ? s.state.science * 2 : 100,
+    missionForSession(s).experiments.length ? s.state.science * 2 : 100,
   );
   const resources = clamp(
     (((s.state.food + s.state.meals) / s.life.food +
@@ -1790,11 +1773,8 @@ export function makeReport(s: Session, success: boolean): Report {
     (s.state.fuel / Math.max(1, newMission(s.design, s.life).fuel)) * 100,
   );
   const communications = s.state.communications ? 100 : 0;
-  const condition = clamp(
-    (s.state.malfunction ? 60 : 100) *
-      (s.suit.equipped ? s.suit.condition / 100 : 1),
-  );
-  const weights = missionById(s.missionId).scoring;
+  const { condition, snapshot } = conditionMetrics(s);
+  const weights = missionForSession(s).scoring;
   const score = Math.round(
     (science * weights.science * 0.6 +
       resources * weights.resources * 0.6 +
@@ -1807,6 +1787,10 @@ export function makeReport(s: Session, success: boolean): Report {
   );
   return {
     missionId: s.missionId,
+    missionRevision: s.revision,
+    metricVersion: 2,
+    conditionSnapshot: snapshot,
+    measurements: s.measurements ? structuredClone(s.measurements) : undefined,
     runId: s.id,
     success,
     score,
@@ -1820,14 +1804,14 @@ export function makeReport(s: Session, success: boolean): Report {
     communications,
     experiments: s.experiments.length,
     samples: s.samples.length + s.world.storedSamples.length,
-    sampleManifest: [...s.samples, ...s.world.storedSamples],
+    sampleManifest: structuredClone([...s.samples, ...s.world.storedSamples]),
     remaining: {
       fuel: s.state.fuel,
       battery: s.state.battery,
       science: s.state.science,
     },
     optional: completedOptional(s).length,
-    optionalResults: (missionById(s.missionId).optional || []).map((o) => ({
+    optionalResults: (missionForSession(s).optional || []).map((o) => ({
       id: o.id,
       title: o.title,
       reward: o.reward,
@@ -1840,14 +1824,14 @@ export function makeReport(s: Session, success: boolean): Report {
         : "FAILURE",
     finance: financialReport(
       s,
-      missionById(s.missionId),
+      missionForSession(s),
       success,
-      (missionById(s.missionId).optional || [])
+      (missionForSession(s).optional || [])
         .filter((o) => completedOptional(s).includes(o.id))
         .reduce((sum, o) => sum + o.reward, 0),
     ),
     unlocks: success
-      ? ((missionById(s.missionId).unlocks || []) as Technology[])
+      ? ((missionForSession(s).unlocks || []) as Technology[])
       : [],
     minutes: s.state.minutes,
     good: [
@@ -1866,6 +1850,8 @@ export function makeReport(s: Session, success: boolean): Report {
       ...(s.state.energy < 60
         ? ["Eat, drink and rest before extended field work."]
         : []),
+      ...(snapshot.componentMean < 100 ? ["Review component wear and paid service estimates before the next flight."] : []),
+      ...(snapshot.unresolvedFaults.length ? ["Unverified hardware faults remain recorded in the condition snapshot."] : []),
       ...(s.state.malfunction ? ["Repair the spacecraft power unit."] : []),
       ...(!success ? ["Restart the mission with more reserve capacity."] : []),
     ],
@@ -1901,7 +1887,7 @@ export function recordReport(p: Progress, s: Session): Progress {
       r.success && s.camp.shelter
         ? {
             ...p.outposts,
-            [missionById(s.missionId).destination]: structuredClone(s.camp),
+            [missionForSession(s).destination]: structuredClone(s.camp),
           }
         : p.outposts,
   };
@@ -1915,7 +1901,7 @@ export const unlockedChapters = (p: Progress) => [
 ];
 
 export function currentPhase(s: Session) {
-  const m = missionById(s.missionId);
+  const m = missionForSession(s);
   if (s.report) return "MISSION REPORT";
   if (currentObjective(s)?.phase) return currentObjective(s)!.phase!;
   const returnIndex = m.objectives.findIndex((o) => o.type === "RETURN");
@@ -1933,7 +1919,7 @@ export function currentPhase(s: Session) {
 }
 
 export function completedOptional(s: Session): string[] {
-  const m = missionById(s.missionId);
+  const m = missionForSession(s);
   return (m.optional || [])
     .filter(
       (o) =>
@@ -1960,14 +1946,14 @@ export function optionalCommand(s: Session, id: string): Session {
     s.flight.status !== "orbit"
   )
     return s;
-  const o = missionById(s.missionId).optional?.find((o) => o.id === id);
+  const o = missionForSession(s).optional?.find((o) => o.id === id);
   if (!o?.action || s.optionalDone.includes(id))
     return say(s, "This optional operation is unavailable or complete.");
   if (o.site && !atSite(s, o.site))
     return say(
       s,
       "Optional task: go to " +
-        sitePosition(o.site, missionById(s.missionId).destination).name +
+        sitePosition(o.site, missionForSession(s).destination).name +
         ".",
     );
   if (o.gear && !s.pack.includes(o.gear))
@@ -2008,7 +1994,7 @@ export function optionalCommand(s: Session, id: string): Session {
     n.samples.push({
       id: s.id + ":rare",
       kind: "Distant survey sample",
-      destination: missionById(s.missionId).destination,
+      destination: missionForSession(s).destination,
     });
   return logged(
     n,

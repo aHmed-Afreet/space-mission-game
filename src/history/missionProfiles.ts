@@ -239,7 +239,7 @@ export const missionProfiles:Record<string,HistoricProfile> = {
   "Galileo Jupiter arrival": {
     "vehicle": "Galileo orbiter and atmospheric probe",
     "hardware": "High-gain antenna, RTGs and descent-probe interface",
-    "operation": "Insert into Jupiter orbit and release atmospheric probe",
+    "operation": "Release the probe during cruise; relay its Jupiter entry data, then enter orbit",
     "observation": "Record Jupiter atmosphere and moon observations",
     "visual": "Spinning spacecraft bus with RTG booms"
   },

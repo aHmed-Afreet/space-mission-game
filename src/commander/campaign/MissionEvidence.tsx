@@ -1,15 +1,15 @@
 import type { Design } from "../../game";
 import type { Destination } from "./environments";
-import { designTradeoffs, type GameMetrics } from "./missionScience";
+import { designTradeoffs, type GameMetrics, type PlanningEnergyModel } from "./missionScience";
 import "./missionEvidence.css";
 
 /** Visible, live comparison of real NASA reference measurements and game rules.
  * No telemetry or external API call is required; sources open in a separate tab.
  */
 export default function MissionEvidence({
-  destination, design, metrics, budgetCap,
-}: {destination:Destination; design:Design; metrics:GameMetrics; budgetCap?:number}) {
-  const info=designTradeoffs(destination,design,metrics,budgetCap);
+  destination, design, metrics, budgetCap, powerModel,
+}: {destination:Destination; design:Design; metrics:GameMetrics; budgetCap?:number; powerModel?:PlanningEnergyModel}) {
+  const info=designTradeoffs(destination,design,metrics,budgetCap,powerModel);
   const {facts}=info;
   return <section className="mission-science-panel" aria-label="Science and engineering decision lab">
     <div className="mission-science-heading">
@@ -43,12 +43,13 @@ export default function MissionEvidence({
         <div className="mission-science-metrics" aria-live="polite">
           <div><small>Payload headroom</small><strong className={info.capacityMargin<0?"mission-science-negative":""}>{info.capacityMargin.toFixed(0)} kg</strong></div>
           <div><small>Budget headroom</small><strong className={info.budgetMargin<0?"mission-science-negative":""}>{info.budgetMargin.toFixed(0)} M credits</strong></div>
-          <div><small>Game power margin</small><strong className={metrics.power<10?"mission-science-negative":""}>{metrics.power.toFixed(0)} W</strong></div>
+          <div><small>{powerModel?`${powerModel.operatingHours} h dispatchable reserve`:'Game power margin'}</small><strong className={(powerModel?.dispatchableReserveW??metrics.power)<10?"mission-science-negative":""}>{(powerModel?.dispatchableReserveW??metrics.power).toFixed(0)} W</strong></div>
           <div><small>Game fuel reserve</small><strong className={metrics.fuel<10?"mission-science-negative":""}>{metrics.fuel.toFixed(0)} units</strong></div>
         </div>
-        <p className="mission-science-comparison">Installed solar panels: <b>{Math.max(0,Number(design.counts.solar||0))}</b> · game catalog nominal output at Earth: <b>{info.arrayAtEarth.toFixed(0)} W</b>.
+        <p className="mission-science-comparison">Installed solar panels: <b>{Math.max(0,Number(design.counts.solar||0))}</b> · {powerModel?'equivalent output at 1 AU under the same hardware assumptions':'game catalog nominal output at Earth'}: <b>{info.arrayAtEarth.toFixed(0)} W</b>.
           {info.atDestination!==null && <> At reference solar distance: <b>~{info.atDestination.toFixed(0)} W</b> under the same idealized panel assumptions.</>}
         </p>
+        {powerModel&&<p>Strategy energy model v{powerModel.version}: generation <b>{powerModel.generationW} W</b> · load <b>{powerModel.loadW} W</b> · battery <b>{powerModel.chargeWh.toFixed(1)} / {powerModel.capacityWh} Wh</b> over a <b>{powerModel.operatingHours}-hour</b> payload operating campaign. Battery storage is finite and does not generate power.</p>}
         <p>{info.note}</p>
         {info.risks.length>0
           ?<div className="mission-science-warnings"><strong>Design adjustments needed</strong><ul>{info.risks.map(r=><li key={r}>{r}</li>)}</ul></div>

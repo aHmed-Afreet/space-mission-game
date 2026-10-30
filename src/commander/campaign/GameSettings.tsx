@@ -2,6 +2,7 @@ import type { PlayerPreferences } from "./preferences";
 import { sound } from "./audio";
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icons";
+import { useModalFocus } from "../modalFocus";
 
 export default function GameSettings({
   value, onChange, onClose, onReset, onDevice, device, readonly=false,
@@ -18,15 +19,14 @@ export default function GameSettings({
   const [fullscreen,setFullscreen]=useState(!!document.fullscreenElement);
   const [screenError,setScreenError]=useState("");
   const close=useRef<HTMLButtonElement>(null);
+  const dialog=useRef<HTMLElement>(null);
+  const overlay=useRef<HTMLDivElement>(null);
+  useModalFocus({ dialog, boundary:overlay, initialFocus:close, onClose });
   useEffect(()=>{
-    const previous=document.activeElement as HTMLElement | null;
-    close.current?.focus();
-    const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.preventDefault();onClose();}};
     const changed=()=>setFullscreen(!!document.fullscreenElement);
-    window.addEventListener("keydown",key);
     document.addEventListener("fullscreenchange",changed);
-    return ()=>{window.removeEventListener("keydown",key);document.removeEventListener("fullscreenchange",changed);previous?.focus()};
-  },[onClose]);
+    return ()=>document.removeEventListener("fullscreenchange",changed);
+  },[]);
   const reset=()=>{
     if(readonly)return;
     if(window.confirm("RESET COMMANDER CAMPAIGN? This deletes all completed missions, agency budget, mission reports and the current checkpoint on this device. It cannot be undone.")) onReset();
@@ -38,9 +38,9 @@ export default function GameSettings({
       else setScreenError("Fullscreen is not available in this browser. Use the browser's full-screen or Add to Home Screen option.");
     } catch {setScreenError("Fullscreen was blocked by the browser. Continue in the normal view.");}
   };
-  return <div className="game-settings-overlay" role="presentation">
+  return <div ref={overlay} className="game-settings-overlay" role="presentation">
     <button type="button" className="game-settings-shade" onClick={onClose} aria-label="Close settings"/>
-    <section className="game-settings-dialog" role="dialog" aria-modal="true" aria-label="Game settings">
+    <section ref={dialog} className="game-settings-dialog" role="dialog" aria-modal="true" aria-label="Game settings">
       <header><div><small>ORBITAL / PLAYER CONTROLS</small><h2>Settings</h2></div>
         <button ref={close} type="button" onClick={onClose} aria-label="Close settings"><Icon name="close"/> Close</button>
       </header>
@@ -52,6 +52,7 @@ export default function GameSettings({
           <option value="laptop">Laptop · WASD, Shift, E, drag to look</option>
         </select>
         <p>You can keep moving while holding Sprint. On touch devices, swipe on Sprint to turn, or use another finger to look.</p>
+        <p>Commander uses compressed mission time: at 1×, one real second advances 30 mission seconds. Time warp also scales resource use.</p>
         <label htmlFor="settings-graphics">Graphics performance</label>
         <select id="settings-graphics" value={value.graphics} onChange={e=>onChange({...value,graphics:e.target.value as PlayerPreferences["graphics"]})}>
           <option value="quality">Quality · improved detail (powerful devices)</option>

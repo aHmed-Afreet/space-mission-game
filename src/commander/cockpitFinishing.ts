@@ -19,9 +19,9 @@ export function installCockpitFinishing(scene:T.Scene,graphics:Graphics):()=>voi
   const light=addMaterial(new T.MeshStandardMaterial({color:"#9bdde9",emissive:"#35c1dc",emissiveIntensity:.7,metalness:.12,roughness:.34}));
   const phosphor=addMaterial(new T.MeshStandardMaterial({color:"#a7b8c5",emissive:"#1b6f8a",emissiveIntensity:.55,metalness:.33,roughness:.38}));
   const gold=addMaterial(new T.MeshStandardMaterial({color:"#d2a876",metalness:.55,roughness:.38}));
-  const rounded=new RoundedBoxGeometry(1,1,1,3,.12);
-  const cylinder=new T.CylinderGeometry(1,1,1,20);
-  const torus=new T.TorusGeometry(1,.13,8,32);
+  const rounded=graphics==="battery"?new T.BoxGeometry(1,1,1):new RoundedBoxGeometry(1,1,1,3,.12);
+  const cylinder=new T.CylinderGeometry(1,1,1,graphics==="battery"?12:20);
+  const torus=new T.TorusGeometry(1,.13,graphics==="battery"?5:8,graphics==="battery"?16:32);
   geometries.push(rounded,cylinder,torus);
   function object(geometry:T.BufferGeometry,material:T.Material,x:number,y:number,z:number,
     sx=1,sy=1,sz=1,rx=0,ry=0,rz=0){

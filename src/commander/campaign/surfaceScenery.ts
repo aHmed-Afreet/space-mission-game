@@ -1,16 +1,36 @@
 import * as T from "three";
 import { makePlanet, disposePlanet } from "../celestial";
 import type { Destination } from "./environments";
+import { presentationBudgets } from "../../presentation/missionPresentation";
 
 export type SurfaceQuality = "quality" | "balanced" | "battery";
 export type Marker = { x: number; z: number };
+export const visualCraters = Object.freeze([
+  {x:-10.5,z:28,radius:3.9}, {x:13,z:34,radius:5}, {x:-20,z:42,radius:5.8},
+]);
+/** Smooth excavated bowl and subdued ejecta rim; negative centre is real terrain
+ * geometry, rather than a torus hovering over an unbroken plane. */
+export function craterRelief(x:number,z:number):number {
+  let height=0;
+  for(const crater of visualCraters){
+    const dx=x-crater.x,dz=z-crater.z,angle=Math.atan2(dz,dx);
+    const radius=crater.radius*(1+.035*Math.sin(angle*9+crater.x));
+    const t=Math.hypot(dx,dz)/radius;
+    if(t>=1.25)continue;
+    const bowl=-.31*Math.max(0,1-(t/.83)**2)**2;
+    const rim=.19*Math.exp(-Math.pow((t-.86)*9,2));
+    const taper=Math.max(0,Math.min(1,(1.25-t)/.23));
+    height+=(bowl+rim)*taper;
+  }
+  return height;
+}
 /** Pure, deterministic visual height function. Navigation/collision are never modified. */
 export function terrainRelief(x:number,z:number):number {
   const waves=Math.sin(x*.22)*Math.cos(z*.19)*.19+
     Math.sin(x*.57+z*.34)*.08+Math.cos(x*.93-z*.41)*.028;
   // Main corridor and instrument sites stay nearly flat. No visual walls.
   const shoulder=Math.max(0,Math.min(1,(Math.abs(x)-2.7)/6));
-  return -.115+waves*(.09+.91*shoulder);
+  return -.115+waves*(.09+.91*shoulder)+craterRelief(x,z);
 }
 function hash(seed:number):number {
   const x=Math.sin(seed*127.13+78.233)*43758.5453;
@@ -92,15 +112,17 @@ export function installSurfaceScenery(
   markers:readonly Marker[],
   quality:SurfaceQuality="balanced",
 ):{dispose():void} {
+  const originalChildren=new Set(group.children);
   const geometries:T.BufferGeometry[]=[];
   const materials:T.Material[]=[];
   const textures:T.Texture[]=[];
-  const count=quality==="battery"?40:quality==="quality"?225:135;
+  const count=presentationBudgets[quality].rockInstances;
   const rocksGeom=new T.IcosahedronGeometry(1,quality==="quality"?1:0);
   geometries.push(rocksGeom);
   const dustyMap=createDustMap(destination,quality,textures);
   const regolith=new T.MeshStandardMaterial({
     color:"#ffffff",map:dustyMap||undefined,roughness:.99,metalness:0,
+    bumpMap:quality==="battery"?null:dustyMap,bumpScale:.012,
     side:T.FrontSide,
   });
   const rubble=new T.MeshStandardMaterial({
@@ -148,42 +170,6 @@ export function installSurfaceScenery(
   pieces.instanceMatrix.needsUpdate=true;flecks.instanceMatrix.needsUpdate=true;
   group.add(pieces,flecks);
 
-  function crater(cx:number,cz:number,radius:number){
-    const rings=12,steps=56;
-    const points:number[]=[];const colors:number[]=[];const faces:number[]=[];
-    for(let j=0;j<=rings;j++){
-      const t=j/rings;
-      const r=radius*t;
-      // A bowl with a fractured raised rim and an undisturbed outer transition.
-      const bowl=-.55*Math.pow(Math.max(0,1-t/.80),1.55);
-      const rim=.39*Math.exp(-Math.pow((t-.81)*12,2));
-      for(let i=0;i<=steps;i++){
-        const angle=i/steps*Math.PI*2;
-        const d=1+.047*Math.sin(angle*11+cx)+.024*Math.sin(angle*19+cz);
-        const x=cx+Math.cos(angle)*r*d;
-        const z=cz+Math.sin(angle)*r*d;
-        const y=terrainRelief(x,z)+bowl+rim+.018;
-        points.push(x,y,z);
-        const shade=Math.min(1,Math.max(0,.58+rim*.31+bowl*.20+hash(i*13+j*7)*.12));
-        colors.push(shade,shade*.995,shade*.98);
-        if(j<rings&&i<steps){
-          const n=j*(steps+1)+i;
-          faces.push(n,n+steps+1,n+1,n+1,n+steps+1,n+steps+2);
-        }
-      }
-    }
-    const geo=new T.BufferGeometry();
-    geo.setAttribute("position",new T.Float32BufferAttribute(points,3));
-    geo.setAttribute("color",new T.Float32BufferAttribute(colors,3));
-    geo.setIndex(faces);geo.computeVertexNormals();
-    geometries.push(geo);
-    const mat=new T.MeshStandardMaterial({vertexColors:true,color:destination==="mars"?"#a97860":"#b0adac",roughness:1,side:T.DoubleSide});
-    materials.push(mat);group.add(new T.Mesh(geo,mat));
-  }
-  if(destination!=="earth"){
-    crater(-9.5,27,3.9);crater(12,32,5);crater(-19,41,5.8);
-  }
-
   // Silhouette terrain behind the walkable field, not a new player obstacle.
   if(destination!=="earth"){
     for(const [i,backZ] of [52,57,62].entries()){
@@ -220,11 +206,14 @@ export function installSurfaceScenery(
   const fill=new T.HemisphereLight("#dce2ef","#161522",.38);
   group.add(fill);
 
+  const installedChildren=group.children.filter(child=>!originalChildren.has(child));
+  let disposed=false;
   return {dispose(){
+    if(disposed)return;disposed=true;
     if(earth)disposePlanet(earth);
     geometries.forEach(g=>g.dispose());
     materials.forEach(m=>m.dispose());
     textures.forEach(t=>t.dispose());
-    group.remove(...group.children.filter(c=>c===floor||c===pieces||c===flecks));
+    group.remove(...installedChildren);
   }};
 }

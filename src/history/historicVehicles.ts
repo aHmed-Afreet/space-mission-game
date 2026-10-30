@@ -24,10 +24,16 @@ function wing(g:THREE.Group,sign:number,dist=2.1,length=3.4,z=0){
  for(let i=0;i<4;i++)block(g,sign*(dist+.25+i*(length-.5)/3),.053,z,.026,.013,1.22,metal);
 }
 function dish(g:THREE.Group,x=0,y=1,z=0,r=1){
- const p=cylinder(g,x,y,z,r,r*.18,.18,white,28);p.rotation.x=Math.PI/2;
+ const profile=[new THREE.Vector2(0,r*.25),new THREE.Vector2(r*.24,r*.23),new THREE.Vector2(r*.55,r*.16),new THREE.Vector2(r*.82,r*.07),new THREE.Vector2(r,0)];
+ const p=add(g,new THREE.LatheGeometry(profile,24),white,x,y,z);p.rotation.x=Math.PI/2;
+ (p.material as THREE.MeshStandardMaterial).side=THREE.DoubleSide;
  const rim=new THREE.Mesh(new THREE.TorusGeometry(r,.036,8,36),metal);
  rim.position.set(x,y,z-.14);g.add(rim);
  tube(g,[x,y,z],[x,y,z-1],.04,metal);
+ for(let k=0;k<3;k++){
+  const a=k*Math.PI*2/3;
+  tube(g,[x+Math.cos(a)*r*.82,y+Math.sin(a)*r*.82,z],[x,y,z-r*.7],.018,metal);
+ }
 }
 function capsule(g:THREE.Group,variant:"mercury"|"gemini"|"apollo"|"vostok"|"orion"){
  if(variant==="vostok"){
@@ -37,14 +43,30 @@ function capsule(g:THREE.Group,variant:"mercury"|"gemini"|"apollo"|"vostok"|"ori
   antenna(g,2.1);return;
  }
  const h=variant==="mercury"?1.8:variant==="gemini"?2.2:2.15;
- cylinder(g,0,.3,0,.54,1.24,h,white);
- cylinder(g,0,.3+h*.5,0,.04,.52,.72,metal);
+ cylinder(g,0,.3,0,variant==="gemini"?.48:.54,1.24,h,variant==="mercury"||variant==="gemini"?dark:white);
+ cylinder(g,0,.3+h*.5,0,.32,.48,variant==="mercury"?.31:.25,metal);
  cylinder(g,0,-h*.5+.27,0,1.2,1.2,.17,gold);
  for(let i=0;i<(variant==="mercury"?1:variant==="gemini"?2:3);i++)
-  block(g,(i-1)*.47,.95,-.85,.31,.25,.06,glass);
+  block(g,(i-((variant==="mercury"?1:variant==="gemini"?2:3)-1)/2)*.47,.95,-.85,.31,.25,.06,glass);
+ if(variant==="mercury"||variant==="gemini"){
+  // Shingled thermal protection and the broad heat shield distinguish these
+  // compact reentry vehicles from a white Apollo service-module stack.
+  for(let k=0;k<12;k++){
+   const a=k*Math.PI/6;
+   tube(g,[Math.cos(a)*1.13,-.45,Math.sin(a)*1.13],[Math.cos(a)*.59,1.03,Math.sin(a)*.59],.013,metal);
+  }
+  if(variant==="gemini")cylinder(g,0,-1.35,0,1.2,.91,1.05,white);
+ }
  if(variant==="apollo"||variant==="orion"){
   cylinder(g,0,-1.57,0,1.13,1.13,1.85,metal);
   cylinder(g,0,-2.53,0,.54,.73,.35,dark);
+  for(let k=0;k<4;k++){
+   const a=k*Math.PI/2,cluster=new THREE.Group();cluster.rotation.y=a;g.add(cluster);
+   block(cluster,1.15,-1.14,0,.19,.22,.38,gold);
+   for(const side of [-1,1]){
+    const nozzle=cylinder(cluster,1.19,-1.14,side*.26,.04,.07,.14,dark,10);nozzle.rotation.x=Math.PI/2;
+   }
+  }
   if(variant==="orion")for(let i=0;i<4;i++){
    const a=i*Math.PI/2,arm=new THREE.Group();arm.rotation.y=a;g.add(arm);
    block(arm,0,-1.4,-2.45,1.15,.06,2.65,solar);
@@ -68,6 +90,14 @@ function lander(g:THREE.Group,variant:"apollo"|"luna9"|"luna16"|"viking"|"generi
   for(const x of [-.56,.56]){const v=block(g,x,.89,-.88,.35,.3,.07,glass);v.rotation.z=x*.45;}
   block(g,0,.2,-1.1,.48,.56,.07,dark);
   for(let i=0;i<6;i++)block(g,1.05,-1.15+i*.19,-1.19,.065,.044,.6,metal);
+  // Descent-stage foil facets, separate ascent cabin and a descent engine bell.
+  const engine=cylinder(g,0,-1.35,0,.24,.49,.61,dark);engine.name="Descent engine bell";
+  for(let k=0;k<8;k++){
+   const a=k*Math.PI/4;
+   const facet=block(g,Math.cos(a)*1.26,-.65,Math.sin(a)*1.26,.74,.75,.045,k%2?gold:metal);facet.rotation.y=-a+Math.PI/2;
+  }
+  tube(g,[-.45,1.28,.1],[-.75,2.1,.5],.024,metal);
+  dish(g,-.75,2.1,.5,.32);
  }else if(variant==="luna16"){
   cylinder(g,0,.62,0,.75,.75,1.65,white);
   cylinder(g,0,1.72,0,.28,.48,1,metal);
@@ -125,11 +155,15 @@ function station(g:THREE.Group,title:string){
 function shuttle(g:THREE.Group){
  const fuselage=cylinder(g,0,0,0,.67,.74,5.5,white);fuselage.rotation.x=Math.PI/2;
  const nose=cylinder(g,0,.08,-3.2,.08,.7,1.3,white);nose.rotation.x=Math.PI/2;
- const wing=add(g,new THREE.ConeGeometry(4.2,.15,3),white,0,-.35,.3);
- wing.rotation.x=Math.PI/2;wing.rotation.y=Math.PI/2;wing.scale.z=.6;
+ const outline=new THREE.Shape();
+ outline.moveTo(-.7,-2.3);outline.lineTo(-3.45,1.28);outline.lineTo(-.8,2.1);
+ outline.lineTo(.8,2.1);outline.lineTo(3.45,1.28);outline.lineTo(.7,-2.3);outline.closePath();
+ const wing=add(g,new THREE.ExtrudeGeometry(outline,{depth:.1,bevelEnabled:false}),white,0,-.35,0);wing.rotation.x=Math.PI/2;
+ for(const side of [-1,1])tube(g,[side*.72,-.33,-2.3],[side*3.45,-.33,1.28],.06,dark);
+ for(const side of [-1,1])for(let k=0;k<5;k++)block(g,side*.35,.66,-1.15+k*.6,.64,.04,.54,white);
  block(g,0,.98,2,.25,1.9,.72,white);
- for(const x of [-.45,.45]){
- const engine=cylinder(g,x,-.3,2.9,.25,.43,.93,dark);engine.rotation.x=Math.PI/2;
+ for(const [x,y] of [[-.45,-.3],[.45,-.3],[0,.35]]){
+ const engine=cylinder(g,x,y,2.9,.25,.43,.93,dark);engine.rotation.x=Math.PI/2;engine.name="Shuttle main engine";
  }
  block(g,0,.45,-2.02,1,.36,.08,glass);
 }
@@ -210,5 +244,14 @@ export function createHistoricVehicle(scenario:StoryScenario):THREE.Group {
  else if(scenario.family==="capsule"||scenario.family==="gemini"||scenario.family==="apollo"||scenario.family==="sphere"){
   capsule(g,/Vostok|Voskhod/.test(title)?"vostok":/Mercury|Freedom 7|Friendship 7/.test(title)?"mercury":/Gemini/.test(title)?"gemini":/Artemis/.test(title)?"orion":"apollo");
  }else probe(g,title);
+ // Scene instances own their materials. Two displayed copies and a later
+ // mission can be disposed independently without invalidating each other.
+ const owned=new Map<THREE.Material,THREE.Material>();
+ g.traverse(object=>{
+  if(!(object instanceof THREE.Mesh))return;
+  const clone=(source:THREE.Material)=>{let copy=owned.get(source);if(!copy){copy=source.clone();owned.set(source,copy);}return copy;};
+  object.material=Array.isArray(object.material)?object.material.map(clone):clone(object.material);
+ });
+ g.userData.interpretation="Procedural educational exterior; not a dimensionally exact historic cabin";
  return g;
 }

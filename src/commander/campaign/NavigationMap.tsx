@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useModalFocus } from "../modalFocus";
 import Icon from "../Icons";
 import { deck, nearby } from "../layout";
 import { currentObjective, fieldSites, outside, sitePosition, type Session } from "./engine";
-import { missionById, type Site } from "./definitions";
+import { missionForSession, type Site } from "./definitions";
 import type { Destination } from "./environments";
 
 const shipKeys: Site[] = [...(Object.keys(deck) as Site[]), "innerHatch", "airlock", "outerHatch"];
@@ -22,7 +23,7 @@ const splitNames: Record<string,string[]> = {
 };
 
 export function NavigationContent({s}:{s:Session}) {
-  const mission=missionById(s.missionId);
+  const mission=missionForSession(s);
   const objective=currentObjective(s);
   const [kind,setKind]=useState<"ship"|"surface">(outside(s)&&mission.eva?"surface":"ship");
   const [selected,setSelected]=useState<Site|null>(null);
@@ -135,16 +136,11 @@ export function NavigationContent({s}:{s:Session}) {
 
 export default function NavigationMap({s,onClose}:{s:Session;onClose:()=>void}) {
   const closer=useRef<HTMLButtonElement>(null);
-  useEffect(()=>{
-    const prior=document.activeElement as HTMLElement|null;
-    closer.current?.focus();
-    const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.preventDefault();onClose();}};
-    window.addEventListener("keydown",key);
-    return ()=>{window.removeEventListener("keydown",key);prior?.focus();};
-  },[onClose]);
-  return <div className="nav-map-layer">
+  const dialog=useRef<HTMLElement>(null),boundary=useRef<HTMLDivElement>(null);
+  useModalFocus({dialog,boundary,initialFocus:closer,onClose});
+  return <div className="nav-map-layer" ref={boundary}>
     <button type="button" className="nav-map-backdrop" aria-label="Close navigation map" onClick={onClose}/>
-    <section className="nav-map-dialog" role="dialog" aria-modal="true" aria-label="Navigation map">
+    <section ref={dialog} className="nav-map-dialog" role="dialog" aria-modal="true" aria-label="Navigation map">
       <header className="nav-map-top"><div><small>ORBITAL / NAVIGATION</small><h1>Navigation Map</h1></div>
         <button type="button" ref={closer} className="nav-map-close" onClick={onClose}>
           <Icon name="close" size={17}/> Close

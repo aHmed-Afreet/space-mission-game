@@ -36,13 +36,15 @@ export function installShipArchitecture(
  const seal=mat("#0d141a",.06,.86);
  const accent=mat("#d0a76c",.4,.42);
  const bolts=mat("#c9d0cd",.6,.34);
+ const ownedTextures:T.Texture[]=[];
  // A tiny reusable painted-alloy texture with seams, serial marks and
  // brushed wear makes large panels look manufactured instead of flat cubes.
  // All geometry still uses shared materials/instancing.
  const textureCanvas=document.createElement("canvas");
- textureCanvas.width=512;textureCanvas.height=512;
+ textureCanvas.width=mode==="battery"?128:512;textureCanvas.height=mode==="battery"?128:512;
  const g=textureCanvas.getContext("2d");
  if(g){
+  g.scale(textureCanvas.width/512,textureCanvas.height/512);
   g.fillStyle="#d5d9d8";g.fillRect(0,0,512,512);
   for(let y=0;y<512;y+=2){
    const shade=Math.round(171+Math.sin(y*.77)*13+Math.sin(y*3.29)*6);
@@ -63,6 +65,7 @@ export function installShipArchitecture(
   g.fillText("ORBITAL / PANEL ASSY",35,63);
   g.font="13px monospace";g.fillText("ACCESS  ·  04 / INSPECT",35,467);
   const map=new T.CanvasTexture(textureCanvas);
+  ownedTextures.push(map);
   map.colorSpace=T.SRGBColorSpace;map.anisotropy=2;
   for(const material of [ceramic,trim,alloy]){
    material.map=map;material.needsUpdate=true;
@@ -73,6 +76,18 @@ export function installShipArchitecture(
  // Eight-sided pressure tunnel: tapered overhead shoulders and thick frames.
  // Structural modules terminate at the actual hatch planes.
  const sections:[number,number][]=[[-7.65,-4.5],[-4.16,-1.51],[-1.19,2.16],[2.52,7.52]];
+ const quilt=mat("#b8b8a7",.05,.94);
+ // Removable soft insulation blankets sit between structural frames. Seams,
+ // retention points and cable trays follow the pressure shell's shoulders.
+ for(const [from,to] of sections)for(const side of [-1,1]){
+  for(let z=from+.4;z<to-.2;z+=.88){
+   part(side*2.88,2.62,z,.54,.035,.79,quilt,[0,0,side*.48]);
+   if(detail>1){
+    for(const dz of [-.32,.32])part(side*2.872,2.595,z+dz,.47,.009,.016,trim,[0,0,side*.48]);
+    for(const x of [2.69,3.02])part(side*x,2.62+(x-2.88)*-.46,z,.025,.016,.06,bolts);
+   }
+  }
+ }
  for(const [from,to] of sections){
   for(let z=from;z<=to+.01;z+=1.16){
    for(const side of [-1,1]){
@@ -239,4 +254,5 @@ export function installShipArchitecture(
    }
   }
  }
+ return ()=>ownedTextures.forEach(texture=>texture.dispose());
 }

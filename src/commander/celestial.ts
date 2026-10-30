@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { disposeObjectResources } from "../presentation/resources";
+import { assetManifest } from "../presentation/assetManifest";
 
 /** Procedural, deterministic educational planet material, generated offline in the browser.
  * Uses no external textures or network requests and keeps memory small for iPads. */
@@ -60,7 +62,10 @@ function textureFor(kind:PlanetKind,clouds=false){
     [toByte(8+seaShade+180*polar),toByte(44+65*detail+180*polar),toByte(105+90*detail+144*polar)];
   }else if(kind==="mars"){
    const cap=Math.max(0,(latitude-.89)*9);
-   rgb=[toByte(135+84*pattern+90*cap),toByte(56+77*pattern+125*cap),toByte(32+53*pattern+140*cap)];
+   // Restrained dark terrain and pale polar ice, a synthetic albedo map rather
+   // than a geographically exact claim. It keeps a readable sunlit terminator.
+   const darkTerrain=Math.max(0,(fractal(u*7,v*5,seed+53)-.52)*3.8);
+   rgb=[toByte(156+54*pattern-51*darkTerrain+80*cap),toByte(77+42*pattern-24*darkTerrain+108*cap),toByte(48+35*pattern-13*darkTerrain+124*cap)];
   }else if(kind==="moon"||kind==="mercury"){
    const craters=Math.abs(Math.sin(u*159+v*182)*Math.cos(u*90-v*154));
    const bright=68+100*pattern+(craters>.97?36:0);
@@ -96,6 +101,7 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
   return group;
  }
  const g=new THREE.Group(),geometry=new THREE.SphereGeometry(radius,48,32);
+ g.name=`${kind} destination visualization`;
  g.userData.destinationKind=kind;
  if(kind==="unknown"){
   geometry.dispose();
@@ -118,8 +124,8 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
  // over HTTPS from the three.js examples repository; the procedural canvas
  // above remains fully functional if offline or if image loading fails.
  const photos:Partial<Record<PlanetKind,string>>={
-  earth:"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg",
-  moon:"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg",
+  earth:assetManifest.earth.runtimeUrl,
+  moon:assetManifest.moon.runtimeUrl,
  };
  const source=photos[kind];
  if(source){
@@ -141,6 +147,11 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
    new THREE.MeshBasicMaterial({color:0x62a9f3,side:THREE.BackSide,transparent:true,opacity:.085}));
   g.add(rim);
  }
+ if(kind==="mars"){
+  const limb=new THREE.Mesh(new THREE.SphereGeometry(radius*1.012,40,24),
+   new THREE.MeshBasicMaterial({color:0xc88e69,side:THREE.BackSide,transparent:true,opacity:.06,depthWrite:false}));
+  limb.name="Thin atmospheric limb";g.add(limb);
+ }
  if(kind==="saturn"){
   const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.3,radius*2.15,64),
    new THREE.MeshStandardMaterial({color:0xb7aa87,side:THREE.DoubleSide,transparent:true,opacity:.77,roughness:1}));
@@ -149,14 +160,6 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
  return g;
 }
 export function disposePlanet(g:THREE.Group){
- g.traverse(obj=>{obj.userData.disposed=true;});
- g.traverse(obj=>{
-  if(!(obj instanceof THREE.Mesh))return;
-  obj.geometry.dispose();
-  const mats=Array.isArray(obj.material)?obj.material:[obj.material];
-  for(const mat of mats){
-   if(mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshBasicMaterial)mat.map?.dispose();
-   mat.dispose();
-  }
- });
+ if(g.userData.disposed)return;
+ disposeObjectResources(g);
 }

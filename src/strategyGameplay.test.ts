@@ -1,27 +1,30 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {addDelta,errors,events,outcome,report,resources,zero,type Design,type Delta,type MissionEvent} from './game';
+import {addDelta,events,outcome,resources,zero,type Design,type Delta,type MissionEvent} from './game';
+import {strategyErrors as errors,strategyReport as report,strategyResources, strategyOutcome, strategyChoiceEnabled,launchStrategyEnergy,advanceStrategyEnergy,strategyEnergyAssumptions,type StrategyEnergy} from './strategyEnergy';
 import {readStrategyProgress,recordStrategyScore,saveStrategyProgress,STRATEGY_SAVE_KEY,strategyBudget,strategyChallenges,strategyDebrief,strategyGoalMet,strategyIssues,strategyStarter,strategyStorage,strategyUnlocked,type StrategyChallenge} from './strategyChallenges';
 
 const decks=events.flatMap(a=>events.filter(b=>a!==b).flatMap(b=>events.filter(c=>c!==a&&c!==b).map(c=>[a,b,c])));
 
-function completedFlights(design:Design,deck:MissionEvent[],index=0,delta:Delta=zero):Delta[]{
- if(index===deck.length)return [delta];
- const current=resources(design,delta),event=deck[index];
+type Flight={delta:Delta;energy:StrategyEnergy};
+function completedFlights(design:Design,deck:MissionEvent[],index=0,delta:Delta=zero,energy=launchStrategyEnergy(design)):Flight[]{
+ if(index===deck.length)return [{delta,energy}];
+ const event=deck[index];
  return event.choices.flatMap(choice=>{
-  if(choice.need&&current[choice.need]<(choice.amount||0))return [];
-  return completedFlights(design,deck,index+1,addDelta(delta,outcome(choice,event,design)));
+  if(!strategyChoiceEnabled(choice,design,delta,energy))return [];
+  const nextDelta=addDelta(delta,strategyOutcome(choice,event,design,energy));
+  return completedFlights(design,deck,index+1,nextDelta,advanceStrategyEnergy(design,nextDelta,energy,strategyEnergyAssumptions.eventHours));
  });
 }
-function winningFlights(design:Design,challenge:StrategyChallenge,deck:MissionEvent[]):Delta[]{
- return completedFlights(design,deck).filter(delta=>strategyGoalMet(design,challenge,delta,report(design,delta).score));
+function winningFlights(design:Design,challenge:StrategyChallenge,deck:MissionEvent[]):Flight[]{
+ return completedFlights(design,deck).filter(({delta,energy})=>strategyGoalMet(design,challenge,delta,report(design,delta,energy).score,energy));
 }
-function canWinWithoutKnowingFuture(design:Design,challenge:StrategyChallenge,delta:Delta=zero,seen:string[]=[],remaining=3):boolean{
- if(remaining===0)return strategyGoalMet(design,challenge,delta,report(design,delta).score);
- const current=resources(design,delta);
+function canWinWithoutKnowingFuture(design:Design,challenge:StrategyChallenge,delta:Delta=zero,seen:string[]=[],remaining=3,energy=launchStrategyEnergy(design)):boolean{
+ if(remaining===0)return strategyGoalMet(design,challenge,delta,report(design,delta,energy).score,energy);
  return events.filter(event=>!seen.includes(event.id)).every(event=>event.choices.some(choice=>{
-  if(choice.need&&current[choice.need]<(choice.amount||0))return false;
-  return canWinWithoutKnowingFuture(design,challenge,addDelta(delta,outcome(choice,event,design)),[...seen,event.id],remaining-1);
+  if(!strategyChoiceEnabled(choice,design,delta,energy))return false;
+  const nextDelta=addDelta(delta,strategyOutcome(choice,event,design,energy));
+  return canWinWithoutKnowingFuture(design,challenge,nextDelta,[...seen,event.id],remaining-1,advanceStrategyEnergy(design,nextDelta,energy,strategyEnergyAssumptions.eventHours));
  }));
 }
 
@@ -95,11 +98,12 @@ test('a battery preserves safe-mode observations without removing the final engi
  assert.equal(winningFlights(dualArray,challenge,deck).length,0);
  const wins=winningFlights(flagship,challenge,deck);
  assert.equal(wins.length,1);
- const r=resources(flagship,wins[0]);
+ const r=strategyResources(flagship,wins[0].delta,wins[0].energy);
  assert.equal(r.science,85);
  assert.equal(r.reliability,82);
  assert.equal(r.cost,217);
- assert.equal(r.power,30);
+ assert.equal(r.power,20);
+ assert.equal(wins[0].energy.unservedWh,0);
 });
 
 test('budget display, preflight and feedback use each mission allocation',()=>{
@@ -142,7 +146,7 @@ test('storage getter and read errors are safe, and failed reads cannot erase pro
 test('failed score writes report unsaved progress, then retry preserves completed levels and best scores',()=>{
  const old={'strategy-1':90,'strategy-2':84,'strategy-3':77};
  let value=JSON.stringify(old),blocked=true;
- const storage={getItem:(key:string)=>key===STRATEGY_SAVE_KEY?value:null,setItem:(key:string,next:string)=>{assert.equal(key,STRATEGY_SAVE_KEY);if(blocked)throw Error('Quota exceeded');value=next;}};
+ const storage={getItem:(key:string)=>key===STRATEGY_SAVE_KEY?value:null,setItem:(key:string,next:string)=>{if(blocked)throw Error('Quota exceeded');if(key===STRATEGY_SAVE_KEY)value=next;}};
  const session=recordStrategyScore(readStrategyProgress(storage),'strategy-4',80);
  assert.deepEqual(saveStrategyProgress(session,storage),{saved:false});
  assert.equal(strategyUnlocked(4,session),true,'a failed write must retain this session’s new unlock');
@@ -158,7 +162,7 @@ test('failed score writes report unsaved progress, then retry preserves complete
 test('all previously completed levels remain completed after saving another score',()=>{
  const old=Object.fromEntries(strategyChallenges.map(c=>[c.id,70+c.level]));
  let value=JSON.stringify(old);
- const storage={getItem:()=>value,setItem:(_key:string,next:string)=>{value=next;}};
+ const storage={getItem:()=>value,setItem:(key:string,next:string)=>{if(key===STRATEGY_SAVE_KEY)value=next;}};
  const saved=saveStrategyProgress(recordStrategyScore(readStrategyProgress(storage),'strategy-1',100),storage);
  assert.equal(saved.saved,true);
  const restored=readStrategyProgress(storage);

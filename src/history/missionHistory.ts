@@ -4,8 +4,8 @@ export type HistoryMission = {
  destination:string; background:string;mission:string;outcome:string;
  challenge:string;skill:string;era:string;source:string;
 };
-/** Independent educational summaries. Sources are program-wide historical archives;
- * some entries link to archive indices rather than specific mission articles.
+/** Independent educational summaries with individually reviewed agency references.
+ * Source scope, checked titles and milestone-date labels live in storyReferences.ts.
  * Future journeys are described as launched, not as completed science missions. */
 export const historyMissions:HistoryMission[] = [
   {
@@ -21,7 +21,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Orbit determination from a faint signal.",
     "skill": "Satellite tracking",
     "era": "Early Space",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.nasa.gov/history/65-years-ago-sputnik-ushers-in-the-space-age/"
   },
   {
     "id": "history-2",
@@ -36,7 +36,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Interpreting rapidly changing instrument readings.",
     "skill": "Radiation instrumentation",
     "era": "Early Space",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/explorer-1/"
   },
   {
     "id": "history-3",
@@ -51,7 +51,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Hitting a distant moving target.",
     "skill": "Deep-space navigation",
     "era": "Early Space",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.nasa.gov/history/60-years-ago-luna-2-makes-impact-in-moon-race/"
   },
   {
     "id": "history-4",
@@ -66,7 +66,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Human orbital spaceflight had never been demonstrated.",
     "skill": "Crew safety",
     "era": "Early Space",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/image-article/april-1961-first-human-entered-space/"
   },
   {
     "id": "history-5",
@@ -81,7 +81,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Reentry and recovery had little margin.",
     "skill": "Capsule checklists",
     "era": "Early Space",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/mercury-redstone-3-freedom-7/"
   },
   {
     "id": "history-6",
@@ -96,7 +96,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Interpreting uncertain spacecraft telemetry.",
     "skill": "Mission Control decisions",
     "era": "Early Space",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/mercury-atlas-6-friendship-7/"
   },
   {
     "id": "history-7",
@@ -111,7 +111,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Deep-space pointing and communications.",
     "skill": "Planetary flybys",
     "era": "Early Space",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/mariner-2/"
   },
   {
     "id": "history-8",
@@ -126,7 +126,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Spacesuit stiffness complicated the spacewalk.",
     "skill": "EVA preparation",
     "era": "Early Space",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/blogs/spacestation/2019/05/29/russian-spacewalkers-wish-happy-birthday-to-first-spacewalker-alexei-leonov/"
   },
   {
     "id": "history-9",
@@ -141,7 +141,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Time and suit resources had to be managed.",
     "skill": "EVA timing",
     "era": "Early Space",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/gemini-iv/"
   },
   {
     "id": "history-10",
@@ -156,7 +156,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Orbit changes do not behave like aircraft turns.",
     "skill": "Rendezvous",
     "era": "Early Space",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/gemini-vi/"
   },
   {
     "id": "history-11",
@@ -171,7 +171,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "A rapid rotation required decisive diagnosis.",
     "skill": "Docking and anomaly response",
     "era": "Early Space",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/gemini-viii/"
   },
   {
     "id": "history-12",
@@ -186,7 +186,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Landing gently enough to protect instruments.",
     "skill": "Soft landing",
     "era": "Early Space",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunarussr.html"
   },
   {
     "id": "history-13",
@@ -201,7 +201,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "The Moon interrupted Earth communications.",
     "skill": "Lunar navigation",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-8/"
   },
   {
     "id": "history-14",
@@ -216,7 +216,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Complex interfaces had to work together.",
     "skill": "Module testing",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-9/"
   },
   {
     "id": "history-15",
@@ -231,7 +231,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Precision trajectory control near the lunar surface.",
     "skill": "Mission rehearsal",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-10/"
   },
   {
     "id": "history-16",
@@ -246,7 +246,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Landing-site selection and consumables were critical.",
     "skill": "Landing and lunar science",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-11/"
   },
   {
     "id": "history-17",
@@ -261,7 +261,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Precision landing required tight navigation.",
     "skill": "Precision landing",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-12/"
   },
   {
     "id": "history-18",
@@ -276,7 +276,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Electrical power and life-support supplies were limited.",
     "skill": "Contingency planning",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-13/"
   },
   {
     "id": "history-19",
@@ -291,7 +291,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Autonomous landing, sampling and ascent were difficult.",
     "skill": "Sample return",
     "era": "Moon Race",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunarussr.html"
   },
   {
     "id": "history-20",
@@ -302,11 +302,11 @@ export const historyMissions:HistoryMission[] = [
     "destination": "Earth orbit",
     "background": "The world's first space station opened the era of dedicated orbital laboratories.",
     "mission": "Plan station docking and long-duration crew work.",
-    "outcome": "The program established important early orbital-station experience.",
+    "outcome": "The program established early orbital-station experience. The Soyuz 11 crew died when their return capsule depressurized; the accident drove changes to pressure-suit and valve procedures.",
     "challenge": "Life support and crew operations were new challenges.",
     "skill": "Station operations",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/history/50-years-ago-remembering-the-crew-of-soyuz-11/"
   },
   {
     "id": "history-21",
@@ -321,7 +321,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Long surface trips increased planning demands.",
     "skill": "Lunar geology",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-15/"
   },
   {
     "id": "history-22",
@@ -336,7 +336,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Dust initially obscured much of the planet.",
     "skill": "Orbital mapping",
     "era": "Moon Race",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/mariner-9/"
   },
   {
     "id": "history-23",
@@ -351,7 +351,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Radiation and distance were major hazards.",
     "skill": "Radiation protection",
     "era": "Moon Race",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/pioneer-10/"
   },
   {
     "id": "history-24",
@@ -366,7 +366,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Extended EVAs required careful suit-reserve tracking.",
     "skill": "Science experiment deployment",
     "era": "Moon Race",
-    "source": "https://www.nasa.gov/the-apollo-program/"
+    "source": "https://www.nasa.gov/mission/apollo-17/"
   },
   {
     "id": "history-25",
@@ -381,7 +381,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Orbital maintenance was urgently needed.",
     "skill": "Spacecraft repairs",
     "era": "Stations & Shuttles",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/mission/skylab-2/"
   },
   {
     "id": "history-26",
@@ -396,7 +396,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Navigation depended on a gravity-assist maneuver.",
     "skill": "Trajectory design",
     "era": "Stations & Shuttles",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/mariner-10/"
   },
   {
     "id": "history-27",
@@ -411,7 +411,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Two spacecraft systems needed compatible hardware.",
     "skill": "International docking",
     "era": "Stations & Shuttles",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/missions/apollo-soyuz-test-project-overview/"
   },
   {
     "id": "history-28",
@@ -426,7 +426,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Chemistry results needed careful interpretation.",
     "skill": "Mars lander operations",
     "era": "Stations & Shuttles",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/viking/"
   },
   {
     "id": "history-29",
@@ -441,7 +441,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Weak radio signals challenged communications.",
     "skill": "Deep-space telemetry",
     "era": "Stations & Shuttles",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/voyager/voyager-1/"
   },
   {
     "id": "history-30",
@@ -456,7 +456,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Flyby opportunities depended on orbital geometry.",
     "skill": "Gravity assist navigation",
     "era": "Stations & Shuttles",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/voyager/voyager-2/"
   },
   {
     "id": "history-31",
@@ -471,7 +471,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Testing a new integrated vehicle involved uncertainty.",
     "skill": "Flight qualification",
     "era": "Stations & Shuttles",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/mission/sts-1/"
   },
   {
     "id": "history-32",
@@ -486,7 +486,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Many connected systems required continuous attention.",
     "skill": "Station resource management",
     "era": "Stations & Shuttles",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/history/35-years-ago-launch-of-mir-space-stations-first-module/"
   },
   {
     "id": "history-33",
@@ -501,7 +501,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Precision instruments needed extensive calibration.",
     "skill": "Telescope commissioning",
     "era": "Stations & Shuttles",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.nasa.gov/mission/sts-31/"
   },
   {
     "id": "history-34",
@@ -516,7 +516,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Complex observations faced long communication delays.",
     "skill": "Jupiter system science",
     "era": "Stations & Shuttles",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/galileo/"
   },
   {
     "id": "history-35",
@@ -531,7 +531,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Rover communication depended on the nearby lander.",
     "skill": "Rover navigation",
     "era": "Stations & Shuttles",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/mars-pathfinder/"
   },
   {
     "id": "history-36",
@@ -546,7 +546,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Station pieces had to be joined and commissioned in orbit.",
     "skill": "Assembly and docking",
     "era": "Stations & Shuttles",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/history/25-years-ago-nasa-partners-begin-space-station-assembly/"
   },
   {
     "id": "history-37",
@@ -561,7 +561,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Crew support depends on maintenance and resupply.",
     "skill": "Daily orbital operations",
     "era": "Stations & Shuttles",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/mission/expedition-1/"
   },
   {
     "id": "history-38",
@@ -576,7 +576,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Distance and probe coordination created hard tradeoffs.",
     "skill": "Planetary science planning",
     "era": "Robotic Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/cassini/"
   },
   {
     "id": "history-39",
@@ -591,7 +591,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Encounter timing had to be precise.",
     "skill": "Impact observation",
     "era": "Robotic Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/deep-impact-epoxi/"
   },
   {
     "id": "history-40",
@@ -606,7 +606,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Complex equipment had to be serviced externally.",
     "skill": "EVA maintenance",
     "era": "Robotic Exploration",
-    "source": "https://www.nasa.gov/history/explore-nasas-history/"
+    "source": "https://www.nasa.gov/mission/sts-125/"
   },
   {
     "id": "history-41",
@@ -621,7 +621,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Accurate photometry required stable observations.",
     "skill": "Exoplanet searches",
     "era": "Robotic Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/kepler/"
   },
   {
     "id": "history-42",
@@ -636,7 +636,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Autonomous movement and sampling had to be safe.",
     "skill": "Mars geochemistry",
     "era": "Robotic Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/msl-curiosity/"
   },
   {
     "id": "history-43",
@@ -651,7 +651,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Tiny gravity complicated anchoring.",
     "skill": "Comet landing",
     "era": "Robotic Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.esa.int/Science_Exploration/Space_Science/Rosetta"
   },
   {
     "id": "history-44",
@@ -666,7 +666,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "The fast flyby allowed little chance to redo observations.",
     "skill": "Flyby imaging",
     "era": "Robotic Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/new-horizons/"
   },
   {
     "id": "history-45",
@@ -681,7 +681,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Jupiter's radiation shaped orbital operations.",
     "skill": "Radiation-aware planning",
     "era": "Robotic Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/juno/"
   },
   {
     "id": "history-46",
@@ -696,7 +696,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Very low gravity complicated contact operations.",
     "skill": "Asteroid sampling",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/osiris-rex/"
   },
   {
     "id": "history-47",
@@ -711,7 +711,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Autonomy and sample handling needed care.",
     "skill": "Rover sample caching",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/mars-2020-perseverance/"
   },
   {
     "id": "history-48",
@@ -726,7 +726,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Very thin air demanded rapid rotor motion.",
     "skill": "Mars flight testing",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/"
   },
   {
     "id": "history-49",
@@ -741,7 +741,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Remote deployment of delicate hardware was demanding.",
     "skill": "Telescope commissioning",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/webb/"
   },
   {
     "id": "history-50",
@@ -756,7 +756,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Thermal protection and endurance needed testing.",
     "skill": "Flight verification",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.nasa.gov/mission/artemis-i/"
   },
   {
     "id": "history-51",
@@ -771,7 +771,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Autonomous precision descent was essential.",
     "skill": "Robotic lunar landing",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.isro.gov.in/Chandrayaan3_Details.html"
   },
   {
     "id": "history-52",
@@ -786,7 +786,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Long travel and limited sunlight affect planning.",
     "skill": "Icy-moon mission design",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.esa.int/Science_Exploration/Space_Science/Juice"
   },
   {
     "id": "history-53",
@@ -801,7 +801,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Landing orientation affected solar power.",
     "skill": "Precision landings",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.nasa.gov/missions/lro/nasas-lro-spots-japans-moon-lander/"
   },
   {
     "id": "history-54",
@@ -816,7 +816,7 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Jupiter's radiation must be managed.",
     "skill": "Flyby engineering",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://science.nasa.gov/mission/europa-clipper/"
   },
   {
     "id": "history-55",
@@ -831,6 +831,6 @@ export const historyMissions:HistoryMission[] = [
     "challenge": "Surface power and communications were essential.",
     "skill": "Commercial lunar missions",
     "era": "Modern Exploration",
-    "source": "https://nssdc.gsfc.nasa.gov/planetary/chrono.html"
+    "source": "https://www.nasa.gov/blogs/missions/2025/03/02/nasa-science-touches-down-on-moon-aboard-firefly-aerospace-lander/"
   }
 ];

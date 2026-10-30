@@ -1,0 +1,1432 @@
+{
+  "version": 3,
+  "design": {
+    "counts": {
+      "spectrometer": 1,
+      "camera": 1,
+      "solar": 1,
+      "battery": 1,
+      "tank": 1,
+      "antenna": 1
+    },
+    "rocket": 1,
+    "trajectory": 2
+  },
+  "life": {
+    "food": 18,
+    "water": 18,
+    "waterRecycler": 1,
+    "oxygen": 4,
+    "oxygenRecycler": 1,
+    "environment": 1,
+    "batteries": 2
+  },
+  "progress": {
+    "completed": {
+      "mission-1": {
+        "missionId": "mission-1",
+        "runId": "8fa3cf19-c16e-4c77-bff3-2ee91524d6cb",
+        "success": true,
+        "score": 81,
+        "rank": "B",
+        "science": 32,
+        "resources": 94.92983796296272,
+        "condition": 100,
+        "crew": 79.81249999999574,
+        "power": 95.19166666666557,
+        "fuel": 74.87499999999982,
+        "communications": 100,
+        "experiments": 0,
+        "samples": 0,
+        "sampleManifest": [],
+        "remaining": {
+          "fuel": 26.206249999999933,
+          "battery": 0.9519166666666556,
+          "science": 16
+        },
+        "optional": 1,
+        "optionalResults": [
+          {
+            "id": "reserve",
+            "title": "Power discipline",
+            "reward": 2,
+            "complete": true
+          },
+          {
+            "id": "package",
+            "title": "Extra calibration package",
+            "reward": 3,
+            "complete": false
+          }
+        ],
+        "outcome": "SUCCESS",
+        "finance": {
+          "before": 425,
+          "allocation": 80,
+          "assistance": 0,
+          "cost": 208.14,
+          "practice": false,
+          "base": 110,
+          "optional": 2,
+          "science": 0,
+          "efficiency": 3,
+          "recovery": 0,
+          "insurance": 0,
+          "repair": 0,
+          "earned": 115,
+          "after": 411.86
+        },
+        "unlocks": [
+          "highGain"
+        ],
+        "minutes": 597.5,
+        "good": [
+          "All required mission conditions and safety procedures were fulfilled.",
+          "Crew energy remained healthy."
+        ],
+        "improve": [],
+        "timestamp": 1793073661631
+      },
+      "mission-6": {
+        "missionId": "mission-6",
+        "runId": "07feab4b-0794-4b6d-87b8-b9514a9a8318",
+        "success": true,
+        "score": 79,
+        "rank": "B",
+        "science": 32,
+        "resources": 91.86182870370324,
+        "condition": 100,
+        "crew": 72.38249999999208,
+        "power": 96.39916666666728,
+        "fuel": 68.89571428571409,
+        "communications": 100,
+        "experiments": 0,
+        "samples": 0,
+        "sampleManifest": [],
+        "remaining": {
+          "fuel": 24.11349999999993,
+          "battery": 1.9279833333333458,
+          "science": 16
+        },
+        "optional": 2,
+        "optionalResults": [
+          {
+            "id": "reserves",
+            "title": "Conserve propellant",
+            "reward": 3,
+            "complete": true
+          },
+          {
+            "id": "energy",
+            "title": "Power discipline",
+            "reward": 2,
+            "complete": true
+          }
+        ],
+        "outcome": "SUCCESS",
+        "finance": {
+          "before": 411.86,
+          "allocation": 115,
+          "assistance": 0,
+          "cost": 214.14,
+          "practice": false,
+          "base": 128,
+          "optional": 5,
+          "science": 0,
+          "efficiency": 3,
+          "recovery": 0,
+          "insurance": 0,
+          "repair": 0,
+          "earned": 136,
+          "after": 448.72
+        },
+        "unlocks": [],
+        "minutes": 788.5,
+        "good": [
+          "All required mission conditions and safety procedures were fulfilled.",
+          "Crew energy remained healthy."
+        ],
+        "improve": [],
+        "timestamp": 1793164025534
+      },
+      "mission-10": {
+        "missionId": "mission-10",
+        "runId": "f434e307-221c-4337-ac69-f7145c4374b9",
+        "success": true,
+        "score": 74,
+        "rank": "C",
+        "science": 24,
+        "resources": 90.82053240740686,
+        "condition": 100,
+        "crew": 53.332499999991384,
+        "power": 100,
+        "fuel": 74.6949999999998,
+        "communications": 100,
+        "experiments": 0,
+        "samples": 0,
+        "sampleManifest": [],
+        "remaining": {
+          "fuel": 26.14324999999993,
+          "battery": 2,
+          "science": 12
+        },
+        "optional": 2,
+        "optionalResults": [
+          {
+            "id": "reserves",
+            "title": "Conserve propellant",
+            "reward": 3,
+            "complete": true
+          },
+          {
+            "id": "energy",
+            "title": "Power discipline",
+            "reward": 2,
+            "complete": true
+          }
+        ],
+        "outcome": "SUCCESS",
+        "finance": {
+          "before": 448.72,
+          "allocation": 122,
+          "assistance": 0,
+          "cost": 214.14,
+          "practice": false,
+          "base": 141,
+          "optional": 5,
+          "science": 0,
+          "efficiency": 3,
+          "recovery": 0,
+          "insurance": 0,
+          "repair": 0,
+          "earned": 149,
+          "after": 505.58
+        },
+        "unlocks": [],
+        "minutes": 938.5,
+        "good": [
+          "All required mission conditions and safety procedures were fulfilled."
+        ],
+        "improve": [
+          "Eat, drink and rest before extended field work."
+        ],
+        "timestamp": 1793165894817
+      }
+    },
+    "history": [
+      {
+        "missionId": "mission-10",
+        "runId": "f434e307-221c-4337-ac69-f7145c4374b9",
+        "success": true,
+        "score": 74,
+        "rank": "C",
+        "science": 24,
+        "resources": 90.82053240740686,
+        "condition": 100,
+        "crew": 53.332499999991384,
+        "power": 100,
+        "fuel": 74.6949999999998,
+        "communications": 100,
+        "experiments": 0,
+        "samples": 0,
+        "sampleManifest": [],
+        "remaining": {
+          "fuel": 26.14324999999993,
+          "battery": 2,
+          "science": 12
+        },
+        "optional": 2,
+        "optionalResults": [
+          {
+            "id": "reserves",
+            "title": "Conserve propellant",
+            "reward": 3,
+            "complete": true
+          },
+          {
+            "id": "energy",
+            "title": "Power discipline",
+            "reward": 2,
+            "complete": true
+          }
+        ],
+        "outcome": "SUCCESS",
+        "finance": {
+          "before": 448.72,
+          "allocation": 122,
+          "assistance": 0,
+          "cost": 214.14,
+          "practice": false,
+          "base": 141,
+          "optional": 5,
+          "science": 0,
+          "efficiency": 3,
+          "recovery": 0,
+          "insurance": 0,
+          "repair": 0,
+          "earned": 149,
+          "after": 505.58
+        },
+        "unlocks": [],
+        "minutes": 938.5,
+        "good": [
+          "All required mission conditions and safety procedures were fulfilled."
+        ],
+        "improve": [
+          "Eat, drink and rest before extended field work."
+        ],
+        "timestamp": 1793165894817
+      },
+      {
+        "missionId": "mission-6",
+        "runId": "07feab4b-0794-4b6d-87b8-b9514a9a8318",
+        "success": true,
+        "score": 79,
+        "rank": "B",
+        "science": 32,
+        "resources": 91.86182870370324,
+        "condition": 100,
+        "crew": 72.38249999999208,
+        "power": 96.39916666666728,
+        "fuel": 68.89571428571409,
+        "communications": 100,
+        "experiments": 0,
+        "samples": 0,
+        "sampleManifest": [],
+        "remaining": {
+          "fuel": 24.11349999999993,
+          "battery": 1.9279833333333458,
+          "science": 16
+        },
+        "optional": 2,
+        "optionalResults": [
+          {
+            "id": "reserves",
+            "title": "Conserve propellant",
+            "reward": 3,
+            "complete": true
+          },
+          {
+            "id": "energy",
+            "title": "Power discipline",
+            "reward": 2,
+            "complete": true
+          }
+        ],
+        "outcome": "SUCCESS",
+        "finance": {
+          "before": 411.86,
+          "allocation": 115,
+          "assistance": 0,
+          "cost": 214.14,
+          "practice": false,
+          "base": 128,
+          "optional": 5,
+          "science": 0,
+          "efficiency": 3,
+          "recovery": 0,
+          "insurance": 0,
+          "repair": 0,
+          "earned": 136,
+          "after": 448.72
+        },
+        "unlocks": [],
+        "minutes": 788.5,
+        "good": [
+          "All required mission conditions and safety procedures were fulfilled.",
+          "Crew energy remained healthy."
+        ],
+        "improve": [],
+        "timestamp": 1793164025534
+      },
+      {
+        "missionId": "mission-1",
+        "runId": "8fa3cf19-c16e-4c77-bff3-2ee91524d6cb",
+        "success": true,
+        "score": 81,
+        "rank": "B",
+        "science": 32,
+        "resources": 94.92983796296272,
+        "condition": 100,
+        "crew": 79.81249999999574,
+        "power": 95.19166666666557,
+        "fuel": 74.87499999999982,
+        "communications": 100,
+        "experiments": 0,
+        "samples": 0,
+        "sampleManifest": [],
+        "remaining": {
+          "fuel": 26.206249999999933,
+          "battery": 0.9519166666666556,
+          "science": 16
+        },
+        "optional": 1,
+        "optionalResults": [
+          {
+            "id": "reserve",
+            "title": "Power discipline",
+            "reward": 2,
+            "complete": true
+          },
+          {
+            "id": "package",
+            "title": "Extra calibration package",
+            "reward": 3,
+            "complete": false
+          }
+        ],
+        "outcome": "SUCCESS",
+        "finance": {
+          "before": 425,
+          "allocation": 80,
+          "assistance": 0,
+          "cost": 208.14,
+          "practice": false,
+          "base": 110,
+          "optional": 2,
+          "science": 0,
+          "efficiency": 3,
+          "recovery": 0,
+          "insurance": 0,
+          "repair": 0,
+          "earned": 115,
+          "after": 411.86
+        },
+        "unlocks": [
+          "highGain"
+        ],
+        "minutes": 597.5,
+        "good": [
+          "All required mission conditions and safety procedures were fulfilled.",
+          "Crew energy remained healthy."
+        ],
+        "improve": [],
+        "timestamp": 1793073661631
+      }
+    ],
+    "tutorials": [],
+    "outposts": {},
+    "economy": {
+      "balance": 371.94,
+      "funded": [
+        "mission-1",
+        "mission-6",
+        "mission-10",
+        "mission-2"
+      ],
+      "settled": [
+        "8fa3cf19-c16e-4c77-bff3-2ee91524d6cb",
+        "07feab4b-0794-4b6d-87b8-b9514a9a8318",
+        "f434e307-221c-4337-ac69-f7145c4374b9"
+      ],
+      "launched": [
+        "8fa3cf19-c16e-4c77-bff3-2ee91524d6cb",
+        "07feab4b-0794-4b6d-87b8-b9514a9a8318",
+        "f434e307-221c-4337-ac69-f7145c4374b9",
+        "ec2478b6-9b4c-417e-84d8-acfd9cd98414"
+      ],
+      "unlocks": [
+        "highGain"
+      ],
+      "ledger": [
+        {
+          "id": "8fa3cf19-c16e-4c77-bff3-2ee91524d6cb:launch",
+          "label": "Mission allocation 80; assistance 0; flight cost 208.14",
+          "amount": -128.14,
+          "balance": 296.86
+        },
+        {
+          "id": "8fa3cf19-c16e-4c77-bff3-2ee91524d6cb:settlement",
+          "label": "SUCCESS · mission-1",
+          "amount": 115,
+          "balance": 411.86
+        },
+        {
+          "id": "07feab4b-0794-4b6d-87b8-b9514a9a8318:launch",
+          "label": "Mission allocation 115; assistance 0; flight cost 214.14",
+          "amount": -99.14,
+          "balance": 312.72
+        },
+        {
+          "id": "07feab4b-0794-4b6d-87b8-b9514a9a8318:settlement",
+          "label": "SUCCESS · mission-6",
+          "amount": 136,
+          "balance": 448.72
+        },
+        {
+          "id": "f434e307-221c-4337-ac69-f7145c4374b9:launch",
+          "label": "Mission allocation 122; assistance 0; flight cost 214.14",
+          "amount": -92.14,
+          "balance": 356.58
+        },
+        {
+          "id": "f434e307-221c-4337-ac69-f7145c4374b9:settlement",
+          "label": "SUCCESS · mission-10",
+          "amount": 149,
+          "balance": 505.58
+        },
+        {
+          "id": "ec2478b6-9b4c-417e-84d8-acfd9cd98414:launch",
+          "label": "Mission allocation 100; assistance 0; flight cost 233.64",
+          "amount": -133.64,
+          "balance": 371.94
+        }
+      ]
+    },
+    "condition": {
+      "hull": 100,
+      "power": 76,
+      "lifeSupport": 98,
+      "communications": 100,
+      "navigation": 100,
+      "propulsion": 100,
+      "science": 100
+    },
+    "equipmentCondition": {}
+  },
+  "session": {
+    "id": "ec2478b6-9b4c-417e-84d8-acfd9cd98414",
+    "missionId": "mission-2",
+    "revision": 3,
+    "state": {
+      "minutes": 2438.5,
+      "food": 11,
+      "water": 13.037499999999996,
+      "oxygen": 2.658824999999852,
+      "battery": 1.2594166666666464,
+      "energy": 72.07499999997428,
+      "nutrition": 66.7649999999846,
+      "hydration": 59.530000000000456,
+      "sleepDebt": 1714,
+      "sleeping": false,
+      "pressure": 101.3,
+      "temperature": 22,
+      "radiation": 0,
+      "communications": true,
+      "malfunction": false,
+      "science": 30,
+      "fuel": 27.11349999999993,
+      "meals": 0,
+      "bottle": 0.25,
+      "parts": 2,
+      "tools": true,
+      "course": true,
+      "sent": false,
+      "rested": true,
+      "paused": true,
+      "ended": false,
+      "notice": "Task complete. Wait until the airlock has breathable air.",
+      "log": [
+        "T+1711m: equipSuit complete.",
+        "T+1718m: checkOxygen complete.",
+        "T+1725m: checkPower complete.",
+        "T+1744m: Meal eaten. Nutrition and readiness restored.",
+        "T+1810m: closeInner complete.",
+        "T+1817m: vent complete.",
+        "T+1821m: openOuter complete.",
+        "T+1914m: closeOuter complete.",
+        "T+1920m: pressurize complete.",
+        "T+1927m: openInner complete.",
+        "T+1980m: One meal added to inventory.",
+        "T+1988m: One meal added to inventory.",
+        "T+1999m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2004m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2010m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2016m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2023m: Filled bottle with 1.00 L.",
+        "T+2026m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2032m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2035m: Meal eaten. Nutrition and readiness restored.",
+        "T+2043m: Filled bottle with 0.50 L.",
+        "T+2084m: Resting. Mission time and life support continue.",
+        "T+2152m: Awake and back on duty.",
+        "T+2193m: equipSuit complete.",
+        "T+2200m: checkOxygen complete.",
+        "T+2207m: checkPower complete.",
+        "T+2213m: Meal eaten. Nutrition and readiness restored.",
+        "T+2216m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2221m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2226m: Drank from bottle; recycler recovered configured fraction.",
+        "T+2275m: closeInner complete.",
+        "T+2283m: vent complete.",
+        "T+2287m: openOuter complete.",
+        "T+2340m: Perform the satellite radio functional test — done.",
+        "T+2340m: Task complete. Return to the airlock.",
+        "T+2372m: Task complete. Close the outside hatch.",
+        "T+2372m: Task complete. Refill the airlock with air.",
+        "T+2372m: Task complete. Wait until the airlock has breathable air."
+      ]
+    },
+    "design": {
+      "counts": {
+        "spectrometer": 1,
+        "camera": 1,
+        "solar": 1,
+        "battery": 1,
+        "tank": 1,
+        "antenna": 1
+      },
+      "rocket": 1,
+      "trajectory": 2
+    },
+    "life": {
+      "food": 18,
+      "water": 18,
+      "waterRecycler": 1,
+      "oxygen": 4,
+      "oxygenRecycler": 1,
+      "environment": 1,
+      "batteries": 2
+    },
+    "selectedGear": [
+      "suit",
+      "repair"
+    ],
+    "pack": [
+      "repair"
+    ],
+    "position": {
+      "x": -0.08570119142437758,
+      "z": 8.830741294408856,
+      "heading": 4.272460779608522e-8
+    },
+    "objective": 35,
+    "repetitions": 0,
+    "objectiveStarted": 2372.5,
+    "completed": [
+      "task-29",
+      "task-30",
+      "task-31",
+      "task-32",
+      "task-33",
+      "task-34",
+      "task-35",
+      "task-36",
+      "task-37",
+      "task-38",
+      "task-39",
+      "task-40",
+      "task-41",
+      "task-42",
+      "task-43",
+      "task-44",
+      "task-45",
+      "task-46",
+      "task-47",
+      "task-48",
+      "task-49",
+      "task-50",
+      "task-51",
+      "task-52",
+      "task-53",
+      "task-54",
+      "task-55",
+      "task-56",
+      "task-57",
+      "task-58",
+      "task-59",
+      "task-60",
+      "task-61",
+      "task-62",
+      "task-63"
+    ],
+    "startedAt": 1793165901646,
+    "lastEat": 2213,
+    "lastDrink": 2225.5,
+    "airlock": {
+      "inner": false,
+      "outer": true,
+      "pressure": 0,
+      "cycling": null
+    },
+    "suit": {
+      "equipped": true,
+      "oxygen": 0.24219999999999572,
+      "power": 0.8260000000000158,
+      "condition": 96.81999999999988,
+      "oxygenChecked": true,
+      "powerChecked": true
+    },
+    "camp": {
+      "shelter": false,
+      "solar": false,
+      "battery": false,
+      "antenna": false,
+      "storage": false,
+      "sensor": false,
+      "broken": false,
+      "power": 0,
+      "samples": 0,
+      "science": 0,
+      "sent": false
+    },
+    "samples": [],
+    "experiments": [],
+    "pendingTransmit": 0,
+    "landed": false,
+    "eventIds": [],
+    "completionMessage": "Refill the airlock with air. ✓",
+    "notice": "Task complete. Wait until the airlock has breathable air.",
+    "observations": {
+      "achieved": [
+        "task-29",
+        "task-30",
+        "task-31",
+        "task-32",
+        "task-33",
+        "task-34",
+        "task-35",
+        "task-37",
+        "task-39",
+        "task-41",
+        "task-42",
+        "task-68",
+        "task-69",
+        "task-71",
+        "task-70",
+        "task-43",
+        "task-45",
+        "task-47",
+        "task-48",
+        "task-49",
+        "task-51",
+        "task-53",
+        "task-54",
+        "task-56",
+        "task-58",
+        "task-59",
+        "task-62",
+        "task-63",
+        "task-65",
+        "task-60"
+      ],
+      "visits": [
+        "cockpit",
+        "power",
+        "galley",
+        "communications",
+        "equipment",
+        "innerHatch",
+        "airlock",
+        "survey"
+      ],
+      "rest": 241.5,
+      "exterior": true,
+      "vacuum": true,
+      "powerDiagnosed": false,
+      "campDiagnosed": false,
+      "transmitted": 0,
+      "queuedScience": 0,
+      "returnMinute": -1,
+      "orbitMinute": 206.5,
+      "pending": []
+    },
+    "world": {
+      "doors": {
+        "flight": {
+          "open": true,
+          "readyAt": 1793165936815
+        },
+        "service": {
+          "open": true,
+          "readyAt": 0
+        },
+        "habitation": {
+          "open": true,
+          "readyAt": 0
+        }
+      },
+      "lockers": {
+        "food": true,
+        "water": true,
+        "equipment": false,
+        "eva": true,
+        "repair": false,
+        "science": false,
+        "samples": false,
+        "emergency": false,
+        "maintenance": false,
+        "campPanel": false
+      },
+      "stored": [],
+      "partsStored": 0,
+      "switches": {
+        "busA": true,
+        "busB": true,
+        "solar": true,
+        "science": true,
+        "radio": true,
+        "cooling": true,
+        "oxygen": true,
+        "water": true,
+        "navigation": true,
+        "emergency": false,
+        "maneuver": false
+      },
+      "antenna": 1,
+      "target": "earth",
+      "setpoint": 22,
+      "faults": [
+        {
+          "id": "fault-1827",
+          "kind": "solar",
+          "diagnosed": false,
+          "repaired": false,
+          "verified": false,
+          "at": 1827
+        }
+      ],
+      "rng": 551123351,
+      "nextFault": 2007,
+      "condition": {
+        "hull": 100,
+        "power": 64,
+        "lifeSupport": 98,
+        "communications": 100,
+        "navigation": 100,
+        "propulsion": 100,
+        "science": 100
+      },
+      "equipment": {
+        "suit": 97.74399999999991,
+        "repair": 100
+      },
+      "messages": [
+        {
+          "at": 617.5,
+          "source": "CREW ACTION",
+          "text": "Filled bottle with 1.00 L."
+        },
+        {
+          "at": 667,
+          "source": "CREW ACTION",
+          "text": "EVA suit locker opened."
+        },
+        {
+          "at": 668,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Put on your EVA suit — done."
+        },
+        {
+          "at": 668,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Check your suit oxygen."
+        },
+        {
+          "at": 677,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Check your suit oxygen — done."
+        },
+        {
+          "at": 677,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Check your suit battery."
+        },
+        {
+          "at": 686.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Check your suit battery — done."
+        },
+        {
+          "at": 686.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Go to the airlock door."
+        },
+        {
+          "at": 708,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Open the inside hatch."
+        },
+        {
+          "at": 747.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Open the inside hatch — done."
+        },
+        {
+          "at": 747.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Walk into the airlock."
+        },
+        {
+          "at": 760,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Close the inside hatch."
+        },
+        {
+          "at": 786,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Close the inside hatch — done."
+        },
+        {
+          "at": 786,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Release air from the sealed airlock."
+        },
+        {
+          "at": 806,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Release air from the sealed airlock — done."
+        },
+        {
+          "at": 806,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Wait for the airlock to reach vacuum."
+        },
+        {
+          "at": 809,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Open the outside hatch."
+        },
+        {
+          "at": 825.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Open the outside hatch — done."
+        },
+        {
+          "at": 825.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Walk out to the survey marker."
+        },
+        {
+          "at": 867,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Inspect the satellite electrical connector before repair."
+        },
+        {
+          "at": 892.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Inspect the satellite electrical connector before repair — done."
+        },
+        {
+          "at": 892.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Replace the diagnosed satellite connector with a spare."
+        },
+        {
+          "at": 906.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Replace the diagnosed satellite connector with a spare — done."
+        },
+        {
+          "at": 906.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Perform the satellite radio functional test."
+        },
+        {
+          "at": 971,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "closeOuter complete."
+        },
+        {
+          "at": 977,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "pressurize complete."
+        },
+        {
+          "at": 983.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "openInner complete."
+        },
+        {
+          "at": 1031.5,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet closed."
+        },
+        {
+          "at": 1033.5,
+          "source": "CREW ACTION",
+          "text": "One meal added to inventory."
+        },
+        {
+          "at": 1039,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet opened."
+        },
+        {
+          "at": 1042.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1048,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1053.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1059,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1062,
+          "source": "CREW ACTION",
+          "text": "Meal eaten. Nutrition and readiness restored."
+        },
+        {
+          "at": 1067.5,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet closed."
+        },
+        {
+          "at": 1069,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet opened."
+        },
+        {
+          "at": 1071,
+          "source": "CREW ACTION",
+          "text": "Filled bottle with 1.00 L."
+        },
+        {
+          "at": 1123,
+          "source": "CREW ACTION",
+          "text": "Resting. Mission time and life support continue."
+        },
+        {
+          "at": 1229,
+          "source": "CREW ACTION",
+          "text": "Awake and back on duty."
+        },
+        {
+          "at": 1262,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet closed."
+        },
+        {
+          "at": 1264,
+          "source": "CREW ACTION",
+          "text": "Storage manifest updated."
+        },
+        {
+          "at": 1266.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "equipSuit complete."
+        },
+        {
+          "at": 1272.5,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet opened."
+        },
+        {
+          "at": 1274,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "checkOxygen complete."
+        },
+        {
+          "at": 1279.5,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet closed."
+        },
+        {
+          "at": 1281,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "checkPower complete."
+        },
+        {
+          "at": 1299,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1307,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1342,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "closeInner complete."
+        },
+        {
+          "at": 1350,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "vent complete."
+        },
+        {
+          "at": 1354,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "openOuter complete."
+        },
+        {
+          "at": 1441.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "closeOuter complete."
+        },
+        {
+          "at": 1448,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "pressurize complete."
+        },
+        {
+          "at": 1455.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "openInner complete."
+        },
+        {
+          "at": 1505.5,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet closed."
+        },
+        {
+          "at": 1507,
+          "source": "CREW ACTION",
+          "text": "One meal added to inventory."
+        },
+        {
+          "at": 1512.5,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet opened."
+        },
+        {
+          "at": 1515.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1521,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1526.5,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet closed."
+        },
+        {
+          "at": 1528,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet opened."
+        },
+        {
+          "at": 1529.5,
+          "source": "CREW ACTION",
+          "text": "Filled bottle with 1.00 L."
+        },
+        {
+          "at": 1533,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1538,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1543.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1548.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 1551.5,
+          "source": "CREW ACTION",
+          "text": "Meal eaten. Nutrition and readiness restored."
+        },
+        {
+          "at": 1556.5,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet closed."
+        },
+        {
+          "at": 1558,
+          "source": "CREW ACTION",
+          "text": "Water service cabinet opened."
+        },
+        {
+          "at": 1559,
+          "source": "CREW ACTION",
+          "text": "Filled bottle with 1.00 L."
+        },
+        {
+          "at": 1603.5,
+          "source": "CREW ACTION",
+          "text": "Resting. Mission time and life support continue."
+        },
+        {
+          "at": 1671.5,
+          "source": "CREW ACTION",
+          "text": "Awake and back on duty."
+        },
+        {
+          "at": 1707,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet opened."
+        },
+        {
+          "at": 1709,
+          "source": "CREW ACTION",
+          "text": "Storage manifest updated."
+        },
+        {
+          "at": 1711,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "equipSuit complete."
+        },
+        {
+          "at": 1716.5,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet closed."
+        },
+        {
+          "at": 1718,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "checkOxygen complete."
+        },
+        {
+          "at": 1723.5,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet opened."
+        },
+        {
+          "at": 1725,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "checkPower complete."
+        },
+        {
+          "at": 1743.5,
+          "source": "CREW ACTION",
+          "text": "Meal eaten. Nutrition and readiness restored."
+        },
+        {
+          "at": 1810,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "closeInner complete."
+        },
+        {
+          "at": 1817.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "vent complete."
+        },
+        {
+          "at": 1821.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "openOuter complete."
+        },
+        {
+          "at": 1827,
+          "source": "ALERTS",
+          "text": "CAUTION: Solar input regulator fault"
+        },
+        {
+          "at": 1914.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "closeOuter complete."
+        },
+        {
+          "at": 1920,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "pressurize complete."
+        },
+        {
+          "at": 1927,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "openInner complete."
+        },
+        {
+          "at": 1979.5,
+          "source": "CREW ACTION",
+          "text": "One meal added to inventory."
+        },
+        {
+          "at": 1988,
+          "source": "CREW ACTION",
+          "text": "One meal added to inventory."
+        },
+        {
+          "at": 1998.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2004,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2010,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2015.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2022.5,
+          "source": "CREW ACTION",
+          "text": "Filled bottle with 1.00 L."
+        },
+        {
+          "at": 2026,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2031.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2035,
+          "source": "CREW ACTION",
+          "text": "Meal eaten. Nutrition and readiness restored."
+        },
+        {
+          "at": 2042.5,
+          "source": "CREW ACTION",
+          "text": "Filled bottle with 0.50 L."
+        },
+        {
+          "at": 2084,
+          "source": "CREW ACTION",
+          "text": "Resting. Mission time and life support continue."
+        },
+        {
+          "at": 2151.5,
+          "source": "CREW ACTION",
+          "text": "Awake and back on duty."
+        },
+        {
+          "at": 2188.5,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet closed."
+        },
+        {
+          "at": 2191,
+          "source": "CREW ACTION",
+          "text": "Storage manifest updated."
+        },
+        {
+          "at": 2193.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "equipSuit complete."
+        },
+        {
+          "at": 2199.5,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet opened."
+        },
+        {
+          "at": 2200.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "checkOxygen complete."
+        },
+        {
+          "at": 2206,
+          "source": "CREW ACTION",
+          "text": "Repair cabinet closed."
+        },
+        {
+          "at": 2207.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "checkPower complete."
+        },
+        {
+          "at": 2213,
+          "source": "CREW ACTION",
+          "text": "Meal eaten. Nutrition and readiness restored."
+        },
+        {
+          "at": 2215.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2220.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2225.5,
+          "source": "CREW ACTION",
+          "text": "Drank from bottle; recycler recovered configured fraction."
+        },
+        {
+          "at": 2275.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "closeInner complete."
+        },
+        {
+          "at": 2283.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "vent complete."
+        },
+        {
+          "at": 2287.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "openOuter complete."
+        },
+        {
+          "at": 2340.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Perform the satellite radio functional test — done."
+        },
+        {
+          "at": 2340.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Return to the airlock."
+        },
+        {
+          "at": 2372.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Close the outside hatch."
+        },
+        {
+          "at": 2372.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Refill the airlock with air."
+        },
+        {
+          "at": 2372.5,
+          "source": "SPACECRAFT SYSTEM",
+          "text": "Task complete. Wait until the airlock has breathable air."
+        }
+      ],
+      "radioQueue": [],
+      "storedSamples": []
+    },
+    "finance": {
+      "before": 505.58,
+      "allocation": 100,
+      "assistance": 0,
+      "cost": 233.64,
+      "practice": false
+    },
+    "upgrades": [],
+    "optionalDone": [],
+    "simRate": 1,
+    "flight": {
+      "status": "orbit",
+      "countdown": 0,
+      "altitude": 247.38804324517147,
+      "velocity": 8.202000000000014,
+      "throttle": 0.9,
+      "pitch": 25,
+      "separated": true,
+      "checks": [
+        "verifyPower",
+        "verifyLife",
+        "verifyRadio",
+        "verifyFuel",
+        "sealed"
+      ]
+    },
+    "systems": {
+      "satelliteDiagnosed": true,
+      "satelliteRepaired": true,
+      "satelliteOnline": true,
+      "campExposure": 1
+    }
+  }
+}

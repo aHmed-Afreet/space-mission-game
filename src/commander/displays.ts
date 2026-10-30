@@ -1,6 +1,7 @@
 import * as T from "three";
 import type { State } from "./simulation";
 import type { Position } from "./layout";
+import type { ShipState } from "./campaign/ship";
 export type Telemetry = Pick<
   State,
   | "minutes"
@@ -16,7 +17,7 @@ export type Telemetry = Pick<
 export function createDisplays() {
   const titles = [
     "FC / INERTIAL NAVIGATION",
-    "SCI / WATER-SEARCH ANALYSIS",
+    "SCI / OBSERVATION LOG",
     "COM / SIGNAL PROCESSING",
     "ECLSS / RESOURCE MONITOR",
   ];
@@ -33,7 +34,7 @@ export function createDisplays() {
       material: new T.MeshBasicMaterial({ map: texture }),
     };
   });
-  function draw(s: Telemetry, t: number, position: Position) {
+  function draw(s: Telemetry, t: number, position: Position, world?: ShipState) {
     panels.forEach(({ ctx: c, texture }, i) => {
       c.fillStyle = "#09151e";
       c.fillRect(0, 0, 512, 256);
@@ -48,6 +49,14 @@ export function createDisplays() {
       c.font = "15px monospace";
       c.fillStyle = "#789aa3";
       c.fillText(titles[i], 18, 27);
+      const powered=!world || (world.switches.busA||world.switches.busB);
+      const circuit=i===0?"navigation":i===1?"science":i===2?"radio":"oxygen";
+      if(!powered || world?.switches[circuit]===false){
+        c.font="23px monospace";c.fillStyle="#b8a181";
+        c.fillText(!powered?"BUS POWER ISOLATED":"CIRCUIT ISOLATED",22,108);
+        c.font="15px monospace";c.fillText("NO LIVE TELEMETRY",22,143);
+        texture.needsUpdate=true;return;
+      }
       c.font = "13px monospace";
       c.fillText(
         `T+ ${String(Math.floor(s.minutes)).padStart(4, "0")} MIN`,
@@ -90,7 +99,7 @@ export function createDisplays() {
         c.font = "13px monospace";
         c.fillStyle = "#789aa3";
         c.fillText(`FUEL    ${s.fuel.toFixed(0)} U`, 310, 157);
-        c.fillText("PROFILE  NOMINAL", 310, 186);
+        c.fillText(world?.faults.some(f=>!f.verified&&f.kind==="navigation")?"NAV  CHECK FAULT":"NAV  POWERED", 310, 186);
         c.fillText("ORBITAL / FLIGHT CONTROL", 18, 240);
       }
       if (i === 1) {
@@ -119,7 +128,7 @@ export function createDisplays() {
         c.fillText(`SCIENCE RETURN  ${s.science.toFixed(0)} PTS`, 29, 78);
         c.font = "13px monospace";
         c.fillStyle = "#789aa3";
-        c.fillText("REMOTE OBSERVATIONS", 18, 240);
+        c.fillText(world?.faults.some(f=>!f.verified&&f.kind==="sensor")?"SENSOR FAULT / VERIFY CALIBRATION":"SIMULATED TRACE / SCIENCE POINTS", 18, 240);
       }
       if (i === 2) {
         c.strokeStyle = "#29414c";
@@ -185,7 +194,8 @@ export function createDisplays() {
         });
         c.font = "13px monospace";
         c.fillStyle = "#789aa3";
-        c.fillText("LIFE SUPPORT / LIVE", 18, 240);
+        const faults=world?.faults.filter(f=>!f.verified).length??0;
+        c.fillText(faults?`LIVE / ${faults} UNVERIFIED FAULT${faults===1?"":"S"}`:"LIFE SUPPORT / LIVE", 18, 240);
       }
       texture.needsUpdate = true;
     });

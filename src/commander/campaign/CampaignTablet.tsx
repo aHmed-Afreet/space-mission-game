@@ -1,7 +1,8 @@
 import SoundSettings from "./SoundSettings";
 import { shipAlerts } from "./ship";
 import { money } from "./economy";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useModalFocus } from "../modalFocus";
 import Icon, { type IconName } from "../Icons";
 import { missionTime } from "../MissionTablet";
 import { NavigationContent } from "./NavigationMap";
@@ -21,7 +22,7 @@ import {
   type Session,
   type Progress,
 } from "./engine";
-import { missions, missionById, type CampaignAction } from "./definitions";
+import { missions, missionById, missionForSession, type CampaignAction } from "./definitions";
 import { environments } from "./environments";
 import { equipment, packMass, PACK_CAPACITY } from "./equipment";
 export type CampaignTab = "MISSION" | "STATUS" | "INVENTORY" | "MAP" | "LOG";
@@ -98,7 +99,7 @@ export default function CampaignTablet({
   onResetTutorials: () => void;
   saveError: string;
 }) {
-  const m = missionById(s.missionId),
+  const m = missionForSession(s),
     o = currentObjective(s),
     guide = objectiveGuide(s),
     recovery = recoveryMission(s),
@@ -107,40 +108,12 @@ export default function CampaignTablet({
     [details, setDetails] = useState(false);
   const close = useRef<HTMLButtonElement>(null),
     dialog = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement;
-    close.current?.focus();
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-      if (e.key === "Tab") {
-        const a = dialog.current?.querySelectorAll<HTMLElement>(
-          "button:not(:disabled),summary",
-        );
-        if (!a?.length) return;
-        const first = a[0],
-          last = a[a.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("keydown", key);
-      previous?.focus();
-    };
-  }, [onClose]);
+  const boundary = useRef<HTMLDivElement>(null);
+  useModalFocus({dialog, boundary, initialFocus: close, onClose});
   const locked = (_a: CampaignAction) =>
     state.paused || state.sleeping || state.ended;
   return (
-    <div className="cmd-tablet-layer">
+    <div className="cmd-tablet-layer" ref={boundary}>
       <button
         className="cmd-tablet-scrim"
         aria-label="Close mission tablet"
@@ -202,6 +175,10 @@ export default function CampaignTablet({
                     {campaignForMission(m.id)?.name.toUpperCase()} LEVEL {campaignLevel(m.id)} / {currentPhase(s)}
                   </small>
                   <h2>{m.title}</h2>
+                  {m.revision !== missionById(m.id).revision && <p role="status">
+                    Legacy procedure revision {m.revision}. Your earned tasks and progress are retained;
+                    the additional temperature observation belongs to newly launched flights.
+                  </p>}
                 </div>
                 <span>
                   {s.objective} / {m.objectives.length}

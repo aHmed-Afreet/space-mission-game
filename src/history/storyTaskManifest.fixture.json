@@ -1,0 +1,510 @@
+{
+  "provenance": "Frozen pre-build source-and-frozen-dist.tar.gz, 2026-10-29; preserves mission/task identity and order",
+  "missions": [
+    {
+      "id": "history-1",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-2",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-3",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-4",
+      "tasks": [
+        "flight",
+        "cabin",
+        "track",
+        "recovery"
+      ]
+    },
+    {
+      "id": "history-5",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-6",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-7",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-8",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-9",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-10",
+      "tasks": [
+        "plan",
+        "control",
+        "dock",
+        "anomaly",
+        "records"
+      ]
+    },
+    {
+      "id": "history-11",
+      "tasks": [
+        "plan",
+        "control",
+        "dock",
+        "anomaly",
+        "records"
+      ]
+    },
+    {
+      "id": "history-12",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-13",
+      "tasks": [
+        "translunar",
+        "systems",
+        "orbit",
+        "earthrise",
+        "home"
+      ]
+    },
+    {
+      "id": "history-14",
+      "tasks": [
+        "flight",
+        "life",
+        "separate",
+        "rendezvous",
+        "record"
+      ]
+    },
+    {
+      "id": "history-15",
+      "tasks": [
+        "flight",
+        "life",
+        "separate",
+        "rendezvous",
+        "record"
+      ]
+    },
+    {
+      "id": "history-16",
+      "tasks": [
+        "egress",
+        "first-steps",
+        "photographs",
+        "contingency-sample",
+        "flag",
+        "return"
+      ]
+    },
+    {
+      "id": "history-17",
+      "tasks": [
+        "target",
+        "guidance",
+        "descent",
+        "surveyor"
+      ]
+    },
+    {
+      "id": "history-18",
+      "tasks": [
+        "report",
+        "conserve",
+        "course",
+        "reentry"
+      ]
+    },
+    {
+      "id": "history-19",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-20",
+      "tasks": [
+        "docking",
+        "support",
+        "maintenance",
+        "science"
+      ]
+    },
+    {
+      "id": "history-21",
+      "tasks": [
+        "plan",
+        "descent",
+        "rover",
+        "samples",
+        "experiments"
+      ]
+    },
+    {
+      "id": "history-22",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-23",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-24",
+      "tasks": [
+        "plan",
+        "descent",
+        "rover",
+        "samples",
+        "experiments"
+      ]
+    },
+    {
+      "id": "history-25",
+      "tasks": [
+        "damage",
+        "life",
+        "repair",
+        "solar",
+        "science"
+      ]
+    },
+    {
+      "id": "history-26",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-27",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-28",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-29",
+      "tasks": [
+        "route",
+        "rtg",
+        "imaging",
+        "radio"
+      ]
+    },
+    {
+      "id": "history-30",
+      "tasks": [
+        "route",
+        "rtg",
+        "imaging",
+        "radio"
+      ]
+    },
+    {
+      "id": "history-31",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-32",
+      "tasks": [
+        "docking",
+        "support",
+        "maintenance",
+        "science"
+      ]
+    },
+    {
+      "id": "history-33",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-34",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-35",
+      "tasks": [
+        "approach",
+        "engineering",
+        "traverse",
+        "geology"
+      ]
+    },
+    {
+      "id": "history-36",
+      "tasks": [
+        "docking",
+        "support",
+        "maintenance",
+        "science"
+      ]
+    },
+    {
+      "id": "history-37",
+      "tasks": [
+        "docking",
+        "support",
+        "maintenance",
+        "science"
+      ]
+    },
+    {
+      "id": "history-38",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-39",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-40",
+      "tasks": [
+        "rendezvous",
+        "suits",
+        "repair",
+        "test"
+      ]
+    },
+    {
+      "id": "history-41",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-42",
+      "tasks": [
+        "approach",
+        "engineering",
+        "traverse",
+        "geology"
+      ]
+    },
+    {
+      "id": "history-43",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-44",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-45",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-46",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-47",
+      "tasks": [
+        "approach",
+        "engineering",
+        "traverse",
+        "geology"
+      ]
+    },
+    {
+      "id": "history-48",
+      "tasks": [
+        "flight",
+        "battery",
+        "rotor",
+        "image"
+      ]
+    },
+    {
+      "id": "history-49",
+      "tasks": [
+        "l2",
+        "shield",
+        "mirror",
+        "calibration"
+      ]
+    },
+    {
+      "id": "history-50",
+      "tasks": [
+        "uncrewed",
+        "systems",
+        "moon",
+        "reentry"
+      ]
+    },
+    {
+      "id": "history-51",
+      "tasks": [
+        "site",
+        "power",
+        "descent",
+        "science"
+      ]
+    },
+    {
+      "id": "history-52",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-53",
+      "tasks": [
+        "site",
+        "power",
+        "descent",
+        "science"
+      ]
+    },
+    {
+      "id": "history-54",
+      "tasks": [
+        "brief",
+        "systems",
+        "operations",
+        "science"
+      ]
+    },
+    {
+      "id": "history-55",
+      "tasks": [
+        "site",
+        "power",
+        "descent",
+        "science"
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { createFixtures } from "./campaign/fixtures";
 import {
   useEffect,
+  useContext,
   useRef,
   useState,
   type PointerEvent as ReactPointer,
@@ -15,7 +16,11 @@ import type { Session } from "./campaign/engine";
 import { campaignWalkable } from "./campaign/engine";
 import { doors, lockers } from "./campaign/ship";
 import { environments } from "./campaign/environments";
-import { missionById } from "./campaign/definitions";
+import { missionForSession } from "./campaign/definitions";
+import { createForegroundClock } from "./foregroundTime";
+import { adaptiveGraphicsRatio, graphicsRatioBounds, publishGraphicsTrace } from "./graphicsPolicy";
+import { stepLocomotion } from "./locomotion";
+import { SimulationClockContext } from "./simulationClockContext";
 import type { PlayerPreferences } from "./campaign/preferences";
 import { pickAimTarget, type AimTarget } from "./targeting";
 
@@ -37,6 +42,7 @@ type Props = {
   };
 };
 export default function Cabin(props: Props) {
+  const advanceResources = useContext(SimulationClockContext);
   const host = useRef<HTMLDivElement>(null),
     current = useRef(props),
     keys = useRef(new Set<string>()),
@@ -54,7 +60,10 @@ export default function Cabin(props: Props) {
       undefined,
     ),
     jump = useRef({ height: 0, velocity: 0 }),
-    orbitalThrust = useRef(0),
+    orbitalContacts = useRef(new Map<number, number>()),
+    clearInput = useRef(() => {}),
+    flushMotion = useRef(() => {}),
+    interactionTarget = useRef((): AimTarget | null => aim.current),
     [error, setError] = useState("");
   current.current = props;
   useEffect(() => {
@@ -74,14 +83,19 @@ export default function Cabin(props: Props) {
     }
     // Adapt rendering resolution to the iPad's actual graphics performance.
     const graphicsMode=props.settings?.graphics||"balanced";
-    const pixelRatioLimit=Math.min(devicePixelRatio||1,
-      graphicsMode==="quality"?1.85:graphicsMode==="battery"?1:1.45);
-    let renderRatio=pixelRatioLimit;
+    let ratioBounds=graphicsRatioBounds(window.devicePixelRatio,graphicsMode);
+    let renderRatio=ratioBounds.limit;
+    const targetFps=graphicsMode==="battery"?30:60;
     renderer.setPixelRatio(renderRatio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
     el.appendChild(renderer.domElement);
+    const traceRatio = (measuredFps:number|null) => publishGraphicsTrace(renderer.domElement, {
+      preset:graphicsMode, deviceRatio:window.devicePixelRatio, ratio:renderRatio,
+      ...ratioBounds, measuredFps, targetFps,
+    });
+    traceRatio(null);
     renderer.domElement.setAttribute(
       "aria-label",
       "Explorable spacecraft cabin",
@@ -91,8 +105,8 @@ export default function Cabin(props: Props) {
       interior = createInterior(
         props.world
           ? {
-              eva: missionById(props.world.session.missionId).eva,
-              destination: missionById(props.world.session.missionId).destination,
+              eva: missionForSession(props.world.session).eva,
+              destination: missionForSession(props.world.session).destination,
               graphics: props.settings?.graphics,
             }
           : {},
@@ -109,13 +123,13 @@ export default function Cabin(props: Props) {
     let field:
       { update: (s: Session) => void; dispose: () => void } | undefined;
     let disposed = false;
-    if (props.world && missionById(props.world.session.missionId).eva) {
+    if (props.world && missionForSession(props.world.session).eva) {
       import("./campaign/world")
         .then(({ createFieldWorld }) => {
           if (!disposed)
             field = createFieldWorld(
               interior.scene,
-              missionById(props.world!.session.missionId).destination,
+              missionForSession(props.world!.session).destination,
               props.world!.session.missionId,
               graphicsMode,
             );
@@ -133,6 +147,10 @@ export default function Cabin(props: Props) {
     const resize = () => {
       const w = Math.max(1, el.clientWidth),
         h = Math.max(1, el.clientHeight);
+      ratioBounds=graphicsRatioBounds(window.devicePixelRatio,graphicsMode);
+      renderRatio=Math.max(ratioBounds.floor,Math.min(ratioBounds.limit,renderRatio));
+      renderer.setPixelRatio(renderRatio);
+      traceRatio(null);
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -141,19 +159,24 @@ export default function Cabin(props: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(el);
     resize();
+    const foregroundClock = createForegroundClock();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const movement={forward:0,sideways:0};
     const down = (e: KeyboardEvent) => {
+      if (current.current.locked || document.hidden) return;
       if (
         (e.target as HTMLElement).closest(
-          'input,select,textarea,[role="dialog"]',
+          'input,select,textarea,[contenteditable="true"],[role="dialog"]',
         )
       )
         return;
+      flushMotion.current();
       const k = e.key.toLowerCase();
       if (k === "shift") keys.current.add("shift");
       const currentFlight=current.current.world?.session;
       if([" ","control","pageup","pagedown"].includes(k) &&
         currentFlight && currentFlight.position.z>10.4 &&
-        missionById(currentFlight.missionId).destination==="earth"){
+        missionForSession(currentFlight).destination==="earth"){
         e.preventDefault();keys.current.add(k);
       }
       if (
@@ -175,7 +198,7 @@ export default function Cabin(props: Props) {
         k === " " &&
         current.current.world &&
         current.current.world.session.position.z > 10.4 &&
-        missionById(current.current.world.session.missionId).destination !==
+        missionForSession(current.current.world.session).destination !==
           "earth" &&
         !current.current.locked
       ) {
@@ -184,26 +207,33 @@ export default function Cabin(props: Props) {
       }
       if (k === "e" && !e.repeat && !current.current.locked) {
         e.preventDefault();
-        current.current.onInteract(aim.current);
+        current.current.onInteract(interactionTarget.current());
       }
     };
-    const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
+    const up = (e: KeyboardEvent) => {
+      flushMotion.current();
+      keys.current.delete(e.key.toLowerCase());
+    };
     const clear = () => {
       keys.current.clear();
       stick.current = { x: 0, y: 0 };
       pointer.current = undefined;
       sprint.current = false;
-      orbitalThrust.current=0;
+      orbitalContacts.current.clear();
       sprintTouch.current = null;
       lookPointer.current = undefined;
+      movement.forward=0; movement.sideways=0;
+      el.parentElement?.querySelectorAll(".cmd-look-surface.using").forEach(element=>element.classList.remove("using"));
       if (thumb.current) thumb.current.style.transform = "translate(0px,0px)";
       joystick.current?.classList.remove("using");
     };
+    clearInput.current = clear;
+    const suspendInput = () => { clear(); foregroundClock.reset(); };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
-    window.addEventListener("blur", clear);
+    window.addEventListener("blur", suspendInput);
+    document.addEventListener("visibilitychange", suspendInput);
     let frame = 0,
-      last = performance.now(),
       lastReport = 0,
       lastDraw = 0,
       lastArea: Area | undefined,
@@ -213,90 +243,44 @@ export default function Cabin(props: Props) {
     // Balance visual quality by pixel ratio, not a 30 FPS touch-device cap.
     // 60 Hz rAF calls land at ~16.67 ms; slight pacing slack prevents
     // accidental every-other-frame rendering at a nominal 60 FPS.
-    const targetFps=graphicsMode==="battery"?30:60;
     const frameDuration=1000/targetFps;
     let sampleStart=performance.now(),sampleFrames=0,lastResizeAdjust=0;
-    const movement={forward:0,sideways:0};
-    const clock = performance.now();
     const allowed = (x: number, z: number) =>
       current.current.world
         ? campaignWalkable(x, z, current.current.world.session)
         : walkable(x, z);
-    const loop = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 0.05);
-      last = now;
-      elapsed = (now - clock) / 1000;
-      if (!current.current.locked) {
+    const advanceMotion = (now: number) => {
+      advanceResources(now);
+      foregroundClock.advance(now, { active:!current.current.locked, visible:!document.hidden }, dt => {
+        elapsed += dt;
         const k = keys.current;
-        let forward =
-          Number(k.has("w") || k.has("arrowup")) -
-          Number(k.has("s") || k.has("arrowdown")) -
-          stick.current.y;
-        let sideways =
-          Number(k.has("d") || k.has("arrowright")) -
-          Number(k.has("a") || k.has("arrowleft")) +
-          stick.current.x;
-        const length = Math.max(1, Math.hypot(forward, sideways));
-        forward /= length;
-        sideways /= length;
-        // Soft acceleration avoids jitter as the floating joystick changes angle.
-        const smoothing=Math.min(1,dt*10);
-        movement.forward+=(forward-movement.forward)*smoothing;
-        movement.sideways+=(sideways-movement.sideways)*smoothing;
-        forward=movement.forward;sideways=movement.sideways;
-        const yaw = look.current.yaw;
-        const env = current.current.world
-          ? environments[
-              missionById(current.current.world.session.missionId).destination
-            ]
-          : null;
-        const speed =
-          (camera.position.z > 10.4 && env ? env.movement * 0.88 : 1.8) *
-          (sprint.current || k.has("shift") ? 1.65 : 1);
-        const x =
-          camera.position.x +
-          (Math.cos(yaw) * sideways - Math.sin(yaw) * forward) * dt * speed;
-        const z =
-          camera.position.z +
-          (-Math.sin(yaw) * sideways - Math.cos(yaw) * forward) * dt * speed;
-        if (allowed(x, camera.position.z)) camera.position.x = x;
-        if (allowed(camera.position.x, z)) camera.position.z = z;
-        camera.rotation.set(look.current.pitch, yaw, 0);
-        if(camera.position.z>10.4&&env?.gravity===0){
-          // Suit cold-gas training thrusters: drift persists until counter-thrust
-          // or damping slows it. The anchor boundary prevents untethered escape.
-          const lift=(Number(k.has(" ")||k.has("pageup"))-
-            Number(k.has("control")||k.has("pagedown"))+orbitalThrust.current);
-          jump.current.velocity=Math.max(-2.3,Math.min(2.3,
-            jump.current.velocity+(Math.max(-1,Math.min(1,lift))*3.2-
-              jump.current.velocity*.8)*dt));
-          jump.current.height=Math.max(-.65,Math.min(5.4,
-            jump.current.height+jump.current.velocity*dt));
-          if((jump.current.height===-.65&&jump.current.velocity<0)||
-             (jump.current.height===5.4&&jump.current.velocity>0))
-            jump.current.velocity=0;
-        }else if (camera.position.z > 10.4 && env) {
-          jump.current.height = Math.max(
-            0,
-            jump.current.height + jump.current.velocity * dt,
-          );
-          jump.current.velocity -= Math.max(0.5, env.gravity) * dt;
-          if (jump.current.height === 0 && jump.current.velocity < 0)
-            jump.current.velocity = 0;
-        } else {
-          jump.current.height = 0;
-          jump.current.velocity = 0;
-        }
-        camera.position.y =
-          1.63 +
-          jump.current.height +
-          Math.sin(elapsed * 8) *
-            0.009 *
-            Math.min(1, Math.hypot(forward, sideways));
-      }
+        const env = current.current.world ? environments[missionForSession(current.current.world.session).destination] : null;
+        let touchLift = 0;
+        for (const lift of orbitalContacts.current.values()) touchLift += lift;
+        stepLocomotion({ position:camera.position, movement, jump:jump.current }, {
+          forward:Number(k.has("w") || k.has("arrowup")) - Number(k.has("s") || k.has("arrowdown")) - stick.current.y,
+          sideways:Number(k.has("d") || k.has("arrowright")) - Number(k.has("a") || k.has("arrowleft")) + stick.current.x,
+          yaw:look.current.yaw, sprint:sprint.current || k.has("shift"),
+          lift:Number(k.has(" ") || k.has("pageup")) - Number(k.has("control") || k.has("pagedown")) + touchLift,
+        }, env, dt, allowed, elapsed, reducedMotion.matches);
+      });
+      camera.rotation.set(look.current.pitch, look.current.yaw, 0);
+    };
+    // Input edges integrate the preceding interval using the preceding input.
+    // A 100 ms press between one-Hz draws remains a 100 ms press, and a new
+    // press never applies retroactively to a slow frame's entire elapsed time.
+    flushMotion.current = () => advanceMotion(performance.now());
+    interactionTarget.current = () => {
+      flushMotion.current();
+      const session = current.current.world?.session;
+      return session ? pickAimTarget(camera, session, missionForSession(session).eva) : aim.current;
+    };
+    const loop = (_timestamp: number) => {
+      const now = performance.now();
+      advanceMotion(now);
       if (current.current.world && now - lastAim > 120) {
         lastAim = now;
-        const supportsEva=missionById(current.current.world.session.missionId).eva;
+        const supportsEva=missionForSession(current.current.world.session).eva;
         const picked = pickAimTarget(camera, current.current.world.session, supportsEva);
         aim.current = picked;
         const label = picked
@@ -360,16 +344,14 @@ export default function Cabin(props: Props) {
         const sampleElapsed=now-sampleStart;
         if(sampleElapsed>3200&&now-lastResizeAdjust>2700){
           const actualFps=sampleFrames*1000/sampleElapsed;
-          const minRatio=graphicsMode==="battery"?.7:.85;
-          let nextRatio=renderRatio;
-          if(actualFps<targetFps*.78)nextRatio=Math.max(minRatio,renderRatio-.13);
-          else if(actualFps>targetFps*.93)nextRatio=Math.min(pixelRatioLimit,renderRatio+.07);
+          const nextRatio=adaptiveGraphicsRatio(renderRatio,ratioBounds,actualFps,targetFps);
           if(Math.abs(nextRatio-renderRatio)>.015){
             renderRatio=nextRatio;
             renderer.setPixelRatio(renderRatio);
             renderer.setSize(Math.max(1,el.clientWidth),Math.max(1,el.clientHeight),false);
             lastResizeAdjust=now;
           }
+          traceRatio(actualFps);
           sampleStart=now;sampleFrames=0;
         }
       }
@@ -395,9 +377,11 @@ export default function Cabin(props: Props) {
       observer.disconnect();
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
-      window.removeEventListener("blur", clear);
+      window.removeEventListener("blur", suspendInput);
+      document.removeEventListener("visibilitychange", suspendInput);
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       clear();
+      flushMotion.current = () => {};
       fixtures?.dispose();
       interior.dispose();
       renderer.dispose();
@@ -405,18 +389,11 @@ export default function Cabin(props: Props) {
     };
   }, []);
   useEffect(() => {
-    if (props.locked) {
-      keys.current.clear();
-      pointer.current = undefined;
-      sprint.current = false;
-      orbitalThrust.current = 0;
-      sprintTouch.current = null;
-      stick.current = { x: 0, y: 0 };
-      if (thumb.current) thumb.current.style.transform = "translate(0px,0px)";
-    }
+    if (props.locked) clearInput.current();
   }, [props.locked]);
   const startStick = (e: ReactPointer<HTMLDivElement>) => {
     if (props.locked || pointer.current !== undefined) return;
+    flushMotion.current();
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     pointer.current = e.pointerId;
@@ -431,6 +408,7 @@ export default function Cabin(props: Props) {
   };
   const moveStick = (e: ReactPointer<HTMLDivElement>) => {
     if (pointer.current !== e.pointerId) return;
+    flushMotion.current();
     const dx = e.clientX - origin.current.x,
       dy = e.clientY - origin.current.y,
       radius = props.device === "iphone" ? 52 : 67;
@@ -440,6 +418,7 @@ export default function Cabin(props: Props) {
   };
   const stopStick = (e: ReactPointer<HTMLDivElement>) => {
     if (pointer.current !== e.pointerId) return;
+    flushMotion.current();
     pointer.current = undefined;
     stick.current = { x: 0, y: 0 };
     if (thumb.current) thumb.current.style.transform = "translate(0px,0px)";
@@ -447,6 +426,7 @@ export default function Cabin(props: Props) {
   };
   const startLook = (e: ReactPointer<HTMLDivElement>) => {
     if (props.locked || lookPointer.current) return;
+    flushMotion.current();
     e.preventDefault();
     // Retain a right-side camera drag even if the finger leaves that region.
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -456,6 +436,7 @@ export default function Cabin(props: Props) {
   const moveLook = (e: ReactPointer<HTMLDivElement>) => {
     const p = lookPointer.current;
     if (!p || p.id !== e.pointerId || props.locked) return;
+    flushMotion.current();
     if(Math.hypot(e.clientX-p.startX,e.clientY-p.startY)>12) p.dragged=true;
     look.current.yaw -=
       (e.clientX - p.x) *
@@ -470,12 +451,13 @@ export default function Cabin(props: Props) {
   const stopLook = (e: ReactPointer<HTMLDivElement>) => {
     const p=lookPointer.current;
     if(p?.id===e.pointerId){
+      flushMotion.current();
       const wasTap=e.type==="pointerup" && !p.dragged &&
         Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<12;
       lookPointer.current=undefined;
       e.currentTarget.classList.remove("using");
       if(wasTap && !props.locked && props.world) {
-        const a=aim.current,loc=props.world.session.position;
+        const a=interactionTarget.current(),loc=props.world.session.position;
         // Tapping the actual cockpit console is equivalent to pressing
         // INTERACT. In Mission 2 this opens the rendezvous control panel.
         if(a || Math.hypot(loc.x-deck.cockpit.x,loc.z-deck.cockpit.z)<1.7)
@@ -484,7 +466,8 @@ export default function Cabin(props: Props) {
     }
   };
   const startSprint = (e: ReactPointer<HTMLButtonElement>) => {
-    if(props.locked) return;
+    if(props.locked || sprintTouch.current) return;
+    flushMotion.current();
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     sprint.current = true;
@@ -493,6 +476,7 @@ export default function Cabin(props: Props) {
   const dragSprint = (e: ReactPointer<HTMLButtonElement>) => {
     const last=sprintTouch.current;
     if(!last || last.id!==e.pointerId || props.locked) return;
+    flushMotion.current();
     const factor=0.0035 * (current.current.settings?.lookSensitivity ?? 1);
     look.current.yaw -= (e.clientX-last.x)*factor;
     look.current.pitch = Math.max(-1.15,Math.min(1.15,look.current.pitch-(e.clientY-last.y)*factor));
@@ -501,11 +485,12 @@ export default function Cabin(props: Props) {
   };
   const stopSprint = (e: ReactPointer<HTMLButtonElement>) => {
     if(sprintTouch.current?.id!==e.pointerId) return;
+    flushMotion.current();
     sprintTouch.current=null;
     sprint.current=false;
   };
   const orbitalEva = !!props.world && props.world.session.position.z > 10.4 &&
-    missionById(props.world.session.missionId).destination === "earth";
+    missionForSession(props.world.session).destination === "earth";
   return (
     <div className={`cmd-world${orbitalEva ? " cmd-world-orbital" : ""}`}>
       <div className="cmd-canvas" ref={host} />
@@ -541,17 +526,17 @@ export default function Cabin(props: Props) {
             onPointerCancel={stopSprint}
             onLostPointerCapture={stopSprint}>SPRINT</button>
           <button type="button" className="cmd-work" aria-label="Interact with aimed target"
-            disabled={props.locked} onClick={() => props.onInteract(aim.current)}>INTERACT</button>
+            disabled={props.locked} onClick={() => props.onInteract(interactionTarget.current())}>INTERACT</button>
         </div>
       </>}
       {orbitalEva&&props.device!=="laptop"&&
         <div className="cmd-orbital-thrusters" aria-label="Spacesuit vertical thrusters">
           {(["UP","DOWN"] as const).map(direction=><button key={direction} type="button"
             disabled={props.locked}
-            onPointerDown={e=>{if(props.locked)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);orbitalThrust.current=direction==="UP"?1:-1;}}
-            onPointerUp={()=>orbitalThrust.current=0}
-            onPointerCancel={()=>orbitalThrust.current=0}
-            onLostPointerCapture={()=>orbitalThrust.current=0}>
+            onPointerDown={e=>{if(props.locked)return;flushMotion.current();e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);orbitalContacts.current.set(e.pointerId,direction==="UP"?1:-1);}}
+            onPointerUp={e=>{flushMotion.current();orbitalContacts.current.delete(e.pointerId)}}
+            onPointerCancel={e=>{flushMotion.current();orbitalContacts.current.delete(e.pointerId)}}
+            onLostPointerCapture={e=>{flushMotion.current();orbitalContacts.current.delete(e.pointerId)}}>
             {direction==="UP"?"↑ ASCEND":"↓ DESCEND"}
           </button>)}
         </div>}
@@ -563,10 +548,11 @@ export default function Cabin(props: Props) {
       {props.settings?.showHints !== false && aimLabel && !props.locked && <div className="cmd-aim-target"><i />{aimLabel}</div>}
       {props.world &&
         props.world.session.position.z > 10.4 &&
-        missionById(props.world.session.missionId).destination !== "earth" && (
+        missionForSession(props.world.session).destination !== "earth" && (
           <button
             className="campaign-hop"
             onClick={() => {
+              flushMotion.current();
               if (!props.locked && jump.current.height === 0)
                 jump.current.velocity = 2.1;
             }}

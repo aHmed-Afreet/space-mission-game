@@ -48,6 +48,29 @@ import { officialFilms, officialFilmFor } from "../../history/officialFilms";
 import {storyVideoChapters,storyVideoWorld,STORY_VIDEO_CHAPTER_SECONDS} from "../../history/storyVideoTimeline";
 import { pilotBriefing, pilot } from "../../missionCrew";
 import { strategyChallenges } from "../../strategyChallenges";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { createFieldWorld } from "./world";
+import { assetManifest } from "../../presentation/assetManifest";
+import { stepLocomotion, type LocomotionState } from "../locomotion";
+import { adaptiveGraphicsRatio, graphicsRatioBounds } from "../graphicsPolicy";
+import { storyPixelRatio } from "../../history/storyRuntime";
+import { storyReferenceFor } from "../../history/storyReferences";
+
+/** Exercise procedural geometry without WebGL or network image completion. */
+async function withGeometryCanvas(run: () => void | Promise<void>) {
+  const previous = globalThis.document;
+  const context = new Proxy({
+    createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+    createLinearGradient: () => ({ addColorStop() {} }),
+    createRadialGradient: () => ({ addColorStop() {} }),
+  } as Record<string, unknown>, { get: (target, key) => target[String(key)] ?? (() => {}) });
+  globalThis.document = {
+    createElement: () => ({ width: 0, height: 0, getContext: () => context }),
+    createElementNS: () => ({ addEventListener() {}, removeEventListener() {}, set src(_value: string) {} }),
+  } as unknown as Document;
+  try { await run(); } finally { globalThis.document = previous; }
+}
 
 function stand(
   s: Session,
@@ -544,15 +567,44 @@ test("Orbital EVA collisions prevent walking through the satellite core or leavi
  assert.equal(campaignWalkable(2.4,15.08,previousCore),false,
    "satellite body cannot be traversed farther inward");
 });
-test("Orbital EVA backdrop and exterior details remain available offline",()=>{
- const world=readFileSync("src/commander/campaign/world.ts","utf8");
- const inside=readFileSync("src/commander/interior.ts","utf8");
- assert.match(world,/skyCanvas.width=1024/);
- assert.match(world,/SphereGeometry\(56,36,24\)/);
- assert.match(world,/texture[s]?.forEach/);
- assert.match(world,/photovoltaic cells/);
- assert.match(inside,/Integrated equipment conduits/);
-});
+test("Orbital EVA backdrop and exterior details remain available offline",()=>withGeometryCanvas(()=>{
+ const scene=new THREE.Scene();
+ const world=createFieldWorld(scene,"earth","mission-2","battery");
+ try {
+   const environment=scene.children[0];
+   const dome=environment.children.find(object=>object instanceof THREE.Mesh &&
+     object.geometry instanceof THREE.SphereGeometry && object.geometry.parameters.radius===56) as THREE.Mesh<THREE.SphereGeometry,THREE.MeshBasicMaterial>;
+   assert.ok(dome,"an all-direction celestial backdrop must exist before any image download");
+   assert.equal(dome.material.side,THREE.BackSide);
+   assert.ok(dome.material.map instanceof THREE.CanvasTexture);
+   assert.deepEqual([dome.material.map.image.width,dome.material.map.image.height],[1024,512]);
+   const earth=environment.getObjectByName("earth destination visualization")!;
+   assert.ok(earth,"Earth remains visible without downloaded photography");
+   const surface=earth.children[0] as THREE.Mesh<THREE.SphereGeometry,THREE.MeshStandardMaterial>;
+   assert.ok(surface.material.map instanceof THREE.CanvasTexture);
+   const worksite=environment.children.find(object=>object.userData.worksiteProfile==="satellite")!;
+   const cells=worksite.children.find(object=>object instanceof THREE.InstancedMesh) as THREE.InstancedMesh;
+   assert.ok(cells,"photovoltaic cell detail is generated locally");
+   assert.equal(cells.count,24,"Battery retains two complete four-column solar arrays");
+   const positions=[];
+   for(let i=0;i<cells.count;i++){
+     const matrix=new THREE.Matrix4();cells.getMatrixAt(i,matrix);
+     positions.push(new THREE.Vector3().setFromMatrixPosition(matrix));
+   }
+   assert.equal(positions.filter(p=>p.x<-.56).length,12);
+   assert.equal(positions.filter(p=>p.x>.56).length,12);
+   const textures=new Set<THREE.Texture>();
+   environment.traverse(object=>{
+     if(object instanceof THREE.Mesh)for(const material of Array.isArray(object.material)?object.material:[object.material])
+       for(const value of Object.values(material))if(value instanceof THREE.Texture)textures.add(value);
+   });
+   let released=0;
+   for(const texture of textures)texture.addEventListener("dispose",()=>released++);
+   world.dispose();world.dispose();
+   assert.equal(released,textures.size,"scene disposal releases every procedural texture exactly once");
+   assert.equal(scene.children.length,0);
+ } finally { world.dispose(); }
+}));
 test("branching fault responses trade parts against power and science", () => {
   const p = emptyProgress(),
     a = completeMission(missions[0], p, false, false),
@@ -1541,11 +1593,29 @@ test("realism update preserves physical EVA hatch targeting and distinct exterio
  assert.match(story,/if\(outside&&!dusty\)/);
  assert.match(flow,/hatchAim/);
  assert.match(flow,/AIRLOCK CONTROL · PRESS INTERACT/);
- assert.match(commander,/orbitalThrust\.current/);
+ // Actual hatch-face aiming/occlusion is covered with cameras in targeting.test.ts;
+ // the fixed-step timing suite verifies cadence-independent surface hops and drift.
+ // Exercise both thruster directions and the training-frame travel limits here.
+ assert.match(commander,/stepLocomotion\(/);
+ for(const lift of [-1,1]){
+   const motion:LocomotionState={position:{x:0,y:1.63,z:13},movement:{forward:0,sideways:0},jump:{height:0,velocity:0}};
+   for(let frame=0;frame<1200;frame++)stepLocomotion(motion,
+     {forward:0,sideways:0,yaw:0,sprint:false,lift},{movement:1.7,gravity:0},1/120,()=>true,frame/120,true);
+   assert.equal(motion.jump.height,lift>0?5.4:-.65);
+   assert.equal(motion.jump.velocity,0,"the tether travel limit cancels outward drift");
+   stepLocomotion(motion,{forward:0,sideways:0,yaw:0,sprint:false,lift:-lift},
+     {movement:1.7,gravity:0},1/120,()=>true,10,true);
+   assert.ok(motion.jump.velocity*lift<0,"opposite thrust can leave either travel limit");
+   assert.equal(motion.position.y,1.63+motion.jump.height,"reduced motion omits camera bob");
+   motion.position.z=9;
+   stepLocomotion(motion,{forward:0,sideways:0,yaw:0,sprint:false,lift},
+     {movement:1.7,gravity:0},1/120,()=>true,10,true);
+   assert.deepEqual(motion.jump,{height:0,velocity:0},"returning indoors resets exterior vertical motion");
+ }
  assert.match(commander,/SPACE\/CTRL EVA THRUSTERS/);
  assert.match(images,/TextureLoader/);
- assert.match(images,/earth_atmos_2048/);
- assert.match(images,/moon_1024/);
+ assert.equal(assetManifest.earth.runtimeUrl,"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg");
+ assert.equal(assetManifest.moon.runtimeUrl,"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg");
 });
 
 test("quality setting adds surface microdetail without affecting battery mode",()=>{
@@ -1580,11 +1650,26 @@ test("new spacecraft visuals are instanced and do not relocate mission stations"
  assert.match(bridge,/CREW VEHICLE/);
  assert.match(bridge,/GROUND MISSION CONTROL/);
 });
-test("performance options adapt iPad image quality without removing controls",()=>{
+test("performance options adapt image quality within device bounds without removing controls",()=>{
  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
  const story=readFileSync("src/history/storyWorld.ts","utf8");
  assert.match(cabin,/targetFps=graphicsMode==="battery"\?30:60/);
- assert.match(cabin,/actualFps<targetFps/);
+ assert.match(cabin,/adaptiveGraphicsRatio\(renderRatio,ratioBounds,actualFps,targetFps\)/);
+ // These are policy tests, not a physical iPad frame-rate claim. The dedicated
+ // graphicsPolicy suite covers low DPR and read-only renderer evidence as well.
+ for(const preset of ["battery","balanced","quality"] as const){
+   const target=preset==="battery"?30:60,bounds=graphicsRatioBounds(3,preset);
+   assert.equal(bounds.limit,preset==="battery"?1:preset==="balanced"?1.45:1.85);
+   assert.ok(adaptiveGraphicsRatio(bounds.limit,bounds,target*.5,target)<bounds.limit);
+   assert.equal(adaptiveGraphicsRatio(bounds.limit,bounds,target,target),bounds.limit);
+   assert.equal(adaptiveGraphicsRatio(bounds.floor,bounds,target*.85,target),bounds.floor);
+   assert.ok(adaptiveGraphicsRatio(bounds.floor,bounds,target,target)>bounds.floor);
+ }
+ for(const limit of [.5,1,1.55]){
+   const floor=Math.min(.8,limit);
+   assert.equal(storyPixelRatio(floor,limit,30),Math.min(limit,floor+.06));
+   assert.equal(storyPixelRatio(floor,limit,15),floor);
+ }
  assert.match(cabin,/renderer.setPixelRatio\(renderRatio\)/);
  assert.match(cabin,/movement.forward/);
  assert.match(cabin,/pickAimTarget/);
@@ -1628,15 +1713,39 @@ test("Realism materials preserve performance and have an offline asset fallback"
  assert.match(interior,/disposeDetails\(\)/);
 });
 
-test("satellite reference model is lazy, attributed and has an offline fallback",()=>{
+test("satellite reference model is lazy, attributed and has an offline fallback",()=>withGeometryCanvas(async()=>{
  const field=readFileSync("src/commander/campaign/world.ts","utf8");
  const interior=readFileSync("src/commander/Cabin.tsx","utf8");
- assert.match(field,/missionId==="mission-2"/);
- assert.match(field,/NASA-3D-Resources/);
- assert.match(field,/GLTFLoader/);
- assert.match(field,/Offline: original low-cost model remains visible/);
+ assert.match(field,/void import\("three\/examples\/jsm\/loaders\/GLTFLoader.js"\)/);
+ assert.match(assetManifest.hubble.attribution,/DigitalSpace \/ NASA/);
+ assert.equal(assetManifest.hubble.runtimeUrl,
+   `https://raw.githubusercontent.com/nasa/NASA-3D-Resources/${assetManifest.hubble.version}/3D%20Models/Hubble%20Space%20Telescope%20(A)/Hubble%20Space%20Telescope%20(A).glb`);
+ const previousWindow=globalThis.window,load=GLTFLoader.prototype.load;
+ const requests:string[]=[],worlds:ReturnType<typeof createFieldWorld>[]=[];
+ globalThis.window={} as Window & typeof globalThis;
+ GLTFLoader.prototype.load=function(url,_onLoad,_onProgress,onError){
+   requests.push(url);onError?.(new Error("offline regression fixture"));
+ };
+ try {
+   for(const [id,profile] of [["mission-2","satellite"],["mission-8","telescope"],["mission-12","relay"]] as const){
+     const scene=new THREE.Scene(),world=createFieldWorld(scene,"earth",id,"battery");worlds.push(world);
+     const worksite=scene.children[0].children.find(object=>object.userData.worksiteProfile===profile)!;
+     assert.ok(worksite,`${id} constructs its original procedural fallback immediately`);
+     // Let the optional loader's import settle while its network call is stubbed.
+     await import("three/examples/jsm/loaders/GLTFLoader.js");
+     await new Promise<void>(resolve=>setImmediate(resolve));
+     assert.equal(worksite.visible,true);
+     assert.ok(worksite.getObjectByName("live service status")?.visible);
+     assert.ok(worksite.children.some(object=>object instanceof THREE.InstancedMesh && object.visible),
+       `${id} retains procedural arrays when the optional reference download fails`);
+   }
+   assert.deepEqual(requests,[assetManifest.hubble.runtimeUrl],"only Mission 8 requests the optional telescope reference");
+ } finally {
+   worlds.forEach(world=>world.dispose());
+   GLTFLoader.prototype.load=load;globalThis.window=previousWindow;
+ }
  assert.match(interior,/props.world!\.session.missionId/);
-});
+}));
 
 test("Mission 2 orbital rendezvous always has a discoverable touch control and a pause explanation",()=>{
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
@@ -2084,11 +2193,26 @@ test("official agency films open before the historical 3D scene",()=>{
  assert.match(hub,/WATCH VIDEO AT/);
  assert.match(hub,/setFilmOpened\(true\)/);
  assert.match(hub,/setFilmConfirmed\(true\)/);
- for(const v of films){
-   assert.match(v.url,/^https:\/\/(plus\.nasa\.gov|images\.nasa\.gov)\//);
-   assert.match(v.record,/^https:\/\/www\.nasa\.gov\//);
+ assert.match(hub,/href=\{officialFilm.record\}/);
+ assert.match(hub,/VIDEO UNAVAILABLE · CONTINUE WITH MISSION RECORD/);
+ const programRecords:Record<string,string>={"Voyager 1":"https://science.nasa.gov/mission/voyager/",
+   "Voyager 2":"https://science.nasa.gov/mission/voyager/","Skylab 2":"https://www.nasa.gov/mission/skylab/"};
+ for(const [title,v] of Object.entries(officialFilms)){
+   const video=new URL(v.url),record=new URL(v.record);
+   assert.equal(video.protocol,"https:");
+   assert.ok(["plus.nasa.gov","images.nasa.gov"].includes(video.hostname));
+   assert.equal(record.protocol,"https:");
+   assert.ok(["www.nasa.gov","science.nasa.gov"].includes(record.hostname));
+   const mission=historyMissions.find(m=>m.title===title);
+   assert.ok(mission,`${title} must correspond to an existing Story mission`);
+   const reference=storyReferenceFor(mission.id);
+   assert.ok(reference,`${title} must retain an inspectable mission citation`);
+   assert.equal(v.record,title==="Apollo 11"
+     ? "https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11i_Timeline.htm"
+     : programRecords[title]??reference.url,`${title} must cite its own mission or documented program record`);
    assert.equal(v.publisher,"NASA");
    assert.ok(v.order.length>=5);
+   assert.ok(v.scope.length>40,"films explain what the archive footage actually covers");
  }
  assert.equal(officialFilmFor("Apollo 11")?.kind,"original EVA broadcast");
  assert.equal(officialFilmFor("Sputnik 1"),undefined);
