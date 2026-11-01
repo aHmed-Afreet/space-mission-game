@@ -1614,8 +1614,13 @@ test("realism update preserves physical EVA hatch targeting and distinct exterio
  }
  assert.match(commander,/SPACE\/CTRL EVA THRUSTERS/);
  assert.match(images,/TextureLoader/);
- assert.equal(assetManifest.earth.runtimeUrl,"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg");
- assert.equal(assetManifest.moon.runtimeUrl,"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg");
+ // Verified byte-identical pins preserve the inherited imagery without mutable master dependencies.
+ const pin="9b4a2ac29c63ccb43fd51c5661f2f873ac2c39b8";
+ assert.equal(assetManifest.earth.runtimeUrl,`https://raw.githubusercontent.com/mrdoob/three.js/${pin}/examples/textures/planets/earth_atmos_2048.jpg`);
+ assert.equal(assetManifest.moon.runtimeUrl,`https://raw.githubusercontent.com/mrdoob/three.js/${pin}/examples/textures/planets/moon_1024.jpg`);
+ assert.equal(assetManifest.earth.sha256,"2faa400d1eade3bc44caf6750d1b772bd9bbb6d87362c02bc7c3304e78fa0a9d");
+ assert.equal(assetManifest.moon.sha256,"fcb0f1f5548e6e18d40063dd55c6aacd3daedf2407b181dab85b61e22bf9fe57");
+ assert.equal(assetManifest.earth.bytes,512606);assert.equal(assetManifest.moon.bytes,238093);
 });
 
 test("quality setting adds surface microdetail without affecting battery mode",()=>{

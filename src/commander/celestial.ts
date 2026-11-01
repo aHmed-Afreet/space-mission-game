@@ -90,12 +90,12 @@ function textureFor(kind:PlanetKind,clouds=false){
  tex.wrapS=THREE.RepeatWrapping;tex.anisotropy=2;
  return tex;
 }
-export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THREE.Group{
+export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true,onSceneChange?:()=>void):THREE.Group{
  if(kind==="outer-planets"){
   const group=new THREE.Group();group.userData.destinationKind=kind;
   // A survey of several planets is represented by several bodies, not Earth.
   for(const [index,planet] of (["jupiter","saturn","uranus","neptune"] as const).entries()){
-   const body=makePlanet(planet,radius*.36,false);
+   const body=makePlanet(planet,radius*.36,false,onSceneChange);
    body.position.set((index-1.5)*radius*.85,Math.sin(index)*radius*.15,0);group.add(body);
   }
   return group;
@@ -136,6 +136,7 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true):THR
    real.colorSpace=THREE.SRGBColorSpace;real.anisotropy=2;
    const fallback=material.map;
    material.map=real;material.needsUpdate=true;fallback?.dispose();
+   onSceneChange?.();
   },undefined,()=>{/* Keep the generated texture. */});
  }
  if(kind==="earth"&&includeClouds){

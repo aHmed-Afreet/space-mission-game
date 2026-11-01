@@ -8,12 +8,14 @@ import { acceptDownloadedScene, disposeObjectResources } from "../../presentatio
 import { assetManifest } from "../../presentation/assetManifest";
 import { installSurfaceScenery, terrainRelief, type SurfaceQuality } from "./surfaceScenery";
 /** Mission-specific 3D environments have offline fallbacks; NASA reference models are optional lazy downloads. */
-export function createFieldWorld(scene: T.Scene, destination: Destination, missionId?: string, quality:SurfaceQuality="balanced") {
+export function createFieldWorld(scene: T.Scene, destination: Destination, missionId?: string, quality:SurfaceQuality="balanced", onSceneChange?:()=>void) {
   const presentation = commanderPresentation(missionId, destination);
   const group = new T.Group();
   group.name = "Commander mission environment";
   group.userData.presentation = presentation;
   scene.add(group);
+  let disposed=false;
+  const sceneChanged=()=>{if(!disposed)onSceneChange?.();};
   const geometries: T.BufferGeometry[] = [],
     materials: T.Material[] = [],
     textures: T.Texture[] = [];
@@ -130,7 +132,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     box(0,3.13,z,6.35,.07,.11,alloy);
   }
   let surfaceScenery:ReturnType<typeof installSurfaceScenery>|null=null;
-  const orbitEarth=destination==="earth"?makePlanet("earth",17):null;
+  const orbitEarth=destination==="earth"?makePlanet("earth",17,true,sceneChanged):null;
   if(orbitEarth){orbitEarth.position.set(-20,-12,43);group.add(orbitEarth);}
   if (destination === "earth") {
     // Procedural high-contrast celestial dome: offline, iPad-friendly, and
@@ -208,7 +210,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   } else if (presentation.playerContext === "surface") {
     // Layered geological scenery is visual only: preserve physical interaction
     // markers, landing site positions and collision/pathfinding exactly.
-    surfaceScenery=installSurfaceScenery(group,destination,Object.values(fieldSites),quality);
+    surfaceScenery=installSurfaceScenery(group,destination,Object.values(fieldSites),quality,sceneChanged);
     for (const p of Object.values(fieldSites)) {
       rod(p.x, 0.23, p.z, 0.025, 0.5, gold);
       box(p.x, 0.48, p.z, 0.27, 0.12, 0.03, gold);
@@ -222,7 +224,6 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   // Procedural spacecraft remain available without any network download.
    // Optional existing NASA-hosted Hubble reference; asset-specific DigitalSpace
    // terms are tracked in the asset manifest. It is never required for play.
-   let disposed=false;
    let referenceModel:T.Group|null=null;
    if(typeof window!=="undefined" && destination==="earth" && presentation.worksite==="telescope"){
      const nasaUrl=assetManifest.hubble.runtimeUrl;
@@ -245,6 +246,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
          // The reference model is mounted behind the procedural service face.
          pivot.position.z=1.4;
          for(const object of satellite.children)if(object!==pivot&&!object.userData.serviceFace)object.visible=false;
+         sceneChanged();
        },undefined,()=>{/* Offline: original low-cost model remains visible. */});
      }).catch(()=>{/* No network dependency for mission progress. */});
    }
@@ -449,7 +451,10 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
       if(disposed)return;
       disposed=true;
       group.userData.disposed=true;
-      if(referenceModel)disposeObjectResources(referenceModel);
+      if(referenceModel){
+        referenceModel.removeFromParent();
+        disposeObjectResources(referenceModel);
+      }
       worksite?.dispose();
       camp.traverse(object=>{if(object instanceof T.InstancedMesh)object.dispose();});
       scene.remove(group);

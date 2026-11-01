@@ -1,5 +1,6 @@
 import type { ShipState } from "./campaign/ship";
 import {makePlanet,planetKind,disposePlanet} from "./celestial";
+import { createEvaGloves } from "../presentation/evaGloves";
 import {installShipArchitecture} from "./shipArchitecture";
 import {installCabinDetail} from "./cabinDetailPass";
 import {installCockpitFinishing} from "./cockpitFinishing";
@@ -11,7 +12,7 @@ import type { Action, Area } from "./simulation";
 export type VisualAction = { id: number; action: Action };
 /** Shared primitive geometry and instanced static fittings keep the cabin inexpensive. */
 export function createInterior(
-  options: { eva?: boolean; destination?: string; graphics?: "quality" | "balanced" | "battery" } = {},
+  options: { eva?: boolean; destination?: string; graphics?: "quality" | "balanced" | "battery"; onSceneChange?: () => void } = {},
 ) {
   const scene = new T.Scene();
   scene.background = new T.Color("#070c15");
@@ -370,7 +371,7 @@ export function createInterior(
   const spaceMat = new T.MeshBasicMaterial({ color: "#060c16" });
   materials.push(spaceMat);
   dynamic(0, 2, -17, 30, 20, 1, spaceMat, plane);
-  const planet=makePlanet(planetKind(options.destination||"earth"),1.48);
+  const planet=makePlanet(planetKind(options.destination||"earth"),1.48,true,options.onSceneChange);
   planet.position.set(1.8,1.45,-13);planet.rotation.z=.3;
   scene.add(planet);
   const starGeo = new T.BufferGeometry();
@@ -623,14 +624,8 @@ export function createInterior(
   const camera = new T.PerspectiveCamera(65, 1, 0.08, 60);
   // Visible white EVA sleeves and gloved hands anchor the first-person viewpoint
   // when an equipped astronaut moves outside the pressurized vehicle.
-  const evaHands=new T.Group();camera.add(evaHands);evaHands.visible=false;
-  const suitFabric=mat("#e1e6e2",.08,.8),suitJoint=mat("#9baab1",.3,.55),suitGlove=mat("#b3babe",.2,.6);
-  for(const side of [-1,1]){
-   const cuff=dynamic(side*.37,-.43,-.67,.23,.4,.47,suitFabric,box,evaHands);
-   cuff.rotation.x=-.38;
-   dynamic(side*.36,-.62,-.92,.21,.16,.23,suitGlove,box,evaHands);
-   dynamic(side*.37,-.35,-.74,.25,.085,.28,suitJoint,box,evaHands);
-  }
+  const evaGloves=createEvaGloves(options.graphics);
+  const evaHands=evaGloves.group;camera.add(evaHands);evaHands.visible=false;
   camera.position.set(0, 1.63, 6.5);
   camera.rotation.order = "YXZ";
   camera.add(handGroup);
@@ -751,6 +746,7 @@ export function createInterior(
       }
     },
     dispose() {
+      evaGloves.dispose();
       disposeArchitecture();
       disposeCockpitFinishing();
       disposeDetails();

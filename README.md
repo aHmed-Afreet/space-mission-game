@@ -203,7 +203,7 @@ This update does not convert all Commander non-EVA missions into EVA missions, n
 
 ### Optional planetary imagery
 
-Earth and lunar globe models first display a locally generated fallback texture. When online, the game attempts to load public example planetary JPEG textures from the [three.js examples planetary texture directory](https://github.com/mrdoob/three.js/tree/master/examples/textures/planets), then replaces the fallback texture only after loading succeeds. Offline play and image-network failures still use the bundled procedural generator. The game makes no claim that procedural Mars and other planet maps are photographic replicas. Planetary imagery is used for educational visualization; credit for the example imagery belongs to its original creators/source archives, including NASA where applicable.
+Earth and lunar globe models first display a locally generated fallback texture. When online, the game attempts to load the inherited JPEGs from a [pinned three.js examples directory](https://github.com/mrdoob/three.js/tree/9b4a2ac29c63ccb43fd51c5661f2f873ac2c39b8/examples/textures/planets), then replaces the fallback texture only after loading succeeds. The [asset manifest](src/presentation/assetManifest.ts) records their byte-verified versions, hashes and sizes. Their original creators and image-specific usage rights remain unresolved; the three.js software MIT license does not establish imagery permission. Offline play and image-network failures still use the procedural generator. Procedural Mars and other planet maps are synthetic illustrations rather than photographic replicas.
 
 ### Advanced EVA controls and real cabinet interior
 

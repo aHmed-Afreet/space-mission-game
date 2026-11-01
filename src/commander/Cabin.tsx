@@ -100,6 +100,11 @@ export default function Cabin(props: Props) {
       "aria-label",
       "Explorable spacecraft cabin",
     );
+    let disposed = false;
+    let needsDraw = true;
+    // Paused scenes stay idle, but accepted asynchronous scene additions still
+    // need one fresh frame. Never wake a renderer that has been disposed.
+    const invalidateScene = () => { if (!disposed) needsDraw = true; };
     let interior: ReturnType<typeof createInterior>;
     try {
       interior = createInterior(
@@ -108,10 +113,12 @@ export default function Cabin(props: Props) {
               eva: missionForSession(props.world.session).eva,
               destination: missionForSession(props.world.session).destination,
               graphics: props.settings?.graphics,
+              onSceneChange: invalidateScene,
             }
-          : {},
+          : { onSceneChange: invalidateScene },
       );
     } catch (error) {
+      disposed = true;
       renderer.dispose();
       renderer.domElement.remove();
       current.current.onGraphicsError();
@@ -122,19 +129,21 @@ export default function Cabin(props: Props) {
     const fixtures = props.world ? createFixtures(interior.scene) : undefined;
     let field:
       { update: (s: Session) => void; dispose: () => void } | undefined;
-    let disposed = false;
     if (props.world && missionForSession(props.world.session).eva) {
       import("./campaign/world")
         .then(({ createFieldWorld }) => {
-          if (!disposed)
-            field = createFieldWorld(
-              interior.scene,
-              missionForSession(props.world!.session).destination,
-              props.world!.session.missionId,
-              graphicsMode,
-            );
+          if (disposed) return;
+          field = createFieldWorld(
+            interior.scene,
+            missionForSession(props.world!.session).destination,
+            props.world!.session.missionId,
+            graphicsMode,
+            invalidateScene,
+          );
+          invalidateScene();
         })
         .catch(() => {
+          if (disposed) return;
           current.current.onGraphicsError();
           setError(
             "The field environment could not load. Reload to retry; your mission is saved.",
@@ -143,7 +152,6 @@ export default function Cabin(props: Props) {
     }
     current.current.onArea(undefined);
     const { camera, scene } = interior;
-    let needsDraw = true;
     const resize = () => {
       const w = Math.max(1, el.clientWidth),
         h = Math.max(1, el.clientHeight);

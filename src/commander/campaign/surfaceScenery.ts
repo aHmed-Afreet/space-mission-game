@@ -111,6 +111,7 @@ export function installSurfaceScenery(
   destination:Destination,
   markers:readonly Marker[],
   quality:SurfaceQuality="balanced",
+  onSceneChange?:()=>void,
 ):{dispose():void} {
   const originalChildren=new Set(group.children);
   const geometries:T.BufferGeometry[]=[];
@@ -197,7 +198,7 @@ export function installSurfaceScenery(
   let earth:T.Group|null=null;
   if(destination==="moon"){
     // Earth is near the sky horizon at a distant position, not a giant globe.
-    earth=makePlanet("earth",1.8);
+    earth=makePlanet("earth",1.8,true,onSceneChange);
     earth.position.set(-23,23,48);
     group.add(earth);
   }

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as T from "three";
+import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { commanderPresentation, commanderPresentations, storyPresentation, presentationBudgets } from "./presentation/missionPresentation";
 import { createOrbitalWorksite } from "./presentation/orbitalWorksite";
 import { acceptDownloadedScene, disposeObjectResources } from "./presentation/resources";
@@ -20,7 +21,7 @@ import { createStoryScene, validStoryWorldSnapshot, type StoryWorldSnapshot } fr
 
 /** Geometry/state tests have no WebGL or network. Browser image comparison and
  * reachability remain separate acceptance evidence. */
-function withCanvas(run:(labels:string[])=>void) {
+function withCanvas<R>(run:(labels:string[])=>R):R {
   const previous=globalThis.document,labels:string[]=[];
   const context=new Proxy({
     createImageData:(w:number,h:number)=>({data:new Uint8ClampedArray(w*h*4)}),
@@ -31,7 +32,7 @@ function withCanvas(run:(labels:string[])=>void) {
     createElement:()=>({width:0,height:0,getContext:()=>context}),
     createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(_value:string){}}),
   } as unknown as Document;
-  try{run(labels);}finally{globalThis.document=previous;}
+  try{return run(labels);}finally{globalThis.document=previous;}
 }
 
 test("presentation routes every Commander mission without granting destination landings",()=>{
@@ -158,6 +159,77 @@ test("late planetary image completion disposes the downloaded texture after scen
     complete!(late);assert.equal(released,1);
   }finally{T.TextureLoader.prototype.load=load;}
 }));
+
+test("accepted cabin, orbital and lunar planet images invalidate only after material replacement; disposed scenes stay idle",()=>withCanvas(()=>{
+  const load=T.TextureLoader.prototype.load;
+  const pending:NonNullable<Parameters<T.TextureLoader["load"]>[1]>[]=[];
+  T.TextureLoader.prototype.load=function(_url,onLoad){if(onLoad)pending.push(onLoad);return new T.Texture();};
+  const factories=[
+    (changed:()=>void)=>{const cabin=createInterior({destination:"moon",graphics:"battery",onSceneChange:changed});return {root:cabin.scene,dispose:()=>cabin.dispose()};},
+    (changed:()=>void)=>{const root=new T.Scene(),world=createFieldWorld(root,"earth","mission-2","battery",changed);return {root,dispose:()=>world.dispose()};},
+    (changed:()=>void)=>{const root=new T.Scene(),world=createFieldWorld(root,"moon","mission-4","battery",changed);return {root,dispose:()=>world.dispose()};},
+  ];
+  try{
+    for(const create of factories)for(const live of [true,false]){
+      let changes=0;
+      const image=new T.Texture<HTMLImageElement>();let imageDisposals=0;
+      image.addEventListener("dispose",()=>imageDisposals++);
+      const mapsBefore=new Set<T.Texture>();
+      const scene=create(()=>{
+        let accepted=false;
+        scene.root.traverse(object=>{if(object instanceof T.Mesh)for(const material of Array.isArray(object.material)?object.material:[object.material]){
+          if("map" in material&&material.map===image)accepted=true;
+        }});
+        assert.equal(accepted,true,"redraw notification observes the installed image, not an incomplete load");changes++;
+      });
+      scene.root.traverse(object=>{if(object instanceof T.Mesh)for(const material of Array.isArray(object.material)?object.material:[object.material]){
+        if("map" in material&&material.map instanceof T.Texture)mapsBefore.add(material.map);
+      }});
+      const complete=pending.pop();assert.ok(complete);assert.equal(pending.length,0);
+      assert.equal(changes,0,"construction does not issue spurious asynchronous notifications");
+      if(!live)scene.dispose();
+      complete(image);
+      assert.equal(changes,live?1:0);
+      if(live){
+        assert.equal(image.colorSpace,T.SRGBColorSpace);assert.equal(image.anisotropy,2);
+        assert.ok(!mapsBefore.has(image));assert.equal(imageDisposals,0);
+        scene.dispose();
+      }
+      assert.equal(imageDisposals,1,"accepted and rejected late images each retain exactly one resource owner");
+    }
+  }finally{T.TextureLoader.prototype.load=load;}
+}));
+
+test("only an accepted live telescope model requests a paused redraw; invalid and late models are disposed",async()=>{
+  const load=GLTFLoader.prototype.load,previousWindow=globalThis.window;
+  const pending:Parameters<GLTFLoader["load"]>[1][]=[];
+  GLTFLoader.prototype.load=function(_url,onLoad){pending.push(onLoad);};
+  globalThis.window={} as Window&typeof globalThis;
+  try{
+    for(const outcome of ["accepted","invalid","late"] as const){
+      let changes=0;
+      const root=new T.Scene();
+      const world=withCanvas(()=>createFieldWorld(root,"earth","mission-8","battery",()=>{
+        assert.ok(root.getObjectByName("Accepted test telescope"),"model is attached before requesting its redraw");changes++;
+      }));
+      for(let tries=0;!pending.length&&tries<10;tries++)await new Promise<void>(resolve=>setImmediate(resolve));
+      const complete=pending.shift();assert.ok(complete,"the real lazy loader requests the optional reference model");
+      const model=new T.Group();model.name="Accepted test telescope";
+      const geometry=new T.BoxGeometry(),material=new T.MeshBasicMaterial();let releases=0;
+      if(outcome!=="invalid")model.add(new T.Mesh(geometry,material));
+      else{geometry.dispose();material.dispose();}
+      geometry.addEventListener("dispose",()=>releases++);
+      if(outcome==="late")world.dispose();
+      complete({scene:model} as GLTF);
+      assert.equal(changes,outcome==="accepted"?1:0);
+      assert.equal(!!root.getObjectByName(model.name),outcome==="accepted");
+      if(outcome==="accepted")world.dispose();
+      else if(outcome==="invalid")world.dispose();
+      assert.equal(model.userData.disposed,true);
+      if(outcome!=="invalid")assert.equal(releases,1);
+    }
+  }finally{GLTFLoader.prototype.load=load;globalThis.window=previousWindow;}
+});
 
 test("physical displays show actual isolation/fault state without fabricated live telemetry",()=>withCanvas(labels=>{
   const displays=createDisplays(),s=createSession(missionById("mission-1"),defaultDesign,defaultLife,[],emptyProgress());

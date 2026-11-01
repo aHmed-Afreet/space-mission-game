@@ -6,6 +6,7 @@ import {installStoryBridge} from "./storyBridge";
 import { storyPixelRatio } from "./storyRuntime";
 import { storyPresentation } from "../presentation/missionPresentation";
 import { disposeObjectResources } from "../presentation/resources";
+import { createEvaGloves } from "../presentation/evaGloves";
 import { installSurfaceScenery } from "../commander/campaign/surfaceScenery";
 
 const stationLocations:Record<Station,[number,number]>={
@@ -201,13 +202,7 @@ export function createStoryScene(scenario:StoryScenario){
  const tether=new THREE.Line(tetherGeometry,tetherMaterial);exterior.add(tether);
 
  // First-person glove and cuff meshes appear only when the suit is worn outside.
- const suitView=new THREE.Group();
- for(const side of [-1,1]){
-  const sleeve=box(suitView,.22,.38,.56,ceramic(),side*.39,-.47,-.83);
-  sleeve.rotation.x=-.42;
-  sphere(suitView,.18,ceramic(),side*.38,-.59,-1.12);
-  cyl(suitView,.17,.17,.14,hatchLight,side*.38,-.36,-.93,Math.PI/2);
- }
+ const suitView=createEvaGloves("battery").group;
  const craftDisplay=badge(scenario.craft.toUpperCase().slice(0,36));
  if(craftDisplay){craftDisplay.position.set(0,6.9,-15);craftDisplay.scale.setScalar(.8);scene.add(craftDisplay);}
  // Physical spotlight and secure display pedestal instead of a large neon halo.

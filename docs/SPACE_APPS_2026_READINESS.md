@@ -1,10 +1,10 @@
-# Space Mission Game — competition readiness (October 2026)
+# Space Mission Game — competition readiness
 
 **Project:** ORBITAL Mission Lab. Independent educational simulation, not affiliated with NASA.
 
 **Status:** Engineering preparation in progress; NOT an approved Space Apps submission.
 
-**Existing project:** Development began before the November 14–15, 2026 hackathon. Disclose the existing GitHub history. Obtain guidance from the 2026 Local Event lead before presenting this repository as an event entry. Do NOT call existing work new hackathon work; earlier NASA Space Apps guidance asked teams to begin challenge work during the event. Approval cannot be inferred from a passing build.
+**Existing project:** Disclose the existing GitHub history and obtain guidance from the relevant Local Event lead before presenting this repository as an event entry. Do NOT call existing work new hackathon work; earlier NASA Space Apps guidance asked teams to begin challenge work during the event. Confirm dates, eligibility, permitted prior work and submission deadlines against the current official challenge and local event rules. Those rules have not been verified by this software audit. Approval cannot be inferred from a passing build.
 
 ## The educational challenge
 
@@ -62,13 +62,13 @@ Do not attempt to tour every campaign during a short judging presentation; demon
 - [ ] Show the prototype to at least one other student without instructions, record confusion, fix reproducible problems
 
 ### Competition actions requiring the participant/team
-- [ ] Confirm the 2026 official challenge brief, category and eligibility
+- [ ] Confirm the target event's official challenge brief, dates, category and eligibility
 - [ ] Ask the Local Event organizers specifically about the existing pre-event repository and how to comply
-- [ ] Register correctly as an under-18 participant with parent/guardian if required
+- [ ] Follow the current participant registration and parent/guardian requirements where applicable
 - [ ] Make and document new, eligible hackathon work during the event where required
 - [ ] Record screen demo; add screenshots, working link, GitHub source, team members and credits
 - [ ] Document evaluation with real learners rather than claiming unmeasured impact
-- [ ] Submit through the official NASA Space Apps project portal by Nov 15, 2026, 11:59 PM local event time
+- [ ] Confirm the official project portal and the applicable local submission deadline before submitting
 
 ## Ninety-second pitch (adapt and verify the presentation)
 
@@ -85,7 +85,7 @@ Do not attempt to tour every campaign during a short judging presentation; demon
 ## Organizer references
 
 - [NASA Space Apps 2026 event](https://www.spaceappschallenge.org/2026/)
-- [NASA official October 15 announcement](https://science.nasa.gov/universe/nasa-welcomes-all-ages-experience-levels-for-space-apps-challenge/)
+- [NASA Space Apps announcement](https://science.nasa.gov/universe/nasa-welcomes-all-ages-experience-levels-for-space-apps-challenge/)
 - [Older NASA Space Apps participant FAQ about start-of-event work](https://legacy.spaceappschallenge.org/resources/faq/)
 
 Awards, event acceptance, legal eligibility and live-device quality cannot be guaranteed from automated testing alone.
