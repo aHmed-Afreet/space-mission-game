@@ -132,7 +132,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     box(0,3.13,z,6.35,.07,.11,alloy);
   }
   let surfaceScenery:ReturnType<typeof installSurfaceScenery>|null=null;
-  const orbitEarth=destination==="earth"?makePlanet("earth",17,true,sceneChanged):null;
+  const orbitEarth=destination==="earth"?makePlanet("earth",17,true,sceneChanged,quality):null;
   if(orbitEarth){orbitEarth.position.set(-20,-12,43);group.add(orbitEarth);}
   if (destination === "earth") {
     // Procedural high-contrast celestial dome: offline, iPad-friendly, and

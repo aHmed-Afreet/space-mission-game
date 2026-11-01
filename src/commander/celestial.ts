@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { disposeObjectResources } from "../presentation/resources";
-import { assetManifest } from "../presentation/assetManifest";
+import { selectPlanetMap, type PlanetMapQuality } from "../presentation/assetManifest";
 
 /** Procedural, deterministic educational planet material, generated offline in the browser.
  * Uses no external textures or network requests and keeps memory small for iPads. */
@@ -90,12 +90,12 @@ function textureFor(kind:PlanetKind,clouds=false){
  tex.wrapS=THREE.RepeatWrapping;tex.anisotropy=2;
  return tex;
 }
-export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true,onSceneChange?:()=>void):THREE.Group{
+export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true,onSceneChange?:()=>void,quality:PlanetMapQuality="balanced"):THREE.Group{
  if(kind==="outer-planets"){
   const group=new THREE.Group();group.userData.destinationKind=kind;
   // A survey of several planets is represented by several bodies, not Earth.
   for(const [index,planet] of (["jupiter","saturn","uranus","neptune"] as const).entries()){
-   const body=makePlanet(planet,radius*.36,false,onSceneChange);
+   const body=makePlanet(planet,radius*.36,false,onSceneChange,quality);
    body.position.set((index-1.5)*radius*.85,Math.sin(index)*radius*.15,0);group.add(body);
   }
   return group;
@@ -120,14 +120,10 @@ export function makePlanet(kind:PlanetKind,radius:number,includeClouds=true,onSc
  const map=textureFor(kind);
  const material=new THREE.MeshStandardMaterial({map,roughness:kind==="earth"?.85:1,metalness:0});
  const surface=new THREE.Mesh(geometry,material);g.add(surface);
- // Optional photographic textures for Earth and the Moon. These are served
- // over HTTPS from the three.js examples repository; the procedural canvas
- // above remains fully functional if offline or if image loading fails.
- const photos:Partial<Record<PlanetKind,string>>={
-  earth:assetManifest.earth.runtimeUrl,
-  moon:assetManifest.moon.runtimeUrl,
- };
- const source=photos[kind];
+ // Reviewed NASA SVS originals are served locally, avoiding third-party CORS
+ // and mutable network dependencies. Generated maps remain the failure fallback.
+ // These visualization composites are not quantitative experiment inputs.
+ const source=kind==="earth"||kind==="moon"?selectPlanetMap(kind,quality).runtimeUrl:null;
  if(source){
   const loader=new THREE.TextureLoader();
   loader.setCrossOrigin("anonymous");

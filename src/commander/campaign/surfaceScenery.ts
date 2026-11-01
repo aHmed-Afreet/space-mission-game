@@ -198,7 +198,7 @@ export function installSurfaceScenery(
   let earth:T.Group|null=null;
   if(destination==="moon"){
     // Earth is near the sky horizon at a distant position, not a giant globe.
-    earth=makePlanet("earth",1.8,true,onSceneChange);
+    earth=makePlanet("earth",1.8,true,onSceneChange,quality);
     earth.position.set(-23,23,48);
     group.add(earth);
   }

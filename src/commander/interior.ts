@@ -371,7 +371,7 @@ export function createInterior(
   const spaceMat = new T.MeshBasicMaterial({ color: "#060c16" });
   materials.push(spaceMat);
   dynamic(0, 2, -17, 30, 20, 1, spaceMat, plane);
-  const planet=makePlanet(planetKind(options.destination||"earth"),1.48,true,options.onSceneChange);
+  const planet=makePlanet(planetKind(options.destination||"earth"),1.48,true,options.onSceneChange,options.graphics);
   planet.position.set(1.8,1.45,-13);planet.rotation.z=.3;
   scene.add(planet);
   const starGeo = new T.BufferGeometry();

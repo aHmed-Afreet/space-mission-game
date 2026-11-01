@@ -26,6 +26,7 @@ assert.equal(process.env.OTHER_BROWSER_STOPPED,"1","Stop other gameplay browsers
 const savePath=process.env.PAUSED_EVA_STORAGE_STATE;
 assert.ok(savePath,"PAUSED_EVA_STORAGE_STATE must name a whole genuinely earned paused EVA storageState.");
 const base=process.env.BASE_URL||"http://127.0.0.1:4173",origin=new URL(base).origin;
+const earthTextureUrl=new URL(assetManifest.earth.runtimeUrl,base).href;
 const inputBytes=await readFile(resolve(savePath));
 const input=JSON.parse(inputBytes.toString());
 const inputOrigin=input.origins?.find((entry:any)=>entry.origin===origin);
@@ -49,7 +50,7 @@ const result:any={startedUtc:new Date().toISOString(),status:"RUNNING",candidate
   scope:"Actual Chromium WebGL draws and paused-state conservation; no mission PASS or physical-device certification.",
   input:{path:resolve(savePath),sha256:sha(inputBytes),missionId:session.missionId,objective:session.objective,completed:session.completed},
   driverSha256:sha(scriptBytes),base,negativeControl:negative,viewport:{width:640,height:480},deviceScaleFactor:.7,
-  optionalTextureStub:textureBytes?{path:resolve(textureFile!),sha256:sha(textureBytes),url:assetManifest.earth.runtimeUrl,declaredNetworkReplacement:true}:null,
+  optionalTextureStub:textureBytes?{path:resolve(textureFile!),sha256:sha(textureBytes),url:earthTextureUrl,declaredNetworkReplacement:true}:null,
   requests:[],phases:[],pageErrors:[]};
 async function persist(){await writeFile(join(out,"results.json"),JSON.stringify(result,null,2));}
 await persist();
@@ -121,7 +122,7 @@ try{
       result.requests.push({kind:"field-module",url,heldUtc:new Date().toISOString()});fieldRequested.resolve();
       await fieldGate.promise;await route.continue();return;
     }
-    if(textureBytes&&url===assetManifest.earth.runtimeUrl){
+    if(textureBytes&&url===earthTextureUrl){
       result.requests.push({kind:"optional-Earth-image-network-stub",url,heldUtc:new Date().toISOString()});textureRequested.resolve();
       await textureGate.promise;await route.fulfill({status:200,contentType:"image/png",headers:{"Access-Control-Allow-Origin":"*"},body:textureBytes});textureResponses++;return;
     }

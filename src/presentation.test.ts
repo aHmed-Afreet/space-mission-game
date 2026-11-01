@@ -5,7 +5,7 @@ import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { commanderPresentation, commanderPresentations, storyPresentation, presentationBudgets } from "./presentation/missionPresentation";
 import { createOrbitalWorksite } from "./presentation/orbitalWorksite";
 import { acceptDownloadedScene, disposeObjectResources } from "./presentation/resources";
-import { assetManifest } from "./presentation/assetManifest";
+import { assetManifest, inheritedPlanetaryImages } from "./presentation/assetManifest";
 import { missions, missionById } from "./commander/campaign/definitions";
 import { createSession, emptyProgress } from "./commander/campaign/engine";
 import { defaultDesign, defaultLife } from "./commander/simulation";
@@ -274,9 +274,13 @@ test("Story pose validation rejects unearned surface/remote positions and invali
   assert.equal(validStoryWorldSnapshot({...orbit,position:[0,1.65,50]},{role:"astronaut",setting:"orbit"}),false);
 });
 
-test("Hubble metadata records exact pinned provenance and image rights remain explicit",()=>{
+test("Hubble remains pinned and active image rights are separate from archived unresolved images",()=>{
   assert.match(assetManifest.hubble.runtimeUrl,new RegExp(assetManifest.hubble.version));
   assert.equal(assetManifest.hubble.sha256.length,64);assert.equal(assetManifest.hubble.bytes,1694988);
   assert.match(assetManifest.hubble.attribution,/DigitalSpace/);
-  for(const asset of [assetManifest.earth,assetManifest.moon]){assert.match(asset.terms,/Pending asset-specific/);assert.ok(asset.fallback);}
+  for(const asset of [assetManifest.earth,assetManifest.moon]){
+    assert.match(asset.terms,/NASA SVS explicitly releases/);assert.ok(asset.fallback);
+    assert.match(asset.runtimeUrl,/^\.\/assets\/planetary\//);
+  }
+  for(const archived of Object.values(inheritedPlanetaryImages))assert.match(archived.rights,/unresolved; no longer requested at runtime/);
 });

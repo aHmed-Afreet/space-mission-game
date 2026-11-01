@@ -1,0 +1,56 @@
+SPACE MISSION GAME — PLANETARY VISUALIZATION CREDITS
+Reviewed November 1, 2026. No NASA endorsement is implied.
+
+Earth geographic composite
+NASA/Goddard Space Flight Center Scientific Visualization Studio.
+Reto Stockli (NASA/GSFC) and NASA Earth Observatory.
+Visualization: Eric Sokolowsky.
+Source item: https://svs.gsfc.nasa.gov/2915/
+
+earth-bluemarble-svs2915-1024-d1d3cb36ae6a.png
+Original: https://svs.gsfc.nasa.gov/vis/a000000/a002900/a002915/bluemarble-1024.png
+444710 bytes, 1024x512
+SHA-256: d1d3cb36ae6ae452c43cdf7ae0ffc13a959e8a5a2358f58b05e5f623c15119f9
+
+earth-bluemarble-svs2915-2048-ae6214b078ed.png
+Original: https://svs.gsfc.nasa.gov/vis/a000000/a002900/a002915/bluemarble-2048.png
+1511379 bytes, 2048x1024
+SHA-256: ae6214b078ed0864c96f74bcb10ae3021f6eb116f8059797efe0fa9ea8b89d35
+
+Moon color visualization
+NASA Scientific Visualization Studio; Ernie Wright (USRA).
+LROC source data: NASA/GSFC/Arizona State University.
+Source item: https://svs.gsfc.nasa.gov/4720/
+
+moon-lroc-svs4720-2019-1024-b246064f217f.jpg
+Original: https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_1k.jpg
+139068 bytes, 1024x512; original 2019 map
+SHA-256: b246064f217f8d479df78c49c7c8595a8f5fbda008a72fd539978d2e121e0109
+
+moon-lroc-svs4720-2025-2048-f7130a182268.jpg
+Original: https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg
+457942 bytes, 2048x1024; revised December 2025 map
+SHA-256: f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170
+
+Usage evidence
+NASA SVS states its content is in the public domain unless otherwise noted:
+https://svs.gsfc.nasa.gov/help/
+No contrary item-specific exception was found for these map downloads.
+NASA media-use and agency-mark restrictions still apply:
+https://www.nasa.gov/nasa-brand-center/images-and-media/
+The Moon item's linked PDS source data has a public-domain release, distinct
+from separately copyrighted curated LROC website imagery:
+https://www.lroc.im-ldi.com/about/terms
+
+These are unchanged original files: no cropping, resizing or re-encoding.
+Battery, Balanced and default Story use 1024-pixel maps; Commander Quality
+uses 2048-pixel maps. The Moon tiers contain different 2019 and 2025 revisions,
+not identical imagery resampled at different resolutions.
+
+Scientific scope
+Earth is a static geographic photographic composite with baked topographic
+shading, not a pure quantitative albedo map, live weather or a date-specific
+historic scene. Moon is a normalized, vision-adjusted visualization with polar
+fill, optimized for appearance rather than quantitative science. These globe
+maps do not geolocate the fictional local terrain or supply experiment values.
+Original procedural fallback maps remain available when image loading fails.
