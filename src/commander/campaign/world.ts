@@ -5,9 +5,8 @@ import { type Destination } from "./environments";
 import { commanderPresentation } from "../../presentation/missionPresentation";
 import { createOrbitalWorksite } from "../../presentation/orbitalWorksite";
 import { acceptDownloadedScene, disposeObjectResources } from "../../presentation/resources";
-import { assetManifest } from "../../presentation/assetManifest";
 import { installSurfaceScenery, terrainRelief, type SurfaceQuality } from "./surfaceScenery";
-/** Mission-specific 3D environments have offline fallbacks; NASA reference models are optional lazy downloads. */
+/** Mission-specific 3D environments have offline fallbacks; local NASA reference models load lazily. */
 export function createFieldWorld(scene: T.Scene, destination: Destination, missionId?: string, quality:SurfaceQuality="balanced", onSceneChange?:()=>void) {
   const presentation = commanderPresentation(missionId, destination);
   const group = new T.Group();
@@ -222,15 +221,14 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
   group.add(satellite);
   // The same service target is used by all three existing orbital EVA missions.
   // Procedural spacecraft remain available without any network download.
-   // Optional existing NASA-hosted Hubble reference; asset-specific DigitalSpace
+   // Optional locally packaged NASA Hubble reference; asset-specific DigitalSpace
    // terms are tracked in the asset manifest. It is never required for play.
    let referenceModel:T.Group|null=null;
+   let referenceLoad:{dispose():void}|null=null;
    if(typeof window!=="undefined" && destination==="earth" && presentation.worksite==="telescope"){
-     const nasaUrl=assetManifest.hubble.runtimeUrl;
-     void import("three/examples/jsm/loaders/GLTFLoader.js").then(({GLTFLoader})=>{
+     void import("../../presentation/referenceModelLoader").then(({loadReferenceModel})=>{
        if(disposed)return;
-       new GLTFLoader().load(nasaUrl,gltf=>{
-         const model=gltf.scene;
+       referenceLoad=loadReferenceModel(model=>{
          if(!acceptDownloadedScene(group,model))return;
          const bounds=new T.Box3().setFromObject(model);
          const size=bounds.getSize(new T.Vector3()),centre=bounds.getCenter(new T.Vector3());
@@ -247,7 +245,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
          pivot.position.z=1.4;
          for(const object of satellite.children)if(object!==pivot&&!object.userData.serviceFace)object.visible=false;
          sceneChanged();
-       },undefined,()=>{/* Offline: original low-cost model remains visible. */});
+       });
      }).catch(()=>{/* No network dependency for mission progress. */});
    }
   const camp = new T.Group();
@@ -451,6 +449,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
       if(disposed)return;
       disposed=true;
       group.userData.disposed=true;
+      referenceLoad?.dispose();
       if(referenceModel){
         referenceModel.removeFromParent();
         disposeObjectResources(referenceModel);

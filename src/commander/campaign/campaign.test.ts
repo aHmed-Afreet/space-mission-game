@@ -1722,9 +1722,9 @@ test("Realism materials preserve performance and have an offline asset fallback"
 test("satellite reference model is lazy, attributed and has an offline fallback",()=>withGeometryCanvas(async()=>{
  const field=readFileSync("src/commander/campaign/world.ts","utf8");
  const interior=readFileSync("src/commander/Cabin.tsx","utf8");
- assert.match(field,/void import\("three\/examples\/jsm\/loaders\/GLTFLoader.js"\)/);
+ assert.match(field,/void import\("\.\.\/\.\.\/presentation\/referenceModelLoader"\)/);
  assert.match(assetManifest.hubble.attribution,/DigitalSpace \/ NASA/);
- assert.equal(assetManifest.hubble.runtimeUrl,
+ assert.equal(assetManifest.hubble.sourceUrl,
    `https://raw.githubusercontent.com/nasa/NASA-3D-Resources/${assetManifest.hubble.version}/3D%20Models/Hubble%20Space%20Telescope%20(A)/Hubble%20Space%20Telescope%20(A).glb`);
  const previousWindow=globalThis.window,load=GLTFLoader.prototype.load;
  const requests:string[]=[],worlds:ReturnType<typeof createFieldWorld>[]=[];
@@ -1738,7 +1738,7 @@ test("satellite reference model is lazy, attributed and has an offline fallback"
      const worksite=scene.children[0].children.find(object=>object.userData.worksiteProfile===profile)!;
      assert.ok(worksite,`${id} constructs its original procedural fallback immediately`);
      // Let the optional loader's import settle while its network call is stubbed.
-     await import("three/examples/jsm/loaders/GLTFLoader.js");
+     await import("../../presentation/referenceModelLoader");
      await new Promise<void>(resolve=>setImmediate(resolve));
      assert.equal(worksite.visible,true);
      assert.ok(worksite.getObjectByName("live service status")?.visible);

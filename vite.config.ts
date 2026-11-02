@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { planetaryAssetFiles } from "./src/presentation/assetManifest";
+import { planetaryAssetFiles, referenceAssetFiles } from "./src/presentation/assetManifest";
 export function offline(): Plugin {
   return {
     name: "orbital-offline",
@@ -14,6 +14,7 @@ export function offline(): Plugin {
         "./icons/icon-512.png",
         "./icons/apple-touch-icon.png",
         ...planetaryAssetFiles,
+        ...referenceAssetFiles,
         ...Object.keys(bundle).map((p) => "./" + p),
       ];
       this.emitFile({

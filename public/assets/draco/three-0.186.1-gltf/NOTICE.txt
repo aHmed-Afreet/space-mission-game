@@ -1,0 +1,38 @@
+Draco 3D decoder distribution notice — reviewed November 1, 2026
+
+Copyright 2016 The Draco Authors.
+AUTHORS identifies Google Inc. and other contributors.
+Draco is licensed under the Apache License, Version 2.0. See LICENSE.
+The full unchanged upstream LICENSE also includes its third-party notices;
+do not describe this decoder as licensed under three.js's MIT license.
+
+Copied byte-for-byte from installed npm package three 0.186.1:
+https://registry.npmjs.org/three/-/three-0.186.1.tgz
+Directory: examples/jsm/libs/draco/gltf
+The separately retained README.upstream.md explicitly identifies Apache 2.0.
+No independent Draco release number is inferred from this distribution.
+
+All three original decoder files were independently matched to:
+https://github.com/mrdoob/three.js/tree/9b4a2ac29c63ccb43fd51c5661f2f873ac2c39b8/examples/jsm/libs/draco/gltf
+(the dereferenced r186 tag; installed npm distribution is three 0.186.1).
+
+draco_wasm_wrapper.js — 58,456 bytes
+SHA-256: 8bb2952d2ba7d67e1414f8df819410cb0434a666be53f671fff75f68843d76f6
+draco_decoder.wasm — 192,420 bytes
+SHA-256: a680d927bed9cb864ddbd63521868891af2bfbe755092761b4837487618df8ac
+draco_decoder.js — 512,465 bytes (non-WASM fallback)
+SHA-256: 8625489da79a805f4f2a7d511c3e52d8b4085608a9d2a4d5f4f9de5db0aea04f
+
+License/copyright evidence retained unchanged from google/draco commit
+2225d05ba6ce1a8d161d0b85146fa784bf3d78e9:
+https://github.com/google/draco/tree/2225d05ba6ce1a8d161d0b85146fa784bf3d78e9
+LICENSE — SHA-256 d3709b0fb4b8a94bbb1d02b8a2e484f258b0d9c5c5a01f940391f3fe662cd1a4
+AUTHORS — SHA-256 7399754545fa82fbf402e3e91d50de0b63772870fd807c48dd9af25c042efb10
+src/draco/compression/decode.h (retained as decode.h.copyright-source) —
+SHA-256 ea23e1dfabf34d11260f51f4f4e160f89480b2ac53d919e354a12266a05c00c1
+There is no root NOTICE in that reviewed upstream tree. This NOTICE.txt is
+the application's distribution/provenance record, not an upstream NOTICE.
+README.upstream.md — SHA-256 839850a67c93f6b26d3cc038a45bd8289e3cfdf15531e69339e8eb1282b4eb76
+
+Decoder bytes are unchanged. The application sets a same-origin relative
+decoder directory and a one-worker limit, and owns request/worker cleanup.

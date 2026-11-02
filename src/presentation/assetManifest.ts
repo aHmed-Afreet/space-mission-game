@@ -42,11 +42,41 @@ export const planetaryAssetFiles = [
   "./assets/planetary/ATTRIBUTION.txt",
 ] as const;
 
+const hubbleRuntimeUrl = "./assets/models/hubble-11ebb4ee-e5ba4de15c7d.glb";
+/** Version identifies the installed distribution, not an inferred Draco release.
+ * All three decoder hashes also match the independently fetched upstream commit. */
+export const dracoDecoder = {
+  runtimePath: "./assets/draco/three-0.186.1-gltf/",
+  version: "three 0.186.1, examples/jsm/libs/draco/gltf",
+  packageSource: "https://registry.npmjs.org/three/-/three-0.186.1.tgz",
+  source: "https://github.com/mrdoob/three.js/tree/9b4a2ac29c63ccb43fd51c5661f2f873ac2c39b8/examples/jsm/libs/draco/gltf",
+  upstreamCommit: "9b4a2ac29c63ccb43fd51c5661f2f873ac2c39b8",
+  license: "Apache-2.0 (Draco); complete upstream LICENSE also retains third-party notices",
+  licenseSource: "https://github.com/google/draco/blob/2225d05ba6ce1a8d161d0b85146fa784bf3d78e9/LICENSE",
+  copyright: "Copyright 2016 The Draco Authors; AUTHORS: Google Inc. and other contributors",
+  files: {
+    "draco_wasm_wrapper.js": { bytes: 58456, sha256: "8bb2952d2ba7d67e1414f8df819410cb0434a666be53f671fff75f68843d76f6" },
+    "draco_decoder.wasm": { bytes: 192420, sha256: "a680d927bed9cb864ddbd63521868891af2bfbe755092761b4837487618df8ac" },
+    "draco_decoder.js": { bytes: 512465, sha256: "8625489da79a805f4f2a7d511c3e52d8b4085608a9d2a4d5f4f9de5db0aea04f" },
+  },
+  modifications: "None to decoder bytes; local paths, one worker, and owned cancellation in the loader adapter.",
+} as const;
+
+/** Pure public-asset list: importing this into Vite must not import three or a
+ * runtime loader. Precache both WASM and the installed loader's JS fallback. */
+export const referenceAssetFiles = [
+  hubbleRuntimeUrl, "./assets/models/ATTRIBUTION.txt",
+  ...Object.keys(dracoDecoder.files).map(name => dracoDecoder.runtimePath + name),
+  ...["README.upstream.md", "LICENSE", "AUTHORS", "decode.h.copyright-source", "NOTICE.txt"]
+    .map(name => dracoDecoder.runtimePath + name),
+] as const;
+
 export const assetManifest = {
   hubble: {
     id: "hubble-reference-a",
     canonicalSource: "https://github.com/nasa/NASA-3D-Resources/tree/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Hubble%20Space%20Telescope%20(A)",
-    runtimeUrl: "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Hubble%20Space%20Telescope%20(A)/Hubble%20Space%20Telescope%20(A).glb",
+    runtimeUrl: hubbleRuntimeUrl,
+    sourceUrl: "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Hubble%20Space%20Telescope%20(A)/Hubble%20Space%20Telescope%20(A).glb",
     creator: "DigitalSpace / NASA (upstream credit)",
     attribution: "Hubble reference model: DigitalSpace / NASA. No NASA endorsement implied.",
     terms: "Upstream README states assets are free and without copyright and links NASA media usage guidelines. NASA policy permits educational computer graphics simulations with credit, subject to marked third-party restrictions. No asset-embedded copyright field was found; this is a provenance review, not an SPDX license assignment.",
@@ -54,10 +84,11 @@ export const assetManifest = {
     version: "11ebb4ee043715aefbba6aeec8a61746fad67fa7",
     sha256: "e5ba4de15c7d359ac8fa1ab7e286aff42dec09c0fadae3db99252587f39fa384",
     bytes: 1694988,
-    modifications: "Runtime normalization to a 3.1-unit extent; mounted behind original procedural service hardware. No source GLB modification.",
+    modifications: "Original GLB self-hosted without byte changes. Runtime maximum-axis extent normalized to 3.1 world units, centred, and translated by y=1.35,z=1.4 relative to worksite (2.4,0,15), behind original procedural service hardware. No physical Hubble dimensions or source orientation correction claimed.",
     use: "Optional visual reference for Mission 8 telescope servicing; not a claim that the fictional training vehicle is Hubble.",
     fallback: "Original procedural telescope with live service indication",
-    reviewed: "2026-10-29",
+    format: "glTF 2.0; required KHR_draco_mesh_compression; optional EXT_texture_webp with embedded PNG fallbacks; 7,672 triangles before node instances and five materials",
+    reviewed: "2026-10-29 policy; 2026-11-01 exact original format/hash and local decoder distribution",
   },
   earth: {
     ...earthMaps.standard,

@@ -1,0 +1,30 @@
+ORBITAL Mission Lab — Hubble visual reference
+DigitalSpace / NASA. No NASA endorsement implied.
+
+Hubble Space Telescope (A), from NASA's public 3D resource repository.
+Canonical source:
+https://github.com/nasa/NASA-3D-Resources/tree/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Hubble%20Space%20Telescope%20(A)
+Original GLB:
+https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Hubble%20Space%20Telescope%20(A)/Hubble%20Space%20Telescope%20(A).glb
+Version: 11ebb4ee043715aefbba6aeec8a61746fad67fa7
+Local: hubble-11ebb4ee-e5ba4de15c7d.glb
+1,694,988 bytes
+SHA-256: e5ba4de15c7d359ac8fa1ab7e286aff42dec09c0fadae3db99252587f39fa384
+
+Asset-specific usage review, October 29, 2026:
+Upstream README states its assets are free and without copyright and links
+NASA media usage guidelines. NASA policy permits credited educational
+computer graphics simulations subject to marked third-party restrictions.
+No asset-embedded copyright field was found. This is provenance evidence,
+not a blanket NASA public-domain claim or an SPDX license assignment.
+NASA media guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/
+
+No original GLB bytes were modified. Mission 8 loads this local reference
+lazily, with the separately licensed Draco decoder distributed alongside it.
+All images are embedded; PNG fallbacks accompany the optional WebP extension.
+The maximum-axis extent is normalized to 3.1 world units and centred, then
+mounted at y=1.35,z=1.4 relative to the existing (2.4,0,15) worksite. The
+original reachable procedural service face and live indicator remain.
+This is a fictional training worksite, not a dimensionally accurate Hubble
+reconstruction or a claim that the playable service procedure is Hubble's.
+The original procedural telescope remains available if loading fails.

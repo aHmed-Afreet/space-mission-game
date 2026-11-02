@@ -212,6 +212,7 @@ test("only an accepted live telescope model requests a paused redraw; invalid an
       const world=withCanvas(()=>createFieldWorld(root,"earth","mission-8","battery",()=>{
         assert.ok(root.getObjectByName("Accepted test telescope"),"model is attached before requesting its redraw");changes++;
       }));
+      await import("./presentation/referenceModelLoader");
       for(let tries=0;!pending.length&&tries<10;tries++)await new Promise<void>(resolve=>setImmediate(resolve));
       const complete=pending.shift();assert.ok(complete,"the real lazy loader requests the optional reference model");
       const model=new T.Group();model.name="Accepted test telescope";
@@ -275,7 +276,8 @@ test("Story pose validation rejects unearned surface/remote positions and invali
 });
 
 test("Hubble remains pinned and active image rights are separate from archived unresolved images",()=>{
-  assert.match(assetManifest.hubble.runtimeUrl,new RegExp(assetManifest.hubble.version));
+  assert.match(assetManifest.hubble.sourceUrl,new RegExp(assetManifest.hubble.version));
+  assert.match(assetManifest.hubble.runtimeUrl,/^\.\/assets\/models\/hubble-11ebb4ee-e5ba4de15c7d\.glb$/);
   assert.equal(assetManifest.hubble.sha256.length,64);assert.equal(assetManifest.hubble.bytes,1694988);
   assert.match(assetManifest.hubble.attribution,/DigitalSpace/);
   for(const asset of [assetManifest.earth,assetManifest.moon]){

@@ -243,7 +243,7 @@ Commander received an additional geometry-focused visual pass, not only CSS chan
 
 - **Lunar exterior:** local GPU-friendly procedural regolith texture; sloped terrain, fractured instanced stones, raised crater rims and depressed bowls; layered distant mountain silhouettes; physically dark star sky and distant Earth. Scenery remains independent of gameplay collision and site positions.
 - **Astronaut cabin:** instrument housings, machined circular gauges, tactile side-console banks, engraved labels and baked diffuse contact shadows. These are noninteractive decorative meshes kept clear of the central walkway.
-- **Satellite and lunar research camp:** a cylindrical spacecraft bus, curved dishes, detailed photovoltaic arrays, service couplers, feet, rails and thermal-rib details instead of bare solid cubes. The satellite still uses the existing optional NASA-hosted visual asset when available, with its offline geometry fallback.
+- **Satellite and lunar research camp:** a cylindrical spacecraft bus, curved dishes, detailed photovoltaic arrays, service couplers, feet, rails and thermal-rib details instead of bare solid cubes. Mission 8 also has an optional locally packaged NASA Hubble reference, with its original procedural telescope fallback.
 - **Quality levels:** Quality increases lunar terrain detail and stone counts; Balanced targets normal play; Battery minimizes extra scenery geometry and screen-space cost. All use local generated textures without a new mandatory network download.
 - **Validation:** The automated suite includes deterministic terrain, graphics tier, cleanup, unchanged iPad control paths and original mission-completion regression checks.
 
@@ -260,12 +260,15 @@ resume it before operating instruments. Flight manoeuvre still checks actual
 simulation fuel, battery, orbit and cabin readiness. The original objectives
 and saved progress are preserved.
 
-The optional NASA-hosted **Hubble Space Telescope (A)** GLB model, credited
+The optional locally packaged **Hubble Space Telescope (A)** GLB model, credited
 to DigitalSpace Corporation via NASA's public 3D resource repository, is used
 as a reference for the fictional telescope worksite in Mission 8.
-The model is loaded lazily in the EVA worksite only; if unavailable, the
+The unchanged pinned model and its locally packaged Apache-2.0 Draco decoder
+are loaded lazily in the EVA worksite only and cached for offline use; if unavailable, the
 original low-cost locally built telescope remains available and gameplay
 continues. NASA does not sponsor or endorse this independent game.
+The [Hubble asset notes](docs/HUBBLE-REFERENCE-ASSET.md) record decoder provenance,
+distributed licenses, runtime transforms and the remaining browser validation.
 
 Visual asset: https://science.nasa.gov/3d-resources/hubble-space-telescope-a/
 Original hosted asset:
