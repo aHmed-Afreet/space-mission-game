@@ -718,6 +718,10 @@
   max-width: 1100px;
   margin: auto;
   padding: 60px 30px;
+  /* Reports must remain readable over the shared photographic backdrop. */
+  background: #071525;
+  border: 1px solid #365064;
+  border-radius: 18px;
 }
 .campaign-report-title {
   display: flex;
@@ -2023,7 +2027,7 @@
 }
 
 /* Destination/mission-type browser — cosmetic and filtering only; progression remains in canStart(). */
-.campaign-destination-picker{position:relative;isolation:isolate;border:1px solid #92c8de55;border-radius:16px;margin:24px 0 10px;padding:clamp(22px,4vw,46px);background:linear-gradient(95deg,#07111eeb,#071726da),url("https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1600&q=80") center/cover;box-shadow:0 24px 60px #0007}
+.campaign-destination-picker{position:relative;isolation:isolate;border:1px solid #92c8de55;border-radius:16px;margin:24px 0 10px;padding:clamp(22px,4vw,46px);background:linear-gradient(95deg,#07111eeb,#071726da),url("/assets/backgrounds/iss049e004248-1920-357943e89d20.jpg") center/cover;box-shadow:0 24px 60px #0007}
 .campaign-picker-intro small{font-size:10px;letter-spacing:.25em;color:#99eaf4;font-weight:750}
 .campaign-picker-intro h1{font-size:clamp(33px,5vw,65px);line-height:1.03;letter-spacing:-.04em;margin:15px 0;text-shadow:0 0 30px #1eddfb44}
 .campaign-picker-intro h1 em{font-style:normal;color:#9ce8ed}

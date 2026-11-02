@@ -1,6 +1,25 @@
 /** Asset-level provenance; repository software licenses do not automatically
  * license imagery or agency marks. Original procedural assets need no download. */
 export type PlanetMapQuality = "battery" | "balanced" | "quality";
+const background = {
+  id: "nasa-iss049e004248-backdrop",
+  runtimeUrl: "./assets/backgrounds/iss049e004248-1920-357943e89d20.jpg",
+  canonicalSource: "https://images.nasa.gov/details/iss049e004248",
+  sourceUrl: "https://images-assets.nasa.gov/image/iss049e004248/iss049e004248~large.jpg",
+  metadataSource: "https://images-assets.nasa.gov/image/iss049e004248/metadata.json",
+  creator: "NASA/JSC / Kate Rubins; Expedition 49, 2016-09-17",
+  attribution: "Background photograph: NASA/JSC / Kate Rubins, iss049e004248 (Solar array). No NASA endorsement implied.",
+  policy: "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+  terms: "NASA media guidelines permit credited educational/informational use, including graphical simulations and web pages, subject to identified third-party restrictions and no endorsement. JSC item metadata identifies Kate Rubins as photographer/creator; no photo-specific third-party restriction was found. The embedded HP sRGB profile copyright concerns the color profile, not photo authorship. This is an item-specific provenance review, not a blanket NASA or SPDX license claim.",
+  sha256: "357943e89d200bca5ff9f95983e1e94f58a49fa58fa7493c698f48ee02a60e4a",
+  bytes: 259633, dimensions: [1920, 1277],
+  version: "NASA Image and Video Library large derivative, retrieved 2026-11-02",
+  modifications: "None to JPEG bytes. Existing CSS cover crops, overlays and home saturation/contrast remain presentation effects.",
+  use: "Decorative shared interface backdrop showing an ISS solar array and Earth; not the player's location, a historical reconstruction or live imagery.",
+  fallback: "Existing dark interface background; mission functionality is independent of the photograph.",
+  reviewed: "2026-11-02 exact item metadata, creator/date, media guidelines, JPEG dimensions and hash",
+} as const;
+export const backgroundAssetFiles = [background.runtimeUrl, "./assets/backgrounds/ATTRIBUTION.txt"] as const;
 const earthMaps = {
   standard: {
     runtimeUrl: "./assets/planetary/earth-bluemarble-svs2915-1024-d1d3cb36ae6a.png",
@@ -72,6 +91,7 @@ export const referenceAssetFiles = [
 ] as const;
 
 export const assetManifest = {
+  background,
   hubble: {
     id: "hubble-reference-a",
     canonicalSource: "https://github.com/nasa/NASA-3D-Resources/tree/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Hubble%20Space%20Telescope%20(A)",

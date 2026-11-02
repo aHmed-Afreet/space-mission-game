@@ -55,6 +55,7 @@ export default function ModeSelect() {
       <footer className="orbital-site-footer">
         <span>✦ ORBITAL MISSION LAB</span>
         <span>Independent educational simulation · Not affiliated with NASA</span>
+        <a href="./assets/backgrounds/ATTRIBUTION.txt" target="_blank" rel="noopener noreferrer">Background photo credit ↗</a>
         <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy & local saves ↗</a>
       </footer>
     </div>;

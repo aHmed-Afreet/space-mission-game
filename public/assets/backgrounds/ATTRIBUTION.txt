@@ -1,0 +1,26 @@
+Background photograph: NASA/JSC / Kate Rubins
+Solar array — iss049e004248 — Expedition 49 — 17 September 2016
+
+NASA Image and Video Library record:
+https://images.nasa.gov/details/iss049e004248
+Item metadata (JSC; photographer and creator: Kate Rubins):
+https://images-assets.nasa.gov/image/iss049e004248/metadata.json
+Unmodified NASA-provided 1920 x 1277 large JPEG:
+https://images-assets.nasa.gov/image/iss049e004248/iss049e004248~large.jpg
+SHA-256: 357943e89d200bca5ff9f95983e1e94f58a49fa58fa7493c698f48ee02a60e4a
+Bytes: 259633
+
+NASA media usage guidelines:
+https://www.nasa.gov/nasa-brand-center/images-and-media/
+These permit credited educational/informational uses, including graphical
+simulations and web pages, subject to identified third-party restrictions.
+The reviewed item identifies NASA/JSC and Kate Rubins; no photo-specific
+third-party copyright restriction was found. The embedded HP sRGB color-profile
+copyright concerns that profile, not the photograph's authorship. This record
+does not grant a blanket license for other agency/third-party material or marks.
+
+No changes to image bytes. CSS cover cropping, overlays and home
+saturation/contrast are presentation effects. Decorative ISS/Earth interface
+background only; not live imagery or a reconstruction of each mission.
+NASA does not endorse and is not affiliated with this independent game.
+Asset and policy reviewed 2 November 2026.

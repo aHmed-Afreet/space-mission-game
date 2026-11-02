@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import * as T from "three";
-import { assetManifest, selectPlanetMap, planetaryAssetFiles, type PlanetMapQuality } from "./presentation/assetManifest";
+import { assetManifest, selectPlanetMap, planetaryAssetFiles, backgroundAssetFiles, type PlanetMapQuality } from "./presentation/assetManifest";
 import { makePlanet, disposePlanet } from "./commander/celestial";
 import { createInterior } from "./commander/interior";
 import { createFieldWorld } from "./commander/campaign/world";
@@ -42,6 +42,19 @@ function dimensions(bytes:Buffer):[number,number] {
   }
   throw Error("JPEG SOF unavailable");
 }
+
+test("shared ISS backdrop preserves the reviewed NASA derivative, dimensions and offline credit",()=>{
+  const asset=assetManifest.background,bytes=readFileSync(resolve("public",asset.runtimeUrl));
+  assert.equal(bytes.length,259633);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"),"357943e89d200bca5ff9f95983e1e94f58a49fa58fa7493c698f48ee02a60e4a");
+  assert.deepEqual(dimensions(bytes),[1920,1277]);
+  assert.equal(asset.bytes,bytes.length);assert.deepEqual(asset.dimensions,[1920,1277]);
+  assert.equal(asset.sha256,createHash("sha256").update(bytes).digest("hex"));
+  const credit=readFileSync("public/assets/backgrounds/ATTRIBUTION.txt","utf8");
+  for(const value of ["NASA/JSC / Kate Rubins","iss049e004248",asset.sourceUrl,asset.policy,asset.sha256])
+    assert.ok(credit.includes(value),`Offline attribution retains ${value}`);
+  assert.equal(new URL(asset.runtimeUrl,"https://example.test/game/").pathname,"/game/assets/backgrounds/iss049e004248-1920-357943e89d20.jpg");
+});
 
 for(const expected of originals) test(`${expected.file} preserves the reviewed original bytes and real raster dimensions`,()=>{
   const bytes=readFileSync(resolve("public/assets/planetary",expected.file));
@@ -152,10 +165,10 @@ test("generated offline worker precaches all map tiers and credits alongside exi
   const source=String(emitted[0].source),prefix="const FILES=",start=source.indexOf(prefix)+prefix.length;
   assert.ok(start>=prefix.length);const end=source.indexOf(";const STATIC",start);assert.ok(end>start);
   const files=JSON.parse(source.slice(start,end)) as string[];
-  for(const path of [...planetaryAssetFiles,"./","./index.html","./privacy.html","./manifest.webmanifest",
+  for(const path of [...backgroundAssetFiles,...planetaryAssetFiles,"./","./index.html","./privacy.html","./manifest.webmanifest",
     "./icons/icon-192.png","./icons/icon-512.png","./icons/apple-touch-icon.png","./assets/Commander.js","./assets/HistoryHub.js"])
     assert.ok(files.includes(path),`Actual generated worker retains ${path}`);
-  for(const path of planetaryAssetFiles)assert.ok(readFileSync(resolve("public",path)).length>0,`${path} really exists`);
+  for(const path of [...backgroundAssetFiles,...planetaryAssetFiles])assert.ok(readFileSync(resolve("public",path)).length>0,`${path} really exists`);
   const credits=readFileSync("public/assets/planetary/ATTRIBUTION.txt","utf8");
   for(const word of ["Reto Stockli","Ernie Wright","Arizona State University","2019","2025","public domain","endorsement"])
     assert.ok(credits.includes(word),`Offline-readable credit retains ${word}`);
