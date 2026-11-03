@@ -7,7 +7,7 @@ import {
   type Subsystem,
 } from "./ship";
 import { technologies, money } from "./economy";
-import { chapters, missions, type MissionDefinition } from "./definitions";
+import { chapters, missions, missionForSession, type MissionDefinition } from "./definitions";
 import { campaigns, campaignById, campaignForMission, campaignLevel, type CampaignId } from "./campaignTypes";
 import { canStart, type Progress, type Session } from "./engine";
 import { environments } from "./environments";
@@ -45,6 +45,7 @@ export default function CampaignHome({
   onSettings?: () => void;
 }) {
   const selectedCampaign = selectedRoute ? campaignById(selectedRoute) : null;
+  const savedMission = session ? missionForSession(session) : null;
   const visible = selectedCampaign
     ? missions.filter(m => (selectedCampaign.missionIds as readonly string[]).includes(m.id))
     : [];
@@ -262,11 +263,11 @@ export default function CampaignHome({
         <section className="campaign-resume">
           <div>
             <small>SAVED MISSION</small>
-            <h2>{missions.find((m) => m.id === session.missionId)?.title}</h2>
+            <h2>{savedMission!.title}</h2>
             <p>
               {session.report
                 ? "This flight has ended. Close the report to return to the level list."
-                : `Task ${session.objective + 1} of ${missions.find((m) => m.id === session.missionId)?.objectives.length}. Progress is preserved.`}
+                : `Task ${session.objective + 1} of ${savedMission!.objectives.length}. Progress is preserved.`}
             </p>
           </div>
           <button onClick={onResume}>{session.report?"Close finished report →":"Resume mission →"}</button>
