@@ -1,3 +1,4 @@
+import TouchActionButton from "../TouchActionButton";
 import { useCallback, useEffect, useState } from "react";
 import { components, rockets, trajectories, type Design } from "../game";
 import Cabin from "./Cabin";
@@ -297,10 +298,10 @@ export default function Commander() {
             </ul>
           </div>
         )}
-        <button
+        <TouchActionButton
           className="primary"
           disabled={!!blockers.length}
-          onClick={() => {
+          onActivate={() => {
             setArea(undefined);
             setEffect(undefined);
             setPosition(spawn);
@@ -308,7 +309,7 @@ export default function Commander() {
           }}
         >
           Launch Commander sortie →
-        </button>
+        </TouchActionButton>
       </div>
     );
   const warnings = alerts(mission),
@@ -367,23 +368,23 @@ export default function Commander() {
               </span>
             </div>
             <div className="cmd-hud-actions">
-              <button
+              <TouchActionButton
                 className="cmd-icon-button"
                 aria-label={mission.paused ? "Resume mission" : "Pause mission"}
                 disabled={mission.ended}
-                onClick={() =>
+                onActivate={() =>
                   setMission((s) => (s ? { ...s, paused: !s.paused } : s))
                 }
               >
                 <Icon name={mission.paused ? "play" : "pause"} />
-              </button>
-              <button
+              </TouchActionButton>
+              <TouchActionButton
                 className="cmd-tablet-trigger"
                 aria-label={
                   tablet ? "Close mission tablet" : "Open mission tablet"
                 }
                 aria-expanded={tablet}
-                onClick={() => {
+                onActivate={() => {
                   setTablet((v) => !v);
                   setInteracting(false);
                 }}
@@ -391,7 +392,7 @@ export default function Commander() {
                 <Icon name="tablet" />
                 <span>MISSION TABLET</span>
                 {warnings.length > 0 && <b>{warnings.length}</b>}
-              </button>
+              </TouchActionButton>
             </div>
           </div>
           <div className="cmd-hud-location">
@@ -406,9 +407,9 @@ export default function Commander() {
             </small>
           </div>
           {warnings.length > 0 && (
-            <button
+            <TouchActionButton
               className="cmd-warning-chip"
-              onClick={() => {
+              onActivate={() => {
                 setTab("STATUS");
                 setTablet(true);
               }}
@@ -417,7 +418,7 @@ export default function Commander() {
               {warnings.length} ACTIVE{" "}
               {warnings.length === 1 ? "ADVISORY" : "ADVISORIES"}
               <Icon name="chevron" size={12} />
-            </button>
+            </TouchActionButton>
           )}
           <div className="cmd-hud-bottom">
             <div className="cmd-coordinates">
@@ -477,21 +478,21 @@ export default function Commander() {
                 <div className="cmd-action-menu">
                   <span>{deck[area].name}</span>
                   {stationActions[area].map((a) => (
-                    <button
+                    <TouchActionButton
                       disabled={mission.paused}
                       key={a.action}
-                      onClick={() => send(a.action)}
+                      onActivate={() => send(a.action)}
                     >
                       {a.name}
                       <Icon name="chevron" size={14} />
-                    </button>
+                    </TouchActionButton>
                   ))}
                 </div>
               )}
-              <button
+              <TouchActionButton
                 className="cmd-interaction-prompt"
                 disabled={mission.paused}
-                onClick={() => setInteracting((v) => !v)}
+                onActivate={() => setInteracting((v) => !v)}
                 aria-expanded={interacting}
               >
                 <kbd>E</kbd>
@@ -506,7 +507,7 @@ export default function Commander() {
                   </strong>
                 </span>
                 <Icon name="chevron" size={15} />
-              </button>
+              </TouchActionButton>
             </div>
           )}
           {toast && !tablet && (
@@ -525,21 +526,21 @@ export default function Commander() {
                 Energy {mission.energy.toFixed(0)}% · life support remains
                 active
               </p>
-              <button onClick={() => send("wake")} disabled={mission.paused}>
+              <TouchActionButton onActivate={() => send("wake")} disabled={mission.paused}>
                 End rest cycle <Icon name="chevron" size={16} />
-              </button>
+              </TouchActionButton>
             </div>
           )}
           {mission.paused && !mission.ended && !tablet && (
             <div className="cmd-paused-indicator">
               <Icon name="pause" size={14} /> MISSION PAUSED{" "}
-              <button
-                onClick={() =>
+              <TouchActionButton
+                onActivate={() =>
                   setMission((s) => (s ? { ...s, paused: false } : s))
                 }
               >
                 Resume
-              </button>
+              </TouchActionButton>
             </div>
           )}
           {mission.ended && (
@@ -563,17 +564,17 @@ export default function Commander() {
                   {mission.energy.toFixed(0)}%<small>CREW ENERGY</small>
                 </span>
               </div>
-              <button onClick={reset}>
+              <TouchActionButton onActivate={reset}>
                 Return to spacecraft design <Icon name="chevron" />
-              </button>
-              <button
-                onClick={() => {
+              </TouchActionButton>
+              <TouchActionButton
+                onActivate={() => {
                   setTab("LOG");
                   setTablet(true);
                 }}
               >
                 Review mission record
-              </button>
+              </TouchActionButton>
             </div>
           )}
         </div>

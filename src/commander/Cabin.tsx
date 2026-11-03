@@ -1,3 +1,4 @@
+import TouchActionButton from "../TouchActionButton";
 import { createFixtures } from "./campaign/fixtures";
 import {
   useEffect,
@@ -533,8 +534,8 @@ export default function Cabin(props: Props) {
             onPointerUp={stopSprint}
             onPointerCancel={stopSprint}
             onLostPointerCapture={stopSprint}>SPRINT</button>
-          <button type="button" className="cmd-work" aria-label="Interact with aimed target"
-            disabled={props.locked} onClick={() => props.onInteract(interactionTarget.current())}>INTERACT</button>
+          <TouchActionButton type="button" className="cmd-work" aria-label="Interact with aimed target"
+            disabled={props.locked} onActivate={() => props.onInteract(interactionTarget.current())}>INTERACT</TouchActionButton>
         </div>
       </>}
       {orbitalEva&&props.device!=="laptop"&&
@@ -557,16 +558,16 @@ export default function Cabin(props: Props) {
       {props.world &&
         props.world.session.position.z > 10.4 &&
         missionForSession(props.world.session).destination !== "earth" && (
-          <button
+          <TouchActionButton
             className="campaign-hop"
-            onClick={() => {
+            onActivate={() => {
               flushMotion.current();
               if (!props.locked && jump.current.height === 0)
                 jump.current.velocity = 2.1;
             }}
           >
             Small hop
-          </button>
+          </TouchActionButton>
         )}
       {error && (
         <div role="alert" className="cmd-graphics-error">

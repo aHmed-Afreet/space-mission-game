@@ -1,3 +1,4 @@
+import TouchActionButton from "../TouchActionButton";
 import {useCallback,useEffect,useRef,useState} from "react";
 import type {PointerEvent as ReactPointer} from "react";
 import {joystickVector} from "../commander/controls";
@@ -312,13 +313,13 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
   onLostPointerCaptureCapture={()=>advanceRef.current()} onClickCapture={()=>advanceRef.current()}>
   <canvas ref={canvas} className="story-fps-canvas" aria-label={"First person interactive 3D training scene for "+mission.title}/>
   <header className="story-fps-top">
-   <button type="button" onClick={()=>setPaused(true)}>← Missions</button>
+   <TouchActionButton type="button" onActivate={()=>setPaused(true)}>← Missions</TouchActionButton>
    <div><strong>{mission.title}</strong><small>{mission.year} · {scenario.craft}</small></div>
    <div className="story-fps-top-actions">
-    {canEva&&<button type="button" className="story-fps-eva-button" onClick={openEva}>
+    {canEva&&<TouchActionButton type="button" className="story-fps-eva-button" onActivate={openEva}>
       {evaOutside?"RETURN / AIRLOCK":"EVA / AIRLOCK"}
-    </button>}
-    <button type="button" onClick={()=>setPaused(true)}>II MENU</button>
+    </TouchActionButton>}
+    <TouchActionButton type="button" onActivate={()=>setPaused(true)}>II MENU</TouchActionButton>
    </div>
   </header>
   <div className="story-fps-panels">
@@ -340,12 +341,12 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
       <small>DOCUMENTED NASA EVA TASK · {stage+1}/{scenario.tasks.length}</small>
       <strong>{task.heading}</strong>
       <p role="status">{fieldFeedback||fieldReady?.feedback}</p>
-      <button type="button" disabled={!fieldReady?.ready}
-        onClick={()=>completeField(task.fieldAction!)}>{
+      <TouchActionButton type="button" disabled={!fieldReady?.ready}
+        onActivate={()=>completeField(task.fieldAction!)}>{
           task.fieldAction==="walk"?"EXAMINE LUNAR SOIL":
           task.fieldAction==="photo"?"TAKE FIELD PHOTOGRAPH":
           task.fieldAction==="sample"?"COLLECT CONTINGENCY SAMPLE":
-          "DEPLOY FLAG WITH CREW"}</button>
+          "DEPLOY FLAG WITH CREW"}</TouchActionButton>
       <details><summary>About this reconstruction</summary><small>Equipment interaction is a simplified teaching model, not an exact recreation of the astronaut's hand movements.</small></details>
     </div>}
   </div>
@@ -368,7 +369,7 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
   </div>
   {evaOutside&&<div className="story-fps-eva-vertical">
     {scenario.setting==="moon"||scenario.setting==="mars"
-      ? <button type="button" onClick={()=>world.current?.jump()} aria-label="Jump in low gravity">JUMP</button>
+      ? <TouchActionButton type="button" onActivate={()=>world.current?.jump()} aria-label="Jump in low gravity">JUMP</TouchActionButton>
       : <>
        <button type="button" onPointerDown={e=>{if(pauseRef.current)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);thrust.current?.press(e.pointerId,1);}}
          onPointerUp={e=>thrust.current?.release(e.pointerId)} onPointerCancel={e=>thrust.current?.release(e.pointerId)}
@@ -381,8 +382,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
   <div className="story-fps-actions">
     <button type="button" className="story-fps-sprint" onPointerDown={beginSprint} onPointerMove={moveSprint}
       onPointerUp={endSprint} onPointerCancel={endSprint} onLostPointerCapture={endSprint}>SPRINT</button>
-    <button type="button" className="story-fps-interact" disabled={!!procedure||completed||paused||showGuide||evaPanel||!(hatchAim||(!task?.fieldAction&&!evaOutside&&aim===task?.station))}
-      onClick={()=>actRef.current()}>INTERACT</button>
+    <TouchActionButton type="button" className="story-fps-interact" disabled={!!procedure||completed||paused||showGuide||evaPanel||!(hatchAim||(!task?.fieldAction&&!evaOutside&&aim===task?.station))}
+      onActivate={()=>actRef.current()}>INTERACT</TouchActionButton>
   </div>
   {evaPanel&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="EVA safety and airlock">
     <small>MISSION EQUIPMENT · PRESSURE LOCK · PROTECTIVE SUIT</small>
@@ -392,21 +393,21 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
       ? "This mission requires the selected documented Apollo 11 surface sequence. Suit and hatch controls are simplified educational reconstructions."
       : "This is an optional fictional training excursion. Some historic crews never performed EVA. It is not an additional claimed event in the real mission."}</p>
     <p>{evaNote||"Approach the airlock, prepare the spacesuit, equalize the fictional chamber, and use the control on your side of the hatch."}</p>
-    {!evaOutside&&<button type="button" className={suitEquipped?"story-fps-armed":"story-fps-minor"} onClick={()=>setSuitEquipped(true)}>
+    {!evaOutside&&<TouchActionButton type="button" className={suitEquipped?"story-fps-armed":"story-fps-minor"} onActivate={()=>setSuitEquipped(true)}>
       {suitEquipped?"✓ HELMET SEALED · GLOVES SECURED · O₂ CONNECTED":"EQUIP PROTECTIVE SPACE SUIT"}
-    </button>}
+    </TouchActionButton>}
     <div className="story-fps-readout">SUIT OXYGEN <strong>{suitOxygen}%</strong></div>
-    {!evaOutside&&<button type="button" className="story-fps-minor" disabled={!world.current?.nearHatch()||suitOxygen>=100} onClick={refillSuit}>
+    {!evaOutside&&<TouchActionButton type="button" className="story-fps-minor" disabled={!world.current?.nearHatch()||suitOxygen>=100} onActivate={refillSuit}>
       REPLENISH SUIT OXYGEN FROM CABIN
-    </button>}
-    {!evaOutside&&suitEquipped&&<button type="button" className={hatchPrepared?"story-fps-armed":"story-fps-minor"}
-      onClick={()=>setHatchPrepared(true)}>
+    </TouchActionButton>}
+    {!evaOutside&&suitEquipped&&<TouchActionButton type="button" className={hatchPrepared?"story-fps-armed":"story-fps-minor"}
+      onActivate={()=>setHatchPrepared(true)}>
        {hatchPrepared?"✓ INNER HATCH SEALED · CHAMBER SIMULATED AT VACUUM":"CLOSE INNER HATCH · SIMULATE DEPRESSURIZATION"}
-    </button>}
-    <button type="button" disabled={!world.current?.nearHatch()||(!evaOutside&&(!suitEquipped||!hatchPrepared||suitOxygen<=2))} onClick={cycleEva}>
+    </TouchActionButton>}
+    <TouchActionButton type="button" disabled={!world.current?.nearHatch()||(!evaOutside&&(!suitEquipped||!hatchPrepared||suitOxygen<=2))} onActivate={cycleEva}>
       {evaOutside?"CLOSE OUTER HATCH · REPRESSURIZE · ENTER":"OPEN OUTER HATCH · EXIT IN SUIT"}
-    </button>
-    <button type="button" className="story-fps-minor" onClick={()=>setEvaPanel(false)}>BACK TO GAME</button>
+    </TouchActionButton>
+    <TouchActionButton type="button" className="story-fps-minor" onActivate={()=>setEvaPanel(false)}>BACK TO GAME</TouchActionButton>
    </section></div>}
   {showGuide&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission guide">
     <small>REAL HISTORY · FIRST-PERSON OPERATIONS</small>
@@ -418,8 +419,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     {task?.fieldAction&&<p><strong>Apollo 11 EVA:</strong> Wear the suit, use the hatch, walk on the lunar surface, perform the field actions in order and return to Eagle. This is a selected segment of the moonwalk, not the entire three-hour EVA.</p>}
     <p>Move with WASD or the floating joystick; drag to look. Outside, use UP/DOWN (Space/Ctrl) to steer in zero gravity or JUMP on a surface. To leave, visit the airlock, equip a suit and close the inner hatch before depressurizing. Return through the exterior hatch. {scenario.tasks.some(t=>t.fieldAction)?"Complete the required surface tasks and return to Eagle. Replenish suit oxygen inside if necessary.":"EVA training is optional and does not change real history."}</p>
     {attemptNotice&&<p role="status">{attemptNotice}</p>}
-    <button type="button" onClick={()=>setShowGuide(false)}>{resumed?"RESUME SAVED 3D MISSION →":"BEGIN 3D MISSION →"}</button>
-    <button type="button" className="story-fps-minor" onClick={readHistory}>READ REAL HISTORY</button>
+    <TouchActionButton type="button" onActivate={()=>setShowGuide(false)}>{resumed?"RESUME SAVED 3D MISSION →":"BEGIN 3D MISSION →"}</TouchActionButton>
+    <TouchActionButton type="button" className="story-fps-minor" onActivate={readHistory}>READ REAL HISTORY</TouchActionButton>
   </section></div>}
   {procedure&&!showGuide&&!paused&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission procedure">
     <small>MISSION CONTROL PROCEDURE · {displayName[procedure.station].toUpperCase()}</small>
@@ -430,20 +431,20 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
       {procedure.station==="systems"&&<>
         <p><strong>Historical hardware:</strong> {scenario.profile.hardware}</p>
         <p>This is a training-system checkout, not a real spacecraft switch sequence. Inspect both simulated subsystems:</p>
-        <button type="button" className={powerVerified?"story-fps-armed":"story-fps-minor"}
-          onClick={()=>setPowerVerified(true)}>
+        <TouchActionButton type="button" className={powerVerified?"story-fps-armed":"story-fps-minor"}
+          onActivate={()=>setPowerVerified(true)}>
           {powerVerified?"✓ POWER / THERMAL STATUS VERIFIED":"VERIFY POWER & THERMAL STATUS"}
-        </button>
-        <button type="button" className={telemetryVerified?"story-fps-armed":"story-fps-minor"}
-          onClick={()=>setTelemetryVerified(true)}>
+        </TouchActionButton>
+        <TouchActionButton type="button" className={telemetryVerified?"story-fps-armed":"story-fps-minor"}
+          onActivate={()=>setTelemetryVerified(true)}>
           {telemetryVerified?"✓ COMMUNICATIONS STATUS VERIFIED":"VERIFY TELEMETRY & COMMUNICATIONS"}
-        </button>
+        </TouchActionButton>
         <div className="story-fps-readout">{scenario.profile.hardware} <strong>{powerVerified&&telemetryVerified?"CHECKS COMPLETE":"CHECKS PENDING"}</strong></div>
       </>}
       {procedure.station==="operations"&&<>
         <p><strong>Historical task:</strong> {scenario.profile.operation}</p><p>Activate the simulated task sequence to record that this historical operation has been reviewed.</p>
-        <button type="button" className={operationArmed?"story-fps-armed":"story-fps-minor"} onClick={()=>setOperationArmed(true)}>
-          {operationArmed?"✓ MISSION SEQUENCE ARMED":"ARM "+procedure.action.toUpperCase()}</button>
+        <TouchActionButton type="button" className={operationArmed?"story-fps-armed":"story-fps-minor"} onActivate={()=>setOperationArmed(true)}>
+          {operationArmed?"✓ MISSION SEQUENCE ARMED":"ARM "+procedure.action.toUpperCase()}</TouchActionButton>
       </>}
       {procedure.station==="science"&&<>
         <p><strong>Historical observation goal:</strong> {scenario.profile.observation}</p>
@@ -451,12 +452,12 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
         <h3>{scienceExercise.title}</h3>
         <table className="story-fps-science-table"><tbody>{scienceExercise.rows.map(row=><tr key={row.label}><th scope="row">{row.label}</th><td>{row.value} {row.unit}</td></tr>)}</tbody></table>
         <p>{scienceExercise.question}</p>
-        {scienceExercise.choices.map((choice,index)=><button type="button" key={choice} className={interpretation===index?"story-fps-armed":"story-fps-minor"} aria-pressed={interpretation===index} onClick={()=>chooseInterpretation(index as 0|1)}>{choice}</button>)}
+        {scienceExercise.choices.map((choice,index)=><TouchActionButton type="button" key={choice} className={interpretation===index?"story-fps-armed":"story-fps-minor"} aria-pressed={interpretation===index} onActivate={()=>chooseInterpretation(index as 0|1)}>{choice}</TouchActionButton>)}
         {interpretation!==null&&<p role="status">{interpretation===scienceExercise.correct?"Correct interpretation. ":"Recheck the interpretation. "}{scienceExercise.explanation}</p>}
         <p>Interpretation practice is optional; it adds no required task or reward. Capture files the example and your actual answer.</p>
         <a href={scienceExercise.source} target="_blank" rel="noopener noreferrer">Mission context and historical records ↗</a>
-        <button type="button" className={measurement?"story-fps-armed":"story-fps-minor"} onClick={captureScience}>
-          {measurement?"✓ OBSERVATION CAPTURED":"CAPTURE SCIENCE READING"}</button>
+        <TouchActionButton type="button" className={measurement?"story-fps-armed":"story-fps-minor"} onActivate={captureScience}>
+          {measurement?"✓ OBSERVATION CAPTURED":"CAPTURE SCIENCE READING"}</TouchActionButton>
       </>}
     </div>
     <div className="story-fps-check">
@@ -464,8 +465,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
        Verify the checklist and acknowledge the simulated operation.
      </label>
     </div>
-    <button type="button" disabled={!canFinish} onClick={finishTask}>{procedure.action.toUpperCase()} ✓</button>
-    <button type="button" className="story-fps-minor" onClick={()=>setProcedure(null)}>BACK TO SPACECRAFT</button>
+    <TouchActionButton type="button" disabled={!canFinish} onActivate={finishTask}>{procedure.action.toUpperCase()} ✓</TouchActionButton>
+    <TouchActionButton type="button" className="story-fps-minor" onActivate={()=>setProcedure(null)}>BACK TO SPACECRAFT</TouchActionButton>
   </section></div>}
   {completed&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission completed">
     <small>HISTORICAL MISSION · TRAINING COMPLETE</small>
@@ -480,19 +481,19 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
     </details>}
     <p>The spacecraft shapes and workstations are educational approximations, not flight-ready layouts. Procedures are simplified; historical outcomes remain unchanged.</p>
     {saveError&&<p role="alert">{saveError}</p>}
-    <button type="button" onClick={()=>{persistRef.current();onComplete(true,runId);}}>{saveError?"RETRY SAVE COMPLETION & RETURN":"SAVE COMPLETION & RETURN"}</button>
-    <button type="button" className="story-fps-minor" onClick={readHistory}>READ THE ACTUAL HISTORY</button>
+    <TouchActionButton type="button" onActivate={()=>{persistRef.current();onComplete(true,runId);}}>{saveError?"RETRY SAVE COMPLETION & RETURN":"SAVE COMPLETION & RETURN"}</TouchActionButton>
+    <TouchActionButton type="button" className="story-fps-minor" onActivate={readHistory}>READ THE ACTUAL HISTORY</TouchActionButton>
     <a href={mission.source} target="_blank" rel="noopener noreferrer">Official mission archive ↗</a>
   </section></div>}
   {paused&&!showGuide&&!completed&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="Mission paused">
     <small>MISSION PAUSED</small><h2>{mission.title}</h2>
     <p>Your task, procedure, suit oxygen and position are saved separately from earned story completions. Return to this story to resume.</p>
     {attemptNotice&&<p role="alert">{attemptNotice}</p>}
-    <button type="button" className="story-fps-minor" onClick={()=>persistRef.current()}>SAVE EXERCISE CHECKPOINT</button>
-    <button type="button" onClick={()=>setPaused(false)}>RESUME MISSION</button>
-    <button type="button" className="story-fps-minor" onClick={readHistory}>READ HISTORY</button>
-    <button type="button" className="story-fps-minor" onClick={quit}>BACK TO MISSION LIST</button>
+    <TouchActionButton type="button" className="story-fps-minor" onActivate={()=>persistRef.current()}>SAVE EXERCISE CHECKPOINT</TouchActionButton>
+    <TouchActionButton type="button" onActivate={()=>setPaused(false)}>RESUME MISSION</TouchActionButton>
+    <TouchActionButton type="button" className="story-fps-minor" onActivate={readHistory}>READ HISTORY</TouchActionButton>
+    <TouchActionButton type="button" className="story-fps-minor" onActivate={quit}>BACK TO MISSION LIST</TouchActionButton>
   </section></div>}
-  {error&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="3D unavailable"><h2>3D unavailable</h2><p>{error}</p><button onClick={readHistory}>Read mission history</button></section></div>}
+  {error&&<div className="story-fps-shade"><section className="story-fps-dialog" role="dialog" aria-modal="true" aria-label="3D unavailable"><h2>3D unavailable</h2><p>{error}</p><TouchActionButton onActivate={readHistory}>Read mission history</TouchActionButton></section></div>}
  </div>;
 }

@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import ScientificReadings from "./ScientificReadings";
 import { fieldToolUse, fieldToolCostText } from "./fieldTools";
 import { sound } from "./audio";
@@ -466,49 +467,49 @@ export default function Flight({
           </span>
         </div>
         <div className="cmd-hud-actions">
-          <button
+          <TouchActionButton
             className="commander-hud-tool"
             aria-label="Open mission objectives"
-            onClick={() => openTab("MISSION")}
+            onActivate={() => openTab("MISSION")}
           >
             <Icon name="target" />
             <span>MISSION</span>
-          </button>
-          <button
+          </TouchActionButton>
+          <TouchActionButton
             className="commander-hud-tool"
             aria-label="Open inventory"
-            onClick={() => openTab("INVENTORY")}
+            onActivate={() => openTab("INVENTORY")}
           >
             <Icon name="box" />
             <span>INVENTORY</span>
-          </button>
-          <button
+          </TouchActionButton>
+          <TouchActionButton
             className="cmd-icon-button"
             aria-label={s.state.paused ? "Resume mission" : "Pause mission"}
-            onClick={() => onTickPause(!s.state.paused)}
+            onActivate={() => onTickPause(!s.state.paused)}
           >
             <Icon name={s.state.paused ? "play" : "pause"} />
-          </button>
-          <button className="cmd-icon-button" aria-label="Open settings" title="Settings" onClick={onSettings}>
+          </TouchActionButton>
+          <TouchActionButton className="cmd-icon-button" aria-label="Open settings" title="Settings" onActivate={onSettings}>
             <Icon name="settings" />
-          </button>
-          <button
+          </TouchActionButton>
+          <TouchActionButton
             className="cmd-tablet-trigger"
             aria-label="Open mission tablet"
             aria-expanded={tablet}
-            onClick={() => {
+            onActivate={() => {
               openTab("STATUS");
             }}
           >
             <Icon name="tablet" />
             <span>SYSTEMS</span>
-          </button>
+          </TouchActionButton>
         </div>
       </div>
-      <button className="campaign-map-button" type="button" aria-label="Open navigation map"
-        aria-expanded={navOpen} onClick={()=>{setActions(false);setNavOpen(true)}}>
+      <TouchActionButton className="campaign-map-button" type="button" aria-label="Open navigation map"
+        aria-expanded={navOpen} onActivate={()=>{setActions(false);setNavOpen(true)}}>
         <Icon name="map" size={18}/> MAP
-      </button>
+      </TouchActionButton>
       <div className="campaign-sim-rate">
         <label>
           SIM RATE{" "}
@@ -550,12 +551,12 @@ export default function Flight({
          {(recovery?.station || o?.site) && <p>Location: {sitePosition((recovery?.station ?? o!.site!)!,m.destination).name}. Refer to MAP.</p>}
          {!recovery && helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>}
         {o && <section className="campaign-task-guide" aria-label="How to complete this objective">
-          <button type="button" className="campaign-guide-toggle"
+          <TouchActionButton type="button" className="campaign-guide-toggle"
             aria-expanded={helpOpen} aria-controls="campaign-objective-help"
-            onClick={()=>setHelpOpen(open=>!open)}>
+            onActivate={()=>setHelpOpen(open=>!open)}>
             {helpOpen ? "▲ Hide instructions · Return to moving" : "ⓘ HOW TO COMPLETE · Show instructions ▼"}
-          </button>
-          {o.tutorial && <button type="button" className="campaign-tutorial-manual" onClick={showTutorial}>ⓘ VIEW TUTORIAL (OPTIONAL)</button>}
+          </TouchActionButton>
+          {o.tutorial && <TouchActionButton type="button" className="campaign-tutorial-manual" onActivate={showTutorial}>ⓘ VIEW TUTORIAL (OPTIONAL)</TouchActionButton>}
           {helpOpen && <div id="campaign-objective-help" className="campaign-task-guide-content">
           <p className="campaign-guide-next">{guide.next}</p>
           <ol>
@@ -566,81 +567,81 @@ export default function Flight({
           </ol>
           <div className="campaign-guide-actions">
             {s.state.paused
-              ? <button type="button" onClick={()=>onTickPause(false)}>▶ Resume mission</button>
+              ? <TouchActionButton type="button" onActivate={()=>onTickPause(false)}>▶ Resume mission</TouchActionButton>
               : recovery?.retry
-                ? <button type="button" className="primary" onClick={onHome}>Save & campaign · Review / retry flight</button>
+                ? <TouchActionButton type="button" className="primary" onActivate={onHome}>Save & campaign · Review / retry flight</TouchActionButton>
                 : recovery && guide.recoveryStation && !atSite(s,guide.recoveryStation)
-                  ? <button type="button" className="primary" onClick={()=>setNavOpen(true)}>Open MAP · Go to recovery location</button>
+                  ? <TouchActionButton type="button" className="primary" onActivate={()=>setNavOpen(true)}>Open MAP · Go to recovery location</TouchActionButton>
                 : recovery && guide.recoveryStation && atSite(s,guide.recoveryStation)
-                  ? <button type="button" className="primary" onClick={()=>{setHelpOpen(false);setActions(true)}}>Open station controls · Resolve problem</button>
+                  ? <TouchActionButton type="button" className="primary" onActivate={()=>{setHelpOpen(false);setActions(true)}}>Open station controls · Resolve problem</TouchActionButton>
                 : recovery
-                  ? <button type="button" onClick={()=>setNavOpen(true)}>Open MAP · Follow recovery steps</button>
+                  ? <TouchActionButton type="button" onActivate={()=>setNavOpen(true)}>Open MAP · Follow recovery steps</TouchActionButton>
                 : guide.recoveryStation && !atSite(s,guide.recoveryStation)
-                ? <button type="button" className="primary" onClick={()=>setNavOpen(true)}>
+                ? <TouchActionButton type="button" className="primary" onActivate={()=>setNavOpen(true)}>
                     Open MAP · Go to {sitePosition(guide.recoveryStation,m.destination).name} to repair
-                  </button>
+                  </TouchActionButton>
                 : guide.recoveryStation && atSite(s,guide.recoveryStation)
-                  ? <button type="button" className="primary" onClick={()=>{setHelpOpen(false);setActions(true)}}>
+                  ? <TouchActionButton type="button" className="primary" onActivate={()=>{setHelpOpen(false);setActions(true)}}>
                       Open station controls · Follow the repair steps
-                    </button>
+                    </TouchActionButton>
                 : o.site && !atSite(s,o.site)
-                  ? <button type="button" onClick={()=>setNavOpen(true)}>Open MAP · Find the station</button>
+                  ? <TouchActionButton type="button" onActivate={()=>setNavOpen(true)}>Open MAP · Find the station</TouchActionButton>
                 : <>
                   {o.event==="power" && !s.observations.powerDiagnosed &&
-                    <button type="button" className="primary" onClick={()=>run("inspectPower")}>
+                    <TouchActionButton type="button" className="primary" onActivate={()=>run("inspectPower")}>
                       Inspect power and diagnose faults
-                    </button>}
+                    </TouchActionButton>}
                   {!recovery && o.action==="land" &&
                     (!s.world.switches.navigation ?
-                      <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"navigation"})}>
+                      <TouchActionButton type="button" className="primary" onActivate={()=>onWorld({kind:"switch",id:"navigation"})}>
                         Turn ON Navigation computer
-                      </button>
+                      </TouchActionButton>
                       : s.world.target!=="moon" ?
-                        <button type="button" className="primary" onClick={()=>onWorld({kind:"target",value:"moon"})}>
+                        <TouchActionButton type="button" className="primary" onActivate={()=>onWorld({kind:"target",value:"moon"})}>
                           Set destination to Lunar approach
-                        </button>
+                        </TouchActionButton>
                         : !s.world.switches.maneuver ?
-                          <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"maneuver"})}>
+                          <TouchActionButton type="button" className="primary" onActivate={()=>onWorld({kind:"switch",id:"maneuver"})}>
                             Turn ON Guarded manoeuvre arm
-                          </button>
-                          : <button type="button" className="primary" onClick={()=>run("land")}>
+                          </TouchActionButton>
+                          : <TouchActionButton type="button" className="primary" onActivate={()=>run("land")}>
                               Execute lunar landing →
-                            </button>)}
+                            </TouchActionButton>)}
                   {!recovery && o.action==="returnBurn" &&
                     (s.world.target!=="earth" ?
-                      <button type="button" className="primary" onClick={()=>onWorld({kind:"target",value:"earth"})}>Set destination to Earth orbit / recovery</button>
+                      <TouchActionButton type="button" className="primary" onActivate={()=>onWorld({kind:"target",value:"earth"})}>Set destination to Earth orbit / recovery</TouchActionButton>
                       : !s.world.switches.maneuver ?
-                        <button type="button" className="primary" onClick={()=>onWorld({kind:"switch",id:"maneuver"})}>Turn ON guarded manoeuvre arm</button>
-                        : <button type="button" className="primary" onClick={()=>run("returnBurn")}>Start controlled return burn →</button>)}
+                        <TouchActionButton type="button" className="primary" onActivate={()=>onWorld({kind:"switch",id:"maneuver"})}>Turn ON guarded manoeuvre arm</TouchActionButton>
+                        : <TouchActionButton type="button" className="primary" onActivate={()=>run("returnBurn")}>Start controlled return burn →</TouchActionButton>)}
                   {!recovery && o.choices?.map(choice=>
-                    <button type="button" key={choice.action}
+                    <TouchActionButton type="button" key={choice.action}
                       disabled={o.event==="power" && !s.observations.powerDiagnosed}
                       className={choice.action==="eventReroute"||choice.action==="powerSafe"?"primary":""}
-                      onClick={()=>run(choice.action)}>
+                      onActivate={()=>run(choice.action)}>
                       {choice.title}<small>{choice.detail}</small>
-                    </button>)}
+                    </TouchActionButton>)}
                   {!recovery && m.id==="mission-2"&&o.action==="approach" &&
-                    <button type="button" className="primary" onClick={openRendezvous}>Open Satellite Rendezvous Computer</button>}
+                    <TouchActionButton type="button" className="primary" onActivate={openRendezvous}>Open Satellite Rendezvous Computer</TouchActionButton>}
                   {!recovery && !launching && !!o.action && !o.choices && o.action!=="returnBurn" &&
                     !(m.id==="mission-2"&&o.action==="approach") &&
                     o.action!=="land" &&
                     o.action!=="eat" && o.action!=="drink" && o.action!=="wake" &&
-                    <button type="button" className="primary" disabled={!!objectiveTool?.problem} onClick={()=>run(o.action!)}>Perform: {o.title}{objectiveTool && <small>{objectiveTool.reason ?? fieldToolCostText(objectiveTool)}</small>}</button>}
-                  {!launching && !!area && !actions && <button type="button" onClick={()=>setActions(true)}>Show station controls</button>}
+                    <TouchActionButton type="button" className="primary" disabled={!!objectiveTool?.problem} onActivate={()=>run(o.action!)}>Perform: {o.title}{objectiveTool && <small>{objectiveTool.reason ?? fieldToolCostText(objectiveTool)}</small>}</TouchActionButton>}
+                  {!launching && !!area && !actions && <TouchActionButton type="button" onActivate={()=>setActions(true)}>Show station controls</TouchActionButton>}
                 </>}
           </div>
           {guideFeedback && <p className="campaign-guide-feedback" role="alert">{guideFeedback}</p>}
-          <button type="button" className="campaign-guide-hide" onClick={()=>setHelpOpen(false)}>
+          <TouchActionButton type="button" className="campaign-guide-hide" onActivate={()=>setHelpOpen(false)}>
             ▲ Hide help and move freely
-          </button>
+          </TouchActionButton>
           </div>}
         </section>}
         {!recovery && m.id==="mission-2"&&o?.action==="approach"&&
-          <button type="button" className="campaign-direct-console"
-           onClick={openRendezvous}>
+          <TouchActionButton type="button" className="campaign-direct-console"
+           onActivate={openRendezvous}>
            {s.state.paused?"▶ Resume mission to use navigation":
             atSite(s,"cockpit")?"◈ OPERATE RENDEZVOUS COMPUTER":"◈ Go to Flight deck · Open navigation computer"}
-          </button>}
+          </TouchActionButton>}
         <div className="cmd-objective-progress">
           <span
             style={{ width: `${(s.objective / m.objectives.length) * 100}%` }}
@@ -651,30 +652,30 @@ export default function Flight({
             {s.repetitions} / {o.count} complete
           </p>
         )}
-        {helpOpen && <button
-          onClick={() => {
+        {helpOpen && <TouchActionButton
+          onActivate={() => {
             setHelpOpen(false);
             setTab("MISSION");
             setTablet(true);
           }}
         >
           Mission steps <Icon name="chevron" size={12} />
-        </button>}
+        </TouchActionButton>}
       </div>}
       {!recovery && m.id==="mission-2"&&o?.action==="approach"&&!s.state.paused&&!rendezvousOpen&&!tablet&&!tutorial&&
         <div className="cmd-rendezvous-shortcut" role="region" aria-label="Active rendezvous mission control">
           <strong>RENDEZVOUS COMPUTER</strong>
           <span>Objective: match the target satellite's approach geometry.</span>
-          <button type="button" onClick={openRendezvous}>
+          <TouchActionButton type="button" onActivate={openRendezvous}>
             OPEN NAVIGATION COMPUTER →
-          </button>
+          </TouchActionButton>
         </div>}
       {s.state.paused && !tutorial && !tablet && !rendezvousOpen && (
         <div className="campaign-paused" role="region" aria-label="Mission paused">
           <span>MISSION PAUSED</span>
           <p>Controls and mission actions are disabled while paused. Resume first.</p>
-          <button onClick={() => onTickPause(false)}>Resume mission →</button>
-          <button onClick={onHome}>Save & campaign</button>
+          <TouchActionButton onActivate={() => onTickPause(false)}>Resume mission →</TouchActionButton>
+          <TouchActionButton onActivate={onHome}>Save & campaign</TouchActionButton>
         </div>
       )}
       {rendezvousOpen&&m.id==="mission-2"&&o?.action==="approach"&&
@@ -684,18 +685,18 @@ export default function Flight({
           onComplete={()=>run("approach")}/>} 
       {hatchNotice&&<div className="cmd-hatch-notice" role="status">
         <strong>MISSION GUIDANCE</strong><span>{hatchNotice}</span>
-        <button type="button" onClick={()=>setHatchNotice("")} aria-label="Dismiss airlock status">×</button>
+        <TouchActionButton type="button" onActivate={()=>setHatchNotice("")} aria-label="Dismiss airlock status">×</TouchActionButton>
       </div>}
       {saveError && (
-        <button
+        <TouchActionButton
           className="campaign-save-warning"
-          onClick={() => {
+          onActivate={() => {
             setTab("LOG");
             setTablet(true);
           }}
         >
           Save warning — open tablet
-        </button>
+        </TouchActionButton>
       )}
       {!launching && (
         <div className="campaign-interaction">
@@ -710,36 +711,36 @@ export default function Flight({
               {actionable &&
                 o?.choices &&
                 o.choices.map((c) => (
-                  <button
+                  <TouchActionButton
                     key={c.action}
                     disabled={s.state.paused}
-                    onClick={() => run(c.action)}
+                    onActivate={() => run(c.action)}
                   >
                     <span>
                       {c.title}
                       <small>{c.detail}</small>
                     </span>
                     <Icon name="chevron" size={13} />
-                  </button>
+                  </TouchActionButton>
                 ))}
               {!recovery && actionable && o?.action && !o.choices && !inventoryTask && (
-                <button
+                <TouchActionButton
                   disabled={s.state.paused || !!objectiveTool?.problem}
-                  onClick={()=>{
+                  onActivate={()=>{
                     if(m.id==="mission-2"&&o.action==="approach"){openRendezvous();}
                     else run(o.action!);
                   }}
                 >
                   <span>{o.title}{objectiveTool && <small>{objectiveTool.reason ?? fieldToolCostText(objectiveTool)}</small>}</span>
                   <Icon name="chevron" size={14} />
-                </button>
+                </TouchActionButton>
               )}
               {extras.map((a) => {
                 const use = fieldToolUse(s, a.action);
-                return <button
+                return <TouchActionButton
                   disabled={s.state.paused || !!use?.problem}
                   key={a.action}
-                  onClick={()=>{
+                  onActivate={()=>{
                     if(m.id==="mission-2"&&o?.action==="approach"&&a.action==="approach"){
                       openRendezvous();
                     }else run(a.action);
@@ -747,7 +748,7 @@ export default function Flight({
                 >
                   <span>{a.label}{use && <small>{use.reason ?? fieldToolCostText(use)}</small>}</span>
                   <Icon name="chevron" size={13} />
-                </button>;
+                </TouchActionButton>;
               })}
             </div>
           )}
@@ -760,9 +761,9 @@ export default function Flight({
           <h2>Rest & recover.</h2>
           <p>Energy {s.state.energy.toFixed(0)}% · time continues</p>
           {true ? (
-            <button disabled={s.state.paused} onClick={() => run("wake")}>
+            <TouchActionButton disabled={s.state.paused} onActivate={() => run("wake")}>
               Wake up →
-            </button>
+            </TouchActionButton>
           ) : (
             <p>{o?.title}</p>
           )}
@@ -775,12 +776,12 @@ export default function Flight({
         </div>
       )}
       {shipAlerts(s).length > 0 && (
-        <button
+        <TouchActionButton
           className="ship-alert-indicator"
-          onClick={() => openTab("STATUS")}
+          onActivate={() => openTab("STATUS")}
         >
           {shipAlerts(s)[0].level} · {shipAlerts(s)[0].text}
-        </button>
+        </TouchActionButton>
       )}
       <div className="campaign-footer-vitals">
         <span>

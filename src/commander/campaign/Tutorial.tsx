@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import { useRef } from "react";
 import { useModalFocus } from "../modalFocus";
 const explanations: Record<string, { title: string; text: string }> = {
@@ -79,9 +80,9 @@ export default function Tutorial({
       <span className="eyebrow">QUICK GUIDE / MISSION PAUSED</span>
       <h2>{t.title}</h2>
       <p>{t.text}</p>
-      <button ref={close} onClick={onClose}>
+      <TouchActionButton ref={close} onActivate={onClose}>
         Got it →
-      </button>
+      </TouchActionButton>
     </div>
   );
 }

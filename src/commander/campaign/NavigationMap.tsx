@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import { useRef, useState } from "react";
 import { useModalFocus } from "../modalFocus";
 import Icon from "../Icons";
@@ -45,8 +46,8 @@ export function NavigationContent({s}:{s:Session}) {
       <span>NO DIRECTION ARROWS</span>
     </div>
     {mission.eva&&<div className="nav-map-switch" role="group" aria-label="Choose map">
-      <button type="button" aria-pressed={!surface} onClick={()=>{setKind("ship");setSelected(null)}}>Spacecraft</button>
-      <button type="button" aria-pressed={surface} onClick={()=>{setKind("surface");setSelected(null)}}>Outside / EVA</button>
+      <TouchActionButton type="button" aria-pressed={!surface} onActivate={()=>{setKind("ship");setSelected(null)}}>Spacecraft</TouchActionButton>
+      <TouchActionButton type="button" aria-pressed={surface} onActivate={()=>{setKind("surface");setSelected(null)}}>Outside / EVA</TouchActionButton>
     </div>}
     <div className="nav-map-columns">
       <div className="nav-map-diagram">
@@ -121,13 +122,13 @@ export function NavigationContent({s}:{s:Session}) {
         </div>
         <h3>{surface?"Outside locations":"Ship compartments and airlock"}</h3>
         <p>These are the same names shown in mission instructions. Look for the name on the map and signs in the spacecraft.</p>
-        <div className="nav-map-places">{sites.map((id,i)=><button key={id} type="button"
+        <div className="nav-map-places">{sites.map((id,i)=><TouchActionButton key={id} type="button"
           aria-pressed={selected===id} className={selected===id?"selected":""}
-          onClick={()=>setSelected(selected===id?null:id)}>
+          onActivate={()=>setSelected(selected===id?null:id)}>
             <em>{String(i+1).padStart(2,"0")}</em>
             <span><strong>{sitePosition(id,mission.destination).name}</strong>
               <small>{signNames[id]||"Surface science site"}</small></span>
-          </button>)}</div>
+          </TouchActionButton>)}</div>
         <p className="nav-map-footnote">You can inspect the map at any time. It does not restrict spacecraft interaction.</p>
       </aside>
     </div>
@@ -139,12 +140,12 @@ export default function NavigationMap({s,onClose}:{s:Session;onClose:()=>void}) 
   const dialog=useRef<HTMLElement>(null),boundary=useRef<HTMLDivElement>(null);
   useModalFocus({dialog,boundary,initialFocus:closer,onClose});
   return <div className="nav-map-layer" ref={boundary}>
-    <button type="button" className="nav-map-backdrop" aria-label="Close navigation map" onClick={onClose}/>
+    <TouchActionButton type="button" className="nav-map-backdrop" aria-label="Close navigation map" onActivate={onClose}/>
     <section ref={dialog} className="nav-map-dialog" role="dialog" aria-modal="true" aria-label="Navigation map">
       <header className="nav-map-top"><div><small>ORBITAL / NAVIGATION</small><h1>Navigation Map</h1></div>
-        <button type="button" ref={closer} className="nav-map-close" onClick={onClose}>
+        <TouchActionButton type="button" ref={closer} className="nav-map-close" onActivate={onClose}>
           <Icon name="close" size={17}/> Close
-        </button>
+        </TouchActionButton>
       </header>
       <NavigationContent s={s}/>
     </section>

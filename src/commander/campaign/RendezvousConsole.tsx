@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import {useEffect,useMemo,useState} from "react";
 import {rendezvousBlocker,type Session} from "./engine";
 
@@ -43,7 +44,7 @@ export default function RendezvousConsole({
      <h2>Satellite Rendezvous Computer</h2>
      <p>Match the target's approach corridor before performing the proximity manoeuvre.</p>
     </div>
-    <button type="button" onClick={onClose} aria-label="Close navigation computer">×</button>
+    <TouchActionButton type="button" onActivate={onClose} aria-label="Close navigation computer">×</TouchActionButton>
    </header>
    <div className="rendezvous-main">
     <div className="rendezvous-scope" aria-label="Approach geometry illustration">
@@ -87,15 +88,15 @@ export default function RendezvousConsole({
        {ready?"< APPROACH CORRIDOR VERIFIED >":"ALIGN BEARING ≤ 3° · SPEED ≤ 0.25 m/s · DISTANCE ≤ 30 m"}
       </div>
       <div className="rendezvous-buttons">
-       <button type="button" onClick={()=>{setBearing(0);setClosing(.1);setRange(25);setAutopilot(true)}}>Run auto-guidance</button>
-       <button type="button" disabled={!ready||!!attemptedSession} className="rendezvous-confirm" onClick={confirm}>
+       <TouchActionButton type="button" onActivate={()=>{setBearing(0);setClosing(.1);setRange(25);setAutopilot(true)}}>Run auto-guidance</TouchActionButton>
+       <TouchActionButton type="button" disabled={!ready||!!attemptedSession} className="rendezvous-confirm" onActivate={confirm}>
         Confirm approach manoeuvre →
-       </button>
+       </TouchActionButton>
       </div>
       {blocker&&<p className="rendezvous-paused-warning" role="alert">{blocker}</p>}
       {error&&!blocker&&<p className="rendezvous-paused-warning" role="alert">{error}</p>}
       {attemptedSession&&<p role="status">Confirming objective completion with mission control…</p>}
-      {session.state.paused&&<button type="button" className="rendezvous-resume" onClick={onResume}>▶ Resume mission</button>}
+      {session.state.paused&&<TouchActionButton type="button" className="rendezvous-resume" onActivate={onResume}>▶ Resume mission</TouchActionButton>}
       <small className="rendezvous-disclaimer">Simplified educational navigation exercise; target vehicle and separation values are simulated, not live flight telemetry.</small>
     </div>
    </div>

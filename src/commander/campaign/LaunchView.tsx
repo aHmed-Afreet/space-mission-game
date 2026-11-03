@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import { currentObjective, type Session } from "./engine";
 import type { CampaignAction } from "./definitions";
 export default function LaunchView({
@@ -156,13 +157,13 @@ export default function LaunchView({
           </>
         )}
         {o?.action ? (
-          <button
+          <TouchActionButton
             className="primary"
             disabled={s.state.paused}
-            onClick={() => onCommand(o.action!)}
+            onActivate={() => onCommand(o.action!)}
           >
             {o.title}
-          </button>
+          </TouchActionButton>
         ) : (
           <p className="launch-live">{o?.title}</p>
         )}

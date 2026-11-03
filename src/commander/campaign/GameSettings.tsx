@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import type { PlayerPreferences } from "./preferences";
 import { sound } from "./audio";
 import { useEffect, useRef, useState } from "react";
@@ -39,10 +40,10 @@ export default function GameSettings({
     } catch {setScreenError("Fullscreen was blocked by the browser. Continue in the normal view.");}
   };
   return <div ref={overlay} className="game-settings-overlay" role="presentation">
-    <button type="button" className="game-settings-shade" onClick={onClose} aria-label="Close settings"/>
+    <TouchActionButton type="button" className="game-settings-shade" onActivate={onClose} aria-label="Close settings"/>
     <section ref={dialog} className="game-settings-dialog" role="dialog" aria-modal="true" aria-label="Game settings">
       <header><div><small>ORBITAL / PLAYER CONTROLS</small><h2>Settings</h2></div>
-        <button ref={close} type="button" onClick={onClose} aria-label="Close settings"><Icon name="close"/> Close</button>
+        <TouchActionButton ref={close} type="button" onActivate={onClose} aria-label="Close settings"><Icon name="close"/> Close</TouchActionButton>
       </header>
       <div className="game-settings-body">
         <label htmlFor="settings-device">Device & controls</label>
@@ -67,14 +68,14 @@ export default function GameSettings({
           onChange={e=>onChange({...value,showHints:e.target.checked})}/> Show control hints</label>
         <label className="game-settings-toggle"><input type="checkbox" checked={!muted}
           onChange={e=>{const isMuted=!e.target.checked; sound.configure({mute:isMuted});setMuted(isMuted)}}/> Sound effects & atmosphere</label>
-        <button type="button" className="game-settings-fullscreen" onClick={toggleFullscreen}>
+        <TouchActionButton type="button" className="game-settings-fullscreen" onActivate={toggleFullscreen}>
           {fullscreen?"Exit fullscreen":"Enter fullscreen"}
-        </button>
+        </TouchActionButton>
         {screenError&&<p role="status">{screenError}</p>}
         <hr/>
         <h3>Campaign save</h3>
         <p>Progress saves locally in this browser. Reset deletes Commander mission unlocks, checkpoints, agency money and reports from this device.</p>
-        <button type="button" className="game-settings-reset" disabled={readonly} onClick={reset}>Reset campaign progress…</button>
+        <TouchActionButton type="button" className="game-settings-reset" disabled={readonly} onActivate={reset}>Reset campaign progress…</TouchActionButton>
         {readonly&&<p>Reset is unavailable because the current save is protected as read-only.</p>}
         <p><a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy & local saves</a> · Historical missions are educational simulations, not official NASA training.</p>
       </div>

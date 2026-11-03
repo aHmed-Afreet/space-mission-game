@@ -1,3 +1,4 @@
+import TouchActionButton from "../TouchActionButton";
 import { useEffect, useRef } from "react";
 import Icon, { type IconName } from "./Icons";
 import { deck, type Position } from "./layout";
@@ -284,10 +285,10 @@ export default function MissionTablet({
   const disabled = s.paused || s.sleeping || s.ended;
   return (
     <div className="cmd-tablet-layer">
-      <button
+      <TouchActionButton
         className="cmd-tablet-scrim"
         aria-label="Close mission tablet"
-        onClick={onClose}
+        onActivate={onClose}
       />
       <section
         ref={dialog}
@@ -306,14 +307,14 @@ export default function MissionTablet({
               Mission Tablet <span>01</span>
             </strong>
           </div>
-          <button
+          <TouchActionButton
             className="cmd-icon-button"
             aria-label="Close tablet"
             ref={close}
-            onClick={onClose}
+            onActivate={onClose}
           >
             <Icon name="close" />
-          </button>
+          </TouchActionButton>
         </div>
         <div className="cmd-tablet-telemetry">
           <span>
@@ -323,17 +324,17 @@ export default function MissionTablet({
         </div>
         <div className="cmd-tabs" role="tablist" aria-label="Tablet sections">
           {tabs.map((t) => (
-            <button
+            <TouchActionButton
               key={t.name}
               role="tab"
               aria-selected={tab === t.name}
               aria-controls="cmd-tab-content"
               id={`tab-${t.name}`}
-              onClick={() => onTab(t.name)}
+              onActivate={() => onTab(t.name)}
             >
               <Icon name={t.icon} size={17} />
               <span>{t.name}</span>
-            </button>
+            </TouchActionButton>
           ))}
         </div>
         <div
@@ -576,13 +577,13 @@ export default function MissionTablet({
                     <strong>{item.value}</strong>
                     <small>{item.sub}</small>
                     {item.action && (
-                      <button
+                      <TouchActionButton
                         disabled={disabled || item.off}
-                        onClick={() => send(item.action!)}
+                        onActivate={() => send(item.action!)}
                       >
                         {item.label}
                         <Icon name="chevron" size={14} />
-                      </button>
+                      </TouchActionButton>
                     )}
                   </article>
                 ))}
@@ -793,15 +794,15 @@ export default function MissionTablet({
           <span>
             <i /> {storageError ? "SAVE UNAVAILABLE" : "LOCAL AUTOSAVE"}
           </span>
-          <button onClick={() => onConfirm(true)}>
+          <TouchActionButton onActivate={() => onConfirm(true)}>
             End sortie <Icon name="chevron" size={13} />
-          </button>
+          </TouchActionButton>
           {confirmReset && (
             <div className="cmd-confirm">
               <strong>Return to spacecraft design?</strong>
               <p>This discards the current sortie.</p>
-              <button onClick={onReset}>Discard sortie</button>
-              <button onClick={() => onConfirm(false)}>Keep playing</button>
+              <TouchActionButton onActivate={onReset}>Discard sortie</TouchActionButton>
+              <TouchActionButton onActivate={() => onConfirm(false)}>Keep playing</TouchActionButton>
             </div>
           )}
         </div>

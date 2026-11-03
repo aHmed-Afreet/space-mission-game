@@ -1868,8 +1868,8 @@ test("Paused mission keeps Resume and Save accessible without overlapping object
  assert.ok(flight.includes('      </div>}\n      {!recovery && m.id==="mission-2"'),"close the pause condition before other overlays");
  assert.match(flight,/s.state.paused && !tutorial && !tablet && !rendezvousOpen/);
  assert.match(flight,/role="region" aria-label="Mission paused"/);
- assert.match(flight,/onClick=\{\(\) => onTickPause\(false\)\}>Resume mission/);
- assert.match(flight,/onClick=\{onHome\}>Save & campaign/);
+ assert.match(flight,/onActivate=\{\(\) => onTickPause\(false\)\}>Resume mission/);
+ assert.match(flight,/onActivate=\{onHome\}>Save & campaign/);
  assert.match(css,/\.campaign-paused\{z-index:30;/);
 });
 test("Movement remains available while mission hints start collapsed on iPad",()=>{
@@ -1890,9 +1890,9 @@ test("New task guide buttons and instructions are available from HUD and Mission
  const css=readFileSync("src/commander/campaign/campaign.css","utf8");
  assert.match(flight,/HOW TO COMPLETE/);
  assert.match(flight,/o\.choices\?\.map\(choice/);
- assert.match(flight,/onClick=\{\(\)=>run\("inspectPower"\)\}/);
- assert.match(flight,/onClick=\{\(\)=>onWorld\(\{kind:"switch",id:"maneuver"\}\)\}/);
- assert.match(flight,/onClick=\{\(\)=>run\("returnBurn"\)\}/);
+ assert.match(flight,/onActivate=\{\(\)=>run\("inspectPower"\)\}/);
+ assert.match(flight,/onActivate=\{\(\)=>onWorld\(\{kind:"switch",id:"maneuver"\}\)\}/);
+ assert.match(flight,/onActivate=\{\(\)=>run\("returnBurn"\)\}/);
  assert.match(flight,/campaign-guide-feedback/);
  assert.match(tablet,/campaign-tablet-help/);
  assert.match(css,/max-height: min\(40dvh, 300px\)/);
@@ -2009,7 +2009,7 @@ test("lunar descent guidance and cockpit action buttons share the same preflight
   const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
   assert.match(flight,/onWorld\(\{kind:"target",value:"moon"\}\)/);
   assert.match(flight,/onWorld\(\{kind:"switch",id:"maneuver"\}\)/);
-  assert.match(flight,/onClick=\{\(\)=>run\("land"\)\}/);
+  assert.match(flight,/onActivate=\{\(\)=>run\("land"\)\}/);
 });
 
 test("Commander type pages navigate independently, preserve saves and show each local level", () => {
@@ -2271,9 +2271,9 @@ test("every one of the 55 Story Mode missions has a video chapter sequence backe
 test("recovery, failed actions and tutorials cannot open instructions without player input",()=>{
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  assert.match(flight,/\[helpOpen,setHelpOpen\] = useState\(false\)/);
- assert.match(flight,/onClick=\{\(\)=>setHelpOpen\(open=>!open\)\}/);
+ assert.match(flight,/onActivate=\{\(\)=>setHelpOpen\(open=>!open\)\}/);
  assert.match(flight,/const showTutorial = \(\) =>/);
- assert.match(flight,/onClick=\{showTutorial\}/);
+ assert.match(flight,/onActivate=\{showTutorial\}/);
  assert.doesNotMatch(flight,/if \(blocked\) setHelpOpen\(true\)/);
  assert.doesNotMatch(flight,/if \(recovery && lastRecovery.current !== recovery.id\) \{\s*setHelpOpen\(true\)/);
  assert.doesNotMatch(flight,/useEffect\(\(\) => \{\s*const t = o\?\.tutorial/);

@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import type { Session } from "./engine";
 import type { CampaignAction } from "./definitions";
 import {
@@ -22,17 +23,17 @@ export default function StationControls({
   const area = nearby(s.position.x, s.position.z),
     w = s.world;
   const toggle = (id: string, title: string) => (
-    <button
+    <TouchActionButton
       className="ship-toggle"
       role="switch"
       aria-checked={w.switches[id]}
       key={id}
-      onClick={() => onWorld({ kind: "switch", id })}
+      onActivate={() => onWorld({ kind: "switch", id })}
     >
       <span>{title}</span>
       <i data-on={w.switches[id]} />
       <b>{w.switches[id] ? "ON" : "ISOLATED"}</b>
-    </button>
+    </TouchActionButton>
   );
   return (
     <div className="ship-station-controls">
@@ -42,28 +43,28 @@ export default function StationControls({
             Math.abs(s.position.z - d.z) < 1.6 && Math.abs(s.position.x) < 1.5,
         )
         .map(([id, d]) => (
-          <button
+          <TouchActionButton
             key={id}
-            onClick={() =>
+            onActivate={() =>
               onWorld({ kind: "door", id: id as keyof typeof doors })
             }
           >
             {w.doors[id as keyof typeof doors].open ? "Close" : "Open"} {d.name}
-          </button>
+          </TouchActionButton>
         ))}
       {Object.entries(lockers)
         .filter(([id]) => nearLocker(s, id as keyof typeof lockers))
         .map(([id, l]) => (
           <section className="ship-locker" key={id}>
-            <button
+            <TouchActionButton
               aria-expanded={w.lockers[id as keyof typeof lockers]}
-              onClick={() =>
+              onActivate={() =>
                 onWorld({ kind: "locker", id: id as keyof typeof lockers })
               }
             >
               {w.lockers[id as keyof typeof lockers] ? "Close" : "Open"}{" "}
               {l.name}
-            </button>
+            </TouchActionButton>
             {w.lockers[id as keyof typeof lockers] && (
               <div className="ship-locker-contents">
                 {id === "food" && (
@@ -71,12 +72,12 @@ export default function StationControls({
                     <p>
                       {s.state.food} stored / {s.state.meals} carried meals
                     </p>
-                    <button onClick={() => onCommand("takeMeal")}>
+                    <TouchActionButton onActivate={() => onCommand("takeMeal")}>
                       Take meal pack
-                    </button>
-                    <button onClick={() => onWorld({ kind: "returnMeal" })}>
+                    </TouchActionButton>
+                    <TouchActionButton onActivate={() => onWorld({ kind: "returnMeal" })}>
                       Put meal pack back
-                    </button>
+                    </TouchActionButton>
                   </>
                 )}
                 {id === "water" && (
@@ -85,9 +86,9 @@ export default function StationControls({
                       {s.state.water.toFixed(2)} L tank /{" "}
                       {s.state.bottle.toFixed(2)} L bottle
                     </p>
-                    <button onClick={() => onCommand("fill")}>
+                    <TouchActionButton onActivate={() => onCommand("fill")}>
                       Fill bottle from potable tank
-                    </button>
+                    </TouchActionButton>
                   </>
                 )}
                 {id === "eva" && (
@@ -96,12 +97,12 @@ export default function StationControls({
                       Suit {s.suit.equipped ? "worn" : "stowed"} ·{" "}
                       {s.suit.condition.toFixed(0)}% condition
                     </p>
-                    <button onClick={() => onCommand("equipSuit")}>
+                    <TouchActionButton onActivate={() => onCommand("equipSuit")}>
                       Equip suit
-                    </button>
-                    <button onClick={() => onWorld({ kind: "stowSuit" })}>
+                    </TouchActionButton>
+                    <TouchActionButton onActivate={() => onWorld({ kind: "stowSuit" })}>
                       Return suit to locker
-                    </button>
+                    </TouchActionButton>
                   </>
                 )}
                 {id === "repair" && (
@@ -109,15 +110,15 @@ export default function StationControls({
                     <p>
                       {s.state.parts} carried / {w.partsStored} stored parts
                     </p>
-                    <button onClick={() => onCommand("tools")}>
+                    <TouchActionButton onActivate={() => onCommand("tools")}>
                       Take repair toolkit
-                    </button>
-                    <button onClick={() => onWorld({ kind: "takeParts" })}>
+                    </TouchActionButton>
+                    <TouchActionButton onActivate={() => onWorld({ kind: "takeParts" })}>
                       Take spare part
-                    </button>
-                    <button onClick={() => onWorld({ kind: "storeParts" })}>
+                    </TouchActionButton>
+                    <TouchActionButton onActivate={() => onWorld({ kind: "storeParts" })}>
                       Return spare part
-                    </button>
+                    </TouchActionButton>
                   </>
                 )}
                 {id === "samples" && (
@@ -126,9 +127,9 @@ export default function StationControls({
                       {s.samples.length} carried / {w.storedSamples.length}{" "}
                       archived samples
                     </p>
-                    <button onClick={() => onWorld({ kind: "storeSamples" })}>
+                    <TouchActionButton onActivate={() => onWorld({ kind: "storeSamples" })}>
                       Store carried samples
-                    </button>
+                    </TouchActionButton>
                   </>
                 )}
                 {(id === "samples" || id === "campPanel") &&
@@ -139,36 +140,36 @@ export default function StationControls({
                         (id === "campPanel"),
                     )
                     .map((sample) => (
-                      <button
+                      <TouchActionButton
                         key={sample.id}
-                        onClick={() =>
+                        onActivate={() =>
                           onWorld({ kind: "retrieveSample", id: sample.id })
                         }
                       >
                         Retrieve {sample.kind} ·{" "}
                         {sample.location || sample.destination}
-                      </button>
+                      </TouchActionButton>
                     ))}
                 {w.stored
                   .filter((g) => equipmentLocker(g) === id)
                   .map((g) => (
-                    <button
+                    <TouchActionButton
                       key={g}
-                      onClick={() => onWorld({ kind: "take", id: g })}
+                      onActivate={() => onWorld({ kind: "take", id: g })}
                     >
                       Take {equipment[g].name} ·{" "}
                       {(w.equipment[g] ?? 100).toFixed(0)}%
-                    </button>
+                    </TouchActionButton>
                   ))}
                 {s.pack
                   .filter((g) => equipmentLocker(g) === id)
                   .map((g) => (
-                    <button
+                    <TouchActionButton
                       key={g}
-                      onClick={() => onWorld({ kind: "store", id: g })}
+                      onActivate={() => onWorld({ kind: "store", id: g })}
                     >
                       Put back {equipment[g].name}
-                    </button>
+                    </TouchActionButton>
                   ))}
               </div>
             )}
@@ -285,15 +286,15 @@ export default function StationControls({
                     "; bring tools and a part."
                   : "Diagnosis required at the subsystem console."}
             </p>
-            <button onClick={() => onWorld({ kind: "diagnose", id: f.id })}>
+            <TouchActionButton onActivate={() => onWorld({ kind: "diagnose", id: f.id })}>
               Diagnose
-            </button>
-            <button onClick={() => onWorld({ kind: "repairFault", id: f.id })}>
+            </TouchActionButton>
+            <TouchActionButton onActivate={() => onWorld({ kind: "repairFault", id: f.id })}>
               Replace failed hardware
-            </button>
-            <button onClick={() => onWorld({ kind: "verifyFault", id: f.id })}>
+            </TouchActionButton>
+            <TouchActionButton onActivate={() => onWorld({ kind: "verifyFault", id: f.id })}>
               Verify operation
-            </button>
+            </TouchActionButton>
           </section>
         ))}
     </div>

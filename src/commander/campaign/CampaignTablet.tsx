@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import SoundSettings from "./SoundSettings";
 import { shipAlerts } from "./ship";
 import { money } from "./economy";
@@ -114,10 +115,10 @@ export default function CampaignTablet({
     state.paused || state.sleeping || state.ended;
   return (
     <div className="cmd-tablet-layer" ref={boundary}>
-      <button
+      <TouchActionButton
         className="cmd-tablet-scrim"
         aria-label="Close mission tablet"
-        onClick={onClose}
+        onActivate={onClose}
       />
       <section
         className="cmd-tablet campaign-tablet"
@@ -136,14 +137,14 @@ export default function CampaignTablet({
               Mission Tablet <span>02</span>
             </strong>
           </div>
-          <button
+          <TouchActionButton
             className="cmd-icon-button"
             aria-label="Close tablet"
             ref={close}
-            onClick={onClose}
+            onActivate={onClose}
           >
             <Icon name="close" />
-          </button>
+          </TouchActionButton>
         </div>
         <div className="cmd-tablet-telemetry">
           <span>
@@ -154,15 +155,15 @@ export default function CampaignTablet({
         </div>
         <div className="cmd-tabs" role="tablist" aria-label="Tablet sections">
           {tabs.map((t) => (
-            <button
+            <TouchActionButton
               key={t.id}
               role="tab"
               aria-selected={t.id === tab}
-              onClick={() => onTab(t.id)}
+              onActivate={() => onTab(t.id)}
             >
               <Icon name={t.icon} size={18} />
               <span>{t.id}</span>
-            </button>
+            </TouchActionButton>
           ))}
         </div>
         <div className="cmd-tablet-content" role="tabpanel" aria-label={tab}>
@@ -210,7 +211,7 @@ export default function CampaignTablet({
                     {s.repetitions} / {o.count} operations complete
                   </strong>
                 )}
-                <button onClick={onClose}>{recovery ? "Return to recovery mission →" : "Return to mission →"}</button>
+                <TouchActionButton onActivate={onClose}>{recovery ? "Return to recovery mission →" : "Return to mission →"}</TouchActionButton>
               </div>
               <div className="cmd-objective-progress">
                 <span
@@ -243,14 +244,14 @@ export default function CampaignTablet({
                             . Consult MAP.
                           </p>
 
-                          <button
+                          <TouchActionButton
                             disabled={
                               state.paused || (!!c.site && !atSite(s, c.site))
                             }
-                            onClick={() => onOptional(c.id)}
+                            onActivate={() => onOptional(c.id)}
                           >
                             Perform optional task
-                          </button>
+                          </TouchActionButton>
                         </div>
                       )
                     ) : (
@@ -491,17 +492,17 @@ export default function CampaignTablet({
                 {money(progress.economy.balance)}
                 {s.finance.practice ? " · TRAINING REPLAY" : ""}
               </p>
-              <button className="campaign-details-button" onClick={onAbort}>
+              <TouchActionButton className="campaign-details-button" onActivate={onAbort}>
                 Abort flight & recover hardware
-              </button>
-              <button
+              </TouchActionButton>
+              <TouchActionButton
                 className="campaign-details-button"
                 aria-expanded={details}
-                onClick={() => setDetails((v) => !v)}
+                onActivate={() => setDetails((v) => !v)}
               >
                 {details ? "Hide" : "Show"} engineering DETAILS{" "}
                 <Icon name="chevron" size={15} />
-              </button>
+              </TouchActionButton>
               {details && (
                 <>
                   <div className="cmd-system-list">
@@ -595,7 +596,7 @@ export default function CampaignTablet({
                   <h3>Meal packs</h3>
                   <strong>{state.meals} carried</strong>
                   <small>{state.food} in spacecraft storage</small>
-                  <button
+                  <TouchActionButton
                     disabled={
                       locked("eat") ||
                       state.meals < 1 ||
@@ -605,10 +606,10 @@ export default function CampaignTablet({
                       state.minutes - s.lastEat < 20 ||
                       state.nutrition >= 98
                     }
-                    onClick={() => onCommand("eat")}
+                    onActivate={() => onCommand("eat")}
                   >
                     Eat meal
-                  </button>
+                  </TouchActionButton>
                 </article>
                 <article className="cmd-inventory-card">
                   <div className="cmd-item-art item-water">
@@ -617,7 +618,7 @@ export default function CampaignTablet({
                   <h3>Water bottle</h3>
                   <strong>{state.bottle.toFixed(2)} / 1 L</strong>
                   <small>{state.water.toFixed(2)} L in storage</small>
-                  <button
+                  <TouchActionButton
                     disabled={
                       locked("drink") ||
                       state.bottle <= 0 ||
@@ -627,10 +628,10 @@ export default function CampaignTablet({
                       state.minutes - s.lastDrink < 2 ||
                       state.hydration >= 99
                     }
-                    onClick={() => onCommand("drink")}
+                    onActivate={() => onCommand("drink")}
                   >
                     Drink water · 250 mL
-                  </button>
+                  </TouchActionButton>
                 </article>
               </div>
               {outside(s) && (
@@ -798,15 +799,15 @@ export default function CampaignTablet({
                 {money(progress.economy.balance)}
                 {s.finance.practice ? " · TRAINING REPLAY" : ""}
               </p>
-              <button className="campaign-details-button" onClick={onAbort}>
+              <TouchActionButton className="campaign-details-button" onActivate={onAbort}>
                 Abort flight & recover hardware
-              </button>
-              <button
+              </TouchActionButton>
+              <TouchActionButton
                 className="campaign-details-button"
-                onClick={onResetTutorials}
+                onActivate={onResetTutorials}
               >
                 Reset beginner explanations
-              </button>
+              </TouchActionButton>
             </>
           )}
         </div>
@@ -815,9 +816,9 @@ export default function CampaignTablet({
             <i />
             {saveError ? "SAVE WARNING" : "LOCAL AUTOSAVE"}
           </span>
-          <button onClick={onHome}>
+          <TouchActionButton onActivate={onHome}>
             Save & campaign <Icon name="chevron" size={14} />
-          </button>
+          </TouchActionButton>
         </div>
       </section>
     </div>

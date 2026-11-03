@@ -1,3 +1,4 @@
+import TouchActionButton from "../../TouchActionButton";
 import { money, technologies } from "./economy";
 import type { Report as Result } from "./engine";
 import ScientificReadings from "./ScientificReadings";
@@ -179,15 +180,15 @@ export default function Report({
         </section>
       </div>
       <div className="actions">
-        {result.success && onNext && <button className="primary" onClick={onNext}>
+        {result.success && onNext && <TouchActionButton className="primary" onActivate={onNext}>
           Next level in {campaignForMission(result.missionId)?.name} →
-        </button>}
-        {!result.success && onRetry && <button className="primary" onClick={onRetry}>
+        </TouchActionButton>}
+        {!result.success && onRetry && <TouchActionButton className="primary" onActivate={onRetry}>
           Retry this level →
-        </button>}
-        <button className="secondary" onClick={onHome}>
+        </TouchActionButton>}
+        <TouchActionButton className="secondary" onActivate={onHome}>
           {result.success ? "Finish report · Return to campaign" : "Return to campaign · No next level unlocked"}
-        </button>
+        </TouchActionButton>
       </div>
     </div>
   );
