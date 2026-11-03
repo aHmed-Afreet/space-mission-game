@@ -1,7 +1,7 @@
 import { worldAction, service, serviceEquipment } from "./campaign/ship";
 import { useCallback, useEffect, useRef, useState } from "react";
 import GameSettings from "./campaign/GameSettings";
-import { writePreferences } from "./campaign/preferences";
+import type { PlayerPreferences } from "./campaign/preferences";
 import { initializeCommander, UNSAVED_WARNING } from "./campaign/commanderStorage";
 import type { Design } from "../game";
 import type { LifeSupport } from "./simulation";
@@ -63,11 +63,12 @@ export default function Commander({
     [device, setDevice] = useState<"ipad" | "iphone" | "laptop" | null>(null),
     [laptopIntro, setLaptopIntro] = useState(false),
     [settingsOpen, setSettingsOpen] = useState(false),
-    [preferences, setPreferences] = useState(initial.preferences);
-  useEffect(() => {
-    if (!storage) return;
-    try { writePreferences(storage, preferences); } catch { /* Storage may be blocked. */ }
-  }, [storage, preferences]);
+    [preferences, setPreferences] = useState(initial.preferences),
+    [preferencesWarning, setPreferencesWarning] = useState(initial.preferencesSaving.warning);
+  const changePreferences = useCallback((next: PlayerPreferences) => {
+    setPreferences(next);
+    setPreferencesWarning(initial.preferencesSaving.save(next));
+  }, [initial.preferencesSaving]);
   const latest = useRef(store);
   latest.current = store;
   const timeBudget = useRef(createCommanderTimeBudget());
@@ -281,7 +282,7 @@ export default function Commander({
     }
   };
   const settingsView = settingsOpen ? (
-    <GameSettings value={preferences} onChange={setPreferences} device={deviceValue}
+    <GameSettings value={preferences} onChange={changePreferences} saveWarning={preferencesWarning} device={deviceValue}
       onDevice={setDevice} onClose={closeSettings}
       onReset={resetProgress} readonly={loaded.readOnly}/>
   ) : null;

@@ -140,6 +140,17 @@ export default function Flight({
   const resumedAfterGuide = useRef(false),
     lastTutorial = useRef(""),
     lastLog = useRef("");
+  const tutorialTrigger = useRef<HTMLButtonElement>(null);
+  const returnToTutorialTrigger = useRef(false);
+  useEffect(() => {
+    // Pausing removes the guidance branch and its original trigger. Restore
+    // the new logical trigger only after resume has committed its DOM refs.
+    if (tutorial || s.state.paused || !returnToTutorialTrigger.current) return;
+    returnToTutorialTrigger.current = false;
+    const trigger = tutorialTrigger.current;
+    if (trigger?.isConnected && !trigger.closest("[inert],[hidden]"))
+      trigger.focus({ preventScroll: true });
+  }, [tutorial, s.state.paused]);
   const m = missionForSession(s),
     o = currentObjective(s),
     guide = objectiveGuide(s),
@@ -556,7 +567,7 @@ export default function Flight({
             onActivate={()=>setHelpOpen(open=>!open)}>
             {helpOpen ? "▲ Hide instructions · Return to moving" : "ⓘ HOW TO COMPLETE · Show instructions ▼"}
           </TouchActionButton>
-          {o.tutorial && <TouchActionButton type="button" className="campaign-tutorial-manual" onActivate={showTutorial}>ⓘ VIEW TUTORIAL (OPTIONAL)</TouchActionButton>}
+          {o.tutorial && <TouchActionButton ref={tutorialTrigger} type="button" className="campaign-tutorial-manual" onActivate={showTutorial}>ⓘ VIEW TUTORIAL (OPTIONAL)</TouchActionButton>}
           {helpOpen && <div id="campaign-objective-help" className="campaign-task-guide-content">
           <p className="campaign-guide-next">{guide.next}</p>
           <ol>
@@ -826,7 +837,10 @@ export default function Flight({
             onClose={() => {
               onDismissTutorial(tutorial);
               setTutorial(null);
-              if (resumedAfterGuide.current) onTickPause(false);
+              if (resumedAfterGuide.current) {
+                returnToTutorialTrigger.current = true;
+                onTickPause(false);
+              }
             }}
           />
         </div>

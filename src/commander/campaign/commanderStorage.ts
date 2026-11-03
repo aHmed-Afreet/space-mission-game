@@ -1,5 +1,5 @@
 import { CampaignSaveRecoveryError, loadStore, newStore, persist, resetStore, SAVE_KEY, type Store } from "./save";
-import { readPreferences } from "./preferences";
+import { initializePreferences } from "./preferences";
 
 export type CampaignStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -55,10 +55,12 @@ export function initializeCommander(
       return result;
     },
   };
+  const preferencesSaving = initializePreferences(storage);
   return {
     storage,
     loaded,
     saving,
-    preferences: readPreferences(storage),
+    preferences: preferencesSaving.value,
+    preferencesSaving,
   };
 }

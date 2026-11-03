@@ -6,7 +6,7 @@ import Icon from "../Icons";
 import { useModalFocus } from "../modalFocus";
 
 export default function GameSettings({
-  value, onChange, onClose, onReset, onDevice, device, readonly=false,
+  value, onChange, onClose, onReset, onDevice, device, readonly=false, saveWarning="",
 }: {
   value: PlayerPreferences;
   onChange: (value:PlayerPreferences)=>void;
@@ -15,6 +15,7 @@ export default function GameSettings({
   onDevice:(value:"ipad"|"iphone"|"laptop")=>void;
   device:"ipad"|"iphone"|"laptop";
   readonly?:boolean;
+  saveWarning?:string;
 }) {
   const [muted,setMuted]=useState(sound.settings().mute);
   const [fullscreen,setFullscreen]=useState(!!document.fullscreenElement);
@@ -46,6 +47,7 @@ export default function GameSettings({
         <TouchActionButton ref={close} type="button" onActivate={onClose} aria-label="Close settings"><Icon name="close"/> Close</TouchActionButton>
       </header>
       <div className="game-settings-body">
+        {saveWarning&&<p role="status">{saveWarning}</p>}
         <label htmlFor="settings-device">Device & controls</label>
         <select id="settings-device" value={device} onChange={e=>onDevice(e.target.value as "ipad"|"iphone"|"laptop")}>
           <option value="ipad">iPad · floating joystick, sprint and interact</option>
