@@ -7,7 +7,7 @@ import { initializeCommander, UNSAVED_WARNING, type CampaignStorage } from "./co
 import { defaultPreferences } from "./preferences";
 import { canServiceEquipment } from "./maintenance";
 import { equipmentServiceCost, serviceEquipment } from "./ship";
-import { newStore, loadStore, persist, resetStore, SAVE_KEY } from "./save";
+import { CampaignSaveRecoveryError, newStore, loadStore, persist, resetStore, SAVE_KEY, SAVE_RECOVERY_WARNING } from "./save";
 
 const BACKUP_KEY = SAVE_KEY + ".backup";
 function memoryStorage() {
@@ -54,6 +54,134 @@ test("initialization reuses its acquired storage for progress and preferences", 
   assert.equal(initial.storage, storage);
   assert.deepEqual(initial.loaded.store.progress.tutorials, ["current-flight"]);
   assert.deepEqual(initial.preferences, { graphics: "battery", lookSensitivity: 1.4, showHints: false });
+});
+
+test("initial read denial stays unsaved after access recovers, preserving primary, backup and unrelated saves", () => {
+  const { storage, map, operations } = existingCampaign();
+  map.set("orbital-history-progress-v1", "unrelated-earned-story-progress");
+  const before = [...map], read = storage.getItem;
+  storage.getItem = key => {
+    if (key === SAVE_KEY || key === BACKUP_KEY) throw new DOMException("Denied", "SecurityError");
+    return read(key);
+  };
+  const initial = initializeCommander(() => storage);
+  assert.equal(initial.loaded.readOnly, false); // Playing in memory remains available.
+  assert.equal(initial.loaded.warning, SAVE_RECOVERY_WARNING);
+  assert.equal(initial.loaded.store.progress.tutorials.length, 0);
+  storage.getItem = read;
+  initial.loaded.store.progress.tutorials.push("unsaved-play");
+  for (let i = 0; i < 3; i++) assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+  assert.deepEqual([...map], before);
+  assert.deepEqual(operations, []);
+  const reloaded = initializeCommander(() => storage);
+  assert.deepEqual(reloaded.loaded.store.progress.tutorials, ["current-flight"]);
+  assert.equal(reloaded.saving.save(reloaded.loaded.store), "");
+});
+
+test("an unreadable primary cannot be replaced by an older readable backup after read recovery", () => {
+  const { storage, map, operations } = existingCampaign();
+  const before = [...map], read = storage.getItem;
+  storage.getItem = key => { if (key === SAVE_KEY) throw Error("Temporarily denied"); return read(key); };
+  const initial = initializeCommander(() => storage);
+  assert.deepEqual(initial.loaded.store.progress.tutorials, ["previous-flight"]);
+  assert.match(initial.loaded.warning, /loaded in memory.*saving is paused/);
+  storage.getItem = read;
+  assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+  assert.deepEqual([...map], before);
+  assert.deepEqual(operations, []);
+});
+
+test("malformed initial reads stay protected even if a later read becomes valid", () => {
+  const { storage, map, operations } = existingCampaign();
+  const before = [...map], read = storage.getItem;
+  storage.getItem = key => key === SAVE_KEY || key === BACKUP_KEY ? "{transient-bad-data" : read(key);
+  const initial = initializeCommander(() => storage);
+  storage.getItem = read;
+  assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+  assert.deepEqual([...map], before);
+  assert.deepEqual(operations, []);
+});
+
+test("backup recovery cannot overwrite a primary that reappears after an initially malformed or missing read", () => {
+  for (const transientPrimary of ["{transient-bad-data", null]) {
+    const { storage, map, operations } = existingCampaign();
+    const before = [...map], read = storage.getItem;
+    storage.getItem = key => key === SAVE_KEY ? transientPrimary : read(key);
+    const initial = initializeCommander(() => storage);
+    assert.deepEqual(initial.loaded.store.progress.tutorials, ["previous-flight"]);
+    storage.getItem = read;
+    assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+    assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+    assert.deepEqual([...map], before);
+    assert.deepEqual(operations, []);
+    assert.deepEqual(initializeCommander(() => storage).loaded.store.progress.tutorials, ["current-flight"]);
+  }
+});
+
+test("autosave never replaces two unreadable copies and latches protection until reload or explicit reset", () => {
+  const { storage, map, operations } = existingCampaign();
+  const initial = initializeCommander(() => storage);
+  map.set(SAVE_KEY, "{broken-primary");
+  map.set(BACKUP_KEY, "{broken-backup");
+  const before = [...map];
+  assert.throws(() => persist(storage, initial.loaded.store), CampaignSaveRecoveryError);
+  assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+  assert.deepEqual([...map], before);
+  assert.deepEqual(operations, []);
+  // Another process recovers the original data; the stale mounted fallback
+  // still has no permission to overwrite it.
+  map.set(SAVE_KEY, JSON.stringify(newStore()));
+  assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+  assert.deepEqual(operations, []);
+});
+
+test("only a successfully committed explicit reset clears unreadable-save protection", () => {
+  const { storage, map, operations } = existingCampaign();
+  map.set(SAVE_KEY, "{broken-primary");
+  map.set(BACKUP_KEY, "{broken-backup");
+  const before = [...map], initial = initializeCommander(() => storage), write = storage.setItem;
+  storage.setItem = () => { throw new DOMException("Full", "QuotaExceededError"); };
+  assert.throws(() => initial.saving.reset(), /Full/);
+  assert.deepEqual([...map], before);
+  assert.throws(() => initial.saving.save(initial.loaded.store), CampaignSaveRecoveryError);
+  storage.setItem = write;
+  const reset = initial.saving.reset();
+  assert.deepEqual(reset.store.progress.tutorials, []);
+  assert.equal(reset.warning, "");
+  assert.equal(initial.saving.save(reset.store), "");
+  assert.deepEqual(operations, ["set:" + SAVE_KEY, "set:" + BACKUP_KEY, "set:" + SAVE_KEY, "set:" + BACKUP_KEY]);
+  assert.equal(map.get(SAVE_KEY), JSON.stringify(reset.store));
+  assert.equal(map.get(BACKUP_KEY), map.get(SAVE_KEY));
+});
+
+test("backup restoration and empty-device saves remain writable through the actual controller", () => {
+  for (const primary of ["{broken", undefined]) {
+    const { storage, map } = existingCampaign();
+    if (primary) map.set(SAVE_KEY, primary); else map.delete(SAVE_KEY);
+    const initial = initializeCommander(() => storage);
+    assert.match(initial.loaded.warning, /backup was restored/);
+    assert.equal(initial.saving.save(initial.loaded.store), "");
+    assert.deepEqual(loadStore(storage).store.progress.tutorials, ["previous-flight"]);
+  }
+  const { storage, map } = memoryStorage();
+  const initial = initializeCommander(() => storage);
+  assert.equal(initial.loaded.warning, "");
+  assert.equal(initial.saving.save(initial.loaded.store), "");
+  assert.equal(map.get(SAVE_KEY), JSON.stringify(initial.loaded.store));
+});
+
+test("the controller cannot clear protection by resetting or saving a newer campaign", () => {
+  for (const futureAtLoad of [false, true]) {
+    const { storage, map, operations } = existingCampaign();
+    if (futureAtLoad) map.set(SAVE_KEY, '{"version":99,"progress":"future-data"}');
+    const initial = initializeCommander(() => storage);
+    map.set(SAVE_KEY, '{"version":99,"progress":"future-data"}');
+    const before = [...map];
+    assert.throws(() => initial.saving.reset(), /newer campaign save/);
+    assert.throws(() => initial.saving.save(initial.loaded.store), /newer campaign save/);
+    assert.deepEqual([...map], before);
+    assert.deepEqual(operations, []);
+  }
 });
 
 test("failed reset and autosave primary writes preserve both original keys and live progress", () => {

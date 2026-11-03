@@ -468,11 +468,23 @@ function newerSave(raw: string | null) {
   } catch { return false; }
 }
 
+export const SAVE_RECOVERY_WARNING =
+  "Campaign saving is paused to protect unreadable saved progress. You can play in this tab without saving. Restore storage access and reload to recover your campaign; use Reset campaign progress only if you intend to discard it.";
+
+export class CampaignSaveRecoveryError extends Error {
+  constructor() {
+    super(SAVE_RECOVERY_WARNING);
+    this.name = "CampaignSaveRecoveryError";
+  }
+}
+
 export function loadStore(storage: Pick<Storage, "getItem">): {
   store: Store;
   warning: string;
   readOnly: boolean;
   legacy: boolean;
+  saveBlocked?: boolean;
+  recoveryPrimary?: string | null;
 } {
   let legacy = false;
   try {
@@ -487,7 +499,8 @@ export function loadStore(storage: Pick<Storage, "getItem">): {
   }
   let raw: string | null = null, backup: string | null = null;
   let unreadable = false;
-  try { raw = storage.getItem(SAVE_KEY); } catch { unreadable = true; }
+  let primaryReadFailed = false;
+  try { raw = storage.getItem(SAVE_KEY); } catch { unreadable = primaryReadFailed = true; }
   try { backup = storage.getItem(SAVE_KEY + ".backup"); } catch { unreadable = true; }
   if (newerSave(raw) || newerSave(backup))
     return {
@@ -505,19 +518,23 @@ export function loadStore(storage: Pick<Storage, "getItem">): {
     try {
       return {
         store: decodeStore(backup),
-        warning: "Your previous valid campaign backup was restored.",
+        warning: primaryReadFailed
+          ? "Your previous valid campaign backup was loaded in memory. " + SAVE_RECOVERY_WARNING
+          : "Your previous valid campaign backup was restored.",
         readOnly: false,
         legacy,
+        saveBlocked: primaryReadFailed,
+        recoveryPrimary: raw,
       };
     } catch { unreadable = true; }
   }
   if (unreadable) {
     return {
       store: newStore(),
-      warning:
-        "The campaign save could not be read. Your older save was left untouched; a new campaign can be started.",
+      warning: SAVE_RECOVERY_WARNING,
       readOnly: false,
       legacy,
+      saveBlocked: true,
     };
   }
   const store = newStore();
@@ -597,11 +614,18 @@ export function persist(
   return "";
 }
 
-function writableSave(storage: Pick<Storage, "getItem">) {
+function writableSave(storage: Pick<Storage, "getItem">, explicitReset = false) {
   const previous = storage.getItem(SAVE_KEY);
   const backup = storage.getItem(SAVE_KEY + ".backup");
   if (newerSave(previous) || newerSave(backup))
     throw Error("A newer campaign save cannot be overwritten.");
+  if (!explicitReset && (previous || backup)) {
+    const valid = [previous, backup].some(raw => {
+      if (!raw) return false;
+      try { decodeStore(raw); return true; } catch { return false; }
+    });
+    if (!valid) throw new CampaignSaveRecoveryError();
+  }
   return previous;
 }
 
@@ -612,7 +636,7 @@ export function resetStore(storage: Pick<Storage, "getItem" | "setItem" | "remov
   const store = newStore();
   const encoded = JSON.stringify(store);
   decodeStore(encoded);
-  writableSave(storage);
+  writableSave(storage, true);
   // Commit the replacement before touching recovery data or live game state.
   storage.setItem(SAVE_KEY, encoded);
   try {

@@ -32,8 +32,7 @@ import {
   type Session,
 } from "./campaign/engine";
 import {
-  persist,
-  resetStore,
+  CampaignSaveRecoveryError,
   toggleGear,
   type Store,
 } from "./campaign/save";
@@ -50,7 +49,7 @@ export default function Commander({
   onExit?: () => void;
 }) {
   const [initial] = useState(() => initializeCommander());
-  const { storage, loaded } = initial;
+  const { storage, loaded, saving } = initial;
   const [campaignRoute, setCampaignRoute] = useState<CampaignId | null>(null);
   const [store, setStore] = useState<Store>(loaded.store),
     [mode, setMode] = useState<"home" | "prepare" | "flight" | "legacy">(
@@ -81,13 +80,14 @@ export default function Commander({
     if (loaded.readOnly) return;
     if (!storage) { setSaveError(UNSAVED_WARNING); return; }
     try {
-      setSaveError(persist(storage, latest.current));
-    } catch {
+      setSaveError(saving.save(latest.current));
+    } catch (error) {
       setSaveError(
-        "Progress cannot be saved on this device. Keep this tab open or allow browser storage.",
+        error instanceof CampaignSaveRecoveryError ? error.message :
+          "Progress cannot be saved on this device. Keep this tab open or allow browser storage.",
       );
     }
-  }, [loaded.readOnly, storage]);
+  }, [loaded.readOnly, storage, saving]);
   useEffect(() => {
     const id = setInterval(save, 1500);
     const hide = () => {
@@ -264,7 +264,7 @@ export default function Commander({
       return;
     }
     try {
-      const { store: next, warning } = resetStore(storage);
+      const { store: next, warning } = saving.reset();
       latest.current = next;
       setStore(next);
       setSelected(missions[0]);
