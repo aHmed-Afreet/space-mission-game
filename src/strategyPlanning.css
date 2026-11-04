@@ -12,4 +12,122 @@
 .strategy-mission-board .strategy-resume p{color:#daedf6}
 @media(max-width:1000px){.app .strategy-energy dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.app .strategy-energy dl{grid-template-columns:1fr}.app .strategy-energy{padding:16px}.app .strategy-attempt-actions button{width:100%}}
-@media print{.app .strategy-attempt-actions,.app .strategy-energy details{display:none}.app .strategy-energy dd{color:#222}}
+/* Keep the earned debrief readable with browser backgrounds enabled or omitted.
+   ID scope and print-only importance beat the shared late dark-theme rules. */
+@media print {
+  @page { size: A4; margin: 14mm; }
+
+  :root, html, body, #root {
+    color: #000 !important;
+    background: #fff !important;
+    color-scheme: light !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  #root::before { display: none !important; content: none !important; }
+  #root .cmd-mode-bar { display: none !important; }
+  #root .app {
+    color: #000 !important;
+    background: #fff !important;
+    font-size: 11pt;
+  }
+  #root .app *, #root .app *::before, #root .app *::after {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  #root .app > header, #root .app .layout > aside,
+  #root .app .actions, #root .app .strategy-attempt-actions,
+  #root .app .alert button { display: none !important; }
+  #root .app .layout { display: block !important; max-width: none; }
+  #root .app main { width: 100%; padding: 0 !important; }
+  #root .app .page-top { display: flex !important; flex-wrap: wrap; gap: 3mm; }
+  #root .app .mission-badge { display: block !important; }
+  #root .app .title-row { margin: 4mm 0; flex-wrap: wrap; gap: 4mm; }
+  #root .app .stage-content { transform: none !important; opacity: 1 !important; }
+  #root .app .panel, #root .app .resource, #root .app .strategy-result {
+    background: #fff !important;
+    border: 1px solid #444 !important;
+    border-radius: 2mm;
+    padding: 4mm;
+    break-inside: avoid;
+    overflow: visible !important;
+  }
+  #root .app .resource-grid, #root .app .report-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 3mm;
+    margin: 4mm 0;
+  }
+  #root .app .brief-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3mm;
+  }
+  #root .app .strategy-energy dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  #root .app .report-hero {
+    flex-direction: row !important;
+    text-align: left !important;
+    gap: 5mm;
+  }
+  #root .app .report-hero > div:first-child { flex: 1; min-width: 0; }
+  #root .app .score {
+    flex: 0 0 38mm;
+    min-width: 38mm;
+    width: 38mm;
+    height: 38mm;
+    border: 2px solid #000 !important;
+  }
+  #root .app h1 { font-size: 22pt; }
+  #root .app h2 { font-size: 16pt; }
+  #root .app h3 { font-size: 12pt; }
+  #root .app h1, #root .app h2, #root .app h3 { break-after: avoid; }
+  #root .app p, #root .app li, #root .app dt,
+  #root .app label, #root .app summary {
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+  }
+  #root .app .intro, #root .app .panel p, #root .app .log p {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    break-inside: avoid;
+  }
+  #root .app .strategy-energy dd { font-size: 11pt !important; }
+  #root .app .resource strong { font-size: 14pt; }
+  #root .app .report-metric strong { font-size: 20pt; }
+  #root .app .score strong { font-size: 32pt; }
+  #root .app .score strong small { font-size: 14pt !important; }
+  #root .app small, #root .app .muted, #root .app .eyebrow,
+  #root .app .stage-count, #root .app .mission-badge,
+  #root .app .mission-badge strong, #root .app .chip,
+  #root .app .score span, #root .app footer {
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+  }
+  #root .app .meter {
+    height: 5px;
+    border: 1px solid #444 !important;
+    background: #fff !important;
+  }
+  #root .app .meter i {
+    background: #000 !important;
+    border-top: 3px solid #000 !important;
+  }
+  /* Closed disclosures still print their real scientific/model disclaimer. */
+  #root .app .strategy-energy details,
+  #root .app .strategy-energy details > * { display: block !important; }
+  #root .app .strategy-energy details::details-content {
+    display: block !important;
+    content-visibility: visible !important;
+  }
+  #root .app footer { display: flex !important; flex-wrap: wrap; gap: 3mm; }
+}
