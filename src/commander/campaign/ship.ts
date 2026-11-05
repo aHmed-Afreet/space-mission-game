@@ -267,11 +267,10 @@ export function worldAction(
       return fail("Stand beside the section hatch.");
     if (s.world.doors[a.id].open && Math.abs(s.position.z - d.z) < 0.45)
       return fail("Clear the hatch opening before closing it.");
-    // Repeated taps during a slide must never reverse a hatch in flight.
-    // The animation and collision interlock share readyAt; add a short release
-    // margin for a second touch/click event on iPad.
+    // A second INTERACT cannot reverse a moving hatch. After 650ms both
+    // the visible leaves and collision clearance are complete.
     const gate = s.world.doors[a.id];
-    if (gate.readyAt > 0 && now < gate.readyAt + 500) return s;
+    if (gate.readyAt > 0 && now < gate.readyAt) return s;
     n.world.doors[a.id] = {
       open: !gate.open,
       readyAt: now + 650,

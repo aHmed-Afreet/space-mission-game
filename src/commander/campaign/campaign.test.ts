@@ -1208,7 +1208,7 @@ test("rapid repeated INTERACT does not reverse a section door during its animati
   const repeat = worldAction(s, { kind: "door", id: "flight" }, now + 100);
   assert.equal(repeat.world.doors.flight.open, true);
   assert.equal(repeat.world.doors.flight.readyAt, opening);
-  const late = worldAction(s, { kind: "door", id: "flight" }, now + 1200);
+  const late = worldAction(s, { kind: "door", id: "flight" }, now + 650);
   assert.equal(late.world.doors.flight.open, false);
 });
 test("food lockers and water service require physical opening and meals can be returned without duplication", () => {

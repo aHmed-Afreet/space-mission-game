@@ -8,7 +8,7 @@ import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { deck, type Position } from "./layout";
-import { sectionDoorLeafX, doorMotionBlend } from "./doorMotion";
+import { sectionDoorLeafX, sectionDoorOpenFraction } from "./doorMotion";
 import type { Action, Area } from "./simulation";
 export type VisualAction = { id: number; action: Action };
 /** Shared primitive geometry and instanced static fittings keep the cabin inexpensive. */
@@ -620,7 +620,6 @@ export function createInterior(
   }
   let lastScreen = -1,
     lastFx = 0,
-    lastDoorTime: number | undefined,
     fxStart = -10,
     action: Action | undefined;
   const handGroup = new T.Group();
@@ -713,18 +712,15 @@ export function createInterior(
         : Math.abs(pos.z + 4.35) < 2.5
           ? 1
           : 0;
-      const blend=doorMotionBlend(lastDoorTime===undefined?null:t-lastDoorTime);
-      lastDoorTime=t;
-      // Flight-deck leaves are owned by the interior. Other leaves are owned
-      // exclusively by fixtures, so all three doors now have one moving pair.
+      // The visible flight door and its controls reach their end state
+      // at precisely the same instant as the crossing collision interlock.
+      const doorReadyAt=world?.doors.flight.readyAt ?? 0;
+      const doorNowMs=Date.now();
       hatchLeaves.forEach((m,i)=>{
-        const target=sectionDoorLeafX(!!open,i===0?-1:1);
-        m.position.x+=(target-m.position.x)*blend;
+        m.position.x=sectionDoorLeafX(!!open,i===0?-1:1,doorReadyAt,doorNowMs);
       });
-      for(const key of flightDoorButtons){
-        const target=.54+open*1.05;
-        key.position.x+=(target-key.position.x)*blend;
-      }
+      const visibleOpen=sectionDoorOpenFraction(!!open,doorReadyAt,doorNowMs);
+      for(const key of flightDoorButtons) key.position.x=.54+visibleOpen*1.05;
       const age = t - fxStart;
       mealStores.visible=!!world?.lockers.food;
       cabinetPivot.rotation.y +=
