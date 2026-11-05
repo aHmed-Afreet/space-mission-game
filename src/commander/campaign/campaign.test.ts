@@ -1157,6 +1157,14 @@ import {
   nominalCondition,
   equipmentServiceCost,
 } from "./ship";
+test("door interaction label stays OPENING or CLOSING until its clearance period ends",()=>{
+  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+  assert.match(cabin,/const inMotion = gateState/);
+  assert.match(cabin,/Date\.now\(\) < gateState\.readyAt/);
+  assert.match(cabin,/"OPENING"/);
+  assert.match(cabin,/"CLOSING"/);
+  assert.match(cabin,/WAIT FOR DOOR/);
+});
 test("exactly one rendered pair owns each section door, preventing overlapping hatch geometry",()=>{
   const interior=readFileSync("src/commander/interior.ts","utf8");
   const fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8");
