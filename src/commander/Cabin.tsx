@@ -292,6 +292,13 @@ export default function Cabin(props: Props) {
         const supportsEva=missionForSession(current.current.world.session).eva;
         const picked = pickAimTarget(camera, current.current.world.session, supportsEva);
         aim.current = picked;
+        const gateState = picked?.kind === "door"
+          ? current.current.world.session.world.doors[picked.id as keyof typeof doors]
+          : undefined;
+        const inMotion = gateState !== undefined && Date.now() < gateState.readyAt;
+        const doorVerb = inMotion
+          ? gateState?.open ? "OPENING" : "CLOSING"
+          : gateState?.open ? "CLOSE" : "OPEN";
         const label = picked
           ? picked.kind === "airlock" ? (supportsEva
               ? `${picked.id==="inner"?"INNER":"OUTER"} AIRLOCK CONTROL · INTERACT`
@@ -300,7 +307,7 @@ export default function Cabin(props: Props) {
               Math.abs(camera.position.z-doors[picked.id as keyof typeof doors].z)>1.55
               || Math.abs(camera.position.x)>1.45
               ? `MOVE CLOSER · ${doors[picked.id as keyof typeof doors].name.toUpperCase()}`
-              : `${current.current.world.session.world.doors[picked.id as keyof typeof doors].open?"CLOSE":"OPEN"} ${doors[picked.id as keyof typeof doors].name.toUpperCase()} · INTERACT`)
+              : `${doorVerb} ${doors[picked.id as keyof typeof doors].name.toUpperCase()} · ${inMotion?"WAIT FOR DOOR":"INTERACT"}`)
           : picked.kind === "locker" ? lockers[picked.id as keyof typeof lockers].name
           : deck[picked.id as keyof typeof deck].name
           : "";
