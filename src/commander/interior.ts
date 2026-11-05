@@ -298,6 +298,14 @@ export function createInterior(
     hatchLeaves.push(m);
     part(side * 1.35, 2.4, -4.2, 0.12, 0.055, 0.025, amber);
   }
+  // All three section hatches use physical sliding leaves. Previously the
+  // service and habitation gates changed collision state but had no animated
+  // leaf, making their interaction feedback misleading.
+  for (const z of [-1.35, 2.35]) {
+    for (const side of [-1, 1]) {
+      hatchLeaves.push(dynamic(side * 0.53, 1.28, z, 1.02, 2.5, 0.08, panel));
+    }
+  }
   // Two large lit buttons, one on each side of the moving flight-deck leaf.
   // They track the actual leaf position when it slides open.
   const doorKeyMat=mat("#e8fff3",.15,.26,"#72e8c0");
@@ -710,12 +718,14 @@ export function createInterior(
           ? 1
           : 0;
       hatchLeaves.forEach((m, i) => {
-        const target = (i === 0 ? -1 : 1) * (0.53 + open * 1.05);
-        m.position.x += (target - m.position.x) * 0.08;
+        const id = i < 2 ? "flight" : i < 4 ? "service" : "habitation";
+        const active = world ? Number(world.doors[id].open) : (id === "flight" ? open : 1);
+        const target = (i % 2 === 0 ? -1 : 1) * (0.53 + active * 1.05);
+        m.position.x += (target - m.position.x) * 0.2;
       });
       for(const key of flightDoorButtons){
         const target=.54+open*1.05;
-        key.position.x+=(target-key.position.x)*.08;
+        key.position.x+=(target-key.position.x)*.2;
       }
       const age = t - fxStart;
       mealStores.visible=!!world?.lockers.food;

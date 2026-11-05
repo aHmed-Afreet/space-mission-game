@@ -1175,6 +1175,18 @@ test("physical section doors block crossing, animate before clearance and reject
   const close = worldAction(s, { kind: "door", id: "flight" });
   assert.equal(close.world.doors.flight.open, true);
 });
+test("rapid repeated INTERACT does not reverse a section door during its animation", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  const now = 100_000;
+  s = worldAction(s, { kind: "door", id: "flight" }, now);
+  assert.equal(s.world.doors.flight.open, true);
+  const opening = s.world.doors.flight.readyAt;
+  const repeat = worldAction(s, { kind: "door", id: "flight" }, now + 100);
+  assert.equal(repeat.world.doors.flight.open, true);
+  assert.equal(repeat.world.doors.flight.readyAt, opening);
+  const late = worldAction(s, { kind: "door", id: "flight" }, now + 1200);
+  assert.equal(late.world.doors.flight.open, false);
+});
 test("food lockers and water service require physical opening and meals can be returned without duplication", () => {
   let s = createSession(missions[0], design, life, [], emptyProgress());
   s = stand(s, "galley");
