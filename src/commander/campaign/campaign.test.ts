@@ -1452,11 +1452,14 @@ test("published privacy page and release disclaimer exist", () => {
   assert.match(privacy,/NASA does not operate or endorse/i);
 });
 
-test("main menu contains exactly four commands with a combined history and story entry", () => {
+test("main menu offers five clear choices including featured and full history archive", () => {
   const menu = readFileSync("src/ModeSelect.tsx", "utf8");
   const history = readFileSync("src/history/HistoryHub.tsx", "utf8");
-  assert.equal((menu.match(/id: "(?:commander|strategy|history|guide)", number:/g) || []).length, 4);
-  assert.match(menu, /title: "Explore Space History"/);
+  assert.equal((menu.match(/id: "(?:commander|strategy|history|history_all|guide)", number:/g) || []).length, 5);
+  assert.match(menu, /title: "Featured Space Stories"/);
+  assert.match(menu, /title: "Full Story Archive"/);
+  assert.match(history, /FEATURED_STORY_IDS/);
+  assert.match(history, /setCollection\("archive"\)/);
   assert.match(menu, /experiences\.map\(item => <button/);
   assert.doesNotMatch(menu, /setMode\("stories"\)/);
   assert.match(history, />READ HISTORY<\/button>/);
@@ -2039,10 +2042,10 @@ test("Commander type pages navigate independently, preserve saves and show each 
   assert.match(home,/session && \(/);
   assert.match(home,/disabled=\{!ready \|\| readOnly\}/);
   assert.match(commander,/onResume=\{\(\) => store\.session\?\.report \? dismissReport\(\) : setMode\("flight"\)\}/);
-  assert.match(portal,/ENTER COMMANDER/);
-  assert.match(portal,/Fly as an Astronaut/);
-  assert.match(portal,/Build & Launch Missions/);
-  assert.match(portal,/Explore Space History/);
+  assert.match(portal,/PLAY COMMANDER/);
+  assert.match(portal,/Commander — Be the Astronaut/);
+  assert.match(portal,/Mission Planner — Build & Launch/);
+  assert.match(portal,/Featured Space Stories/);
   assert.match(css,/orbital-landing-hero/);
 });
 
@@ -2200,19 +2203,21 @@ test("engineer receives astronaut instructions and never flies the spacecraft",(
  assert.match(app,/AUTHORIZE PILOT LAUNCH/);
  assert.match(app,/eventMessage\(selected\.title\)/);
  assert.match(app,/flightMessage\(progress,design\)/);
- assert.match(selection,/MISSION ENGINEER/);
+ assert.match(selection,/Mission Planner/);
 });
-test("official agency films open before the historical 3D scene",()=>{
+test("official agency footage embeds inside the game with a working animation fallback",()=>{
  const hub=readFileSync("src/history/HistoryHub.tsx","utf8");
  const films=Object.values(officialFilms);
  assert.ok(films.length>=5);
  assert.match(hub,/!filmConfirmed/);
- assert.match(hub,/disabled=\{!filmOpened\}/);
- assert.match(hub,/WATCH VIDEO AT/);
- assert.match(hub,/setFilmOpened\(true\)/);
+ const inline=readFileSync("src/history/InlineNasaVideo.tsx","utf8");
+ assert.match(hub,/inlineNasaVideoFor/);
+ assert.match(hub,/InlineNasaVideo/);
  assert.match(hub,/setFilmConfirmed\(true\)/);
- assert.match(hub,/href=\{officialFilm.record\}/);
- assert.match(hub,/VIDEO UNAVAILABLE · CONTINUE WITH MISSION RECORD/);
+ assert.match(inline,/youtube-nocookie.com/);
+ assert.match(inline,/setAnimated\(true\)/);
+ assert.match(inline,/CONTINUE TO INTERACTIVE MISSION/);
+ assert.match(hub,/StoryBriefingVideo/);
  const programRecords:Record<string,string>={"Voyager 1":"https://science.nasa.gov/mission/voyager/",
    "Voyager 2":"https://science.nasa.gov/mission/voyager/","Skylab 2":"https://www.nasa.gov/mission/skylab/"};
  for(const [title,v] of Object.entries(officialFilms)){
@@ -2276,10 +2281,23 @@ test("every one of the 55 Story Mode missions has a video chapter sequence backe
  assert.match(video,/onWatched/);
  assert.match(home,/StoryBriefingVideo/);
  assert.match(home,/mission=\{chosen\}/);
- assert.match(home,/Watch animated video → Live/);
+ assert.match(home,/Watch animation → Play/);
  assert.match(home,/!filmConfirmed/);
 });
 
+test("ten curated featured stories preserve the complete 55-mission archive",()=>{
+ const featured=readFileSync("src/history/featuredStories.ts","utf8");
+ const hub=readFileSync("src/history/HistoryHub.tsx","utf8");
+ const portal=readFileSync("src/ModeSelect.tsx","utf8");
+ const ids=[...featured.matchAll(/"history-\d+"/g)].map(x=>x[0].slice(1,-1));
+ assert.equal(ids.length,10);
+ assert.equal(new Set(ids).size,10);
+ assert.ok(ids.includes("history-16"));
+ for(const id of ids) assert.ok(historyMissions.some(m=>m.id===id));
+ assert.equal(historyMissions.length,55);
+ assert.match(hub,/collection==="archive"\|\|FEATURED_STORY_IDS.has\(m.id\)/);
+ assert.match(portal,/startCollection=\{mode==="history_all"\?"archive":"featured"\}/);
+});
 test("recovery, failed actions and tutorials cannot open instructions without player input",()=>{
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  assert.match(flight,/\[helpOpen,setHelpOpen\] = useState\(false\)/);
