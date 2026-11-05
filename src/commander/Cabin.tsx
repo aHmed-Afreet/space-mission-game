@@ -14,7 +14,7 @@ import type { Area } from "./simulation";
 import type { Telemetry } from "./displays";
 import { joystickVector } from "./controls";
 import type { Session } from "./campaign/engine";
-import { campaignWalkable } from "./campaign/engine";
+import { campaignWalkable, currentObjective } from "./campaign/engine";
 import { doors, lockers } from "./campaign/ship";
 import { environments } from "./campaign/environments";
 import { missionForSession } from "./campaign/definitions";
@@ -465,12 +465,16 @@ export default function Cabin(props: Props) {
         Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<12;
       lookPointer.current=undefined;
       e.currentTarget.classList.remove("using");
-      if(wasTap && !props.locked && props.world) {
-        const a=interactionTarget.current(),loc=props.world.session.position;
-        // Tapping the actual cockpit console is equivalent to pressing
-        // INTERACT. In Mission 2 this opens the rendezvous control panel.
-        if(a || Math.hypot(loc.x-deck.cockpit.x,loc.z-deck.cockpit.z)<1.7)
-          props.onInteract(a);
+      if (wasTap && !props.locked && props.world) {
+        // The LOOK surface must NEVER toggle a section door. On iPad an
+        // ordinary tap used to turn the camera could otherwise open and then
+        // close the same hatch accidentally. INTERACT is the only door input.
+        // Preserve the intentional Mission-2 cockpit accessibility shortcut.
+        const s = props.world.session;
+        const cockpitTap = s.missionId === "mission-2" &&
+          currentObjective(s)?.action === "approach" &&
+          Math.hypot(s.position.x-deck.cockpit.x,s.position.z-deck.cockpit.z)<1.7;
+        if (cockpitTap) props.onInteract({ kind:"station", id:"cockpit" });
       }
     }
   };

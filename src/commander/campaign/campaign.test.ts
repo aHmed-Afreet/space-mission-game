@@ -1157,6 +1157,16 @@ import {
   nominalCondition,
   equipmentServiceCost,
 } from "./ship";
+test("exactly one rendered pair owns each section door, preventing overlapping hatch geometry",()=>{
+  const interior=readFileSync("src/commander/interior.ts","utf8");
+  const fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8");
+  assert.match(interior,/hatchLeaves\.push\(m\)/);
+  assert.match(interior,/Engineering and Habitation leaves belong ONLY to createFixtures/);
+  assert.doesNotMatch(interior,/hatchLeaves\.push\(dynamic/);
+  assert.match(fixtures,/if \(id === "flight"\) continue/);
+  assert.match(fixtures,/sectionDoorLeafX\(/);
+  assert.match(interior,/sectionDoorLeafX\(/);
+});
 test("physical section doors block crossing, animate before clearance and reject closure on the player", () => {
   let s = createSession(missions[0], design, life, [], emptyProgress());
   const before = s.position;
@@ -1725,7 +1735,8 @@ test("Mission 2 supports accessible tap-to-operate and an automatic alignment op
  assert.match(flight,/OPERATE RENDEZVOUS COMPUTER/);
  assert.match(flight,/onComplete=\{\(\)=>run\("approach"\)\}/);
  assert.match(cabin,/wasTap/);
- assert.match(cabin,/props.onInteract\(a\)/);
+ assert.match(cabin,/if \(cockpitTap\) props.onInteract\(\{ kind:"station", id:"cockpit" \}\)/);
+ assert.doesNotMatch(cabin,/if\(a \|\| Math\.hypot/);
  assert.match(panel,/Run auto-guidance/);
  assert.match(panel,/Confirm approach manoeuvre/);
  assert.match(panel,/role="dialog"/);
