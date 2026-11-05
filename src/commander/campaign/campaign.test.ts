@@ -1175,6 +1175,12 @@ test("physical section doors block crossing, animate before clearance and reject
   const close = worldAction(s, { kind: "door", id: "flight" });
   assert.equal(close.world.doors.flight.open, true);
 });
+test("station INTERACT works without an exact aim target", () => {
+  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+  const targeting=readFileSync("src/commander/targeting.ts","utf8");
+  assert.match(flight,/area && \(!target \|\| target\.kind === "station"\)/);
+  assert.match(targeting,/reachableDoor/);
+});
 test("rapid repeated INTERACT does not reverse a section door during its animation", () => {
   let s = createSession(missions[0], design, life, [], emptyProgress());
   const now = 100_000;

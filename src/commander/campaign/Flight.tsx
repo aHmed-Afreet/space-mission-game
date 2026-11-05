@@ -416,7 +416,12 @@ export default function Flight({
       setActions(true);
       return;
     }
-    if (target?.kind === "station" || outside(s)) setActions(v => !v);
+    // A press beside a station must open the station panel even if furniture
+    // hides its small aim point or there is no active crosshair target.
+    if (outside(s) || (area && (!target || target.kind === "station"))) {
+      setHatchNotice("");
+      setActions(v => !v);
+    }
   };
   const openTab = (value: CampaignTab) => {
     setNavOpen(false);

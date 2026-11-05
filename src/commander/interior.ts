@@ -625,6 +625,7 @@ export function createInterior(
   }
   let lastScreen = -1,
     lastFx = 0,
+    lastDoorTime: number | undefined,
     fxStart = -10,
     action: Action | undefined;
   const handGroup = new T.Group();
@@ -717,15 +718,20 @@ export function createInterior(
         : Math.abs(pos.z + 4.35) < 2.5
           ? 1
           : 0;
+      // Initialize from saved states, then animate in real seconds rather
+      // than frames so an iPad at lower FPS doesn't barely move the hatch.
+      const doorDt = lastDoorTime === undefined ? 0 : Math.max(0, Math.min(t-lastDoorTime,.1));
+      const blend = lastDoorTime === undefined ? 1 : 1-Math.exp(-doorDt/.16);
+      lastDoorTime=t;
       hatchLeaves.forEach((m, i) => {
         const id = i < 2 ? "flight" : i < 4 ? "service" : "habitation";
         const active = world ? Number(world.doors[id].open) : (id === "flight" ? open : 1);
         const target = (i % 2 === 0 ? -1 : 1) * (0.53 + active * 1.05);
-        m.position.x += (target - m.position.x) * 0.2;
+        m.position.x += (target - m.position.x) * blend;
       });
       for(const key of flightDoorButtons){
         const target=.54+open*1.05;
-        key.position.x+=(target-key.position.x)*.2;
+        key.position.x+=(target-key.position.x)*blend;
       }
       const age = t - fxStart;
       mealStores.visible=!!world?.lockers.food;
