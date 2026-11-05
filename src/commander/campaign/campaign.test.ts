@@ -1206,7 +1206,8 @@ test("physical section doors block crossing, animate before clearance and reject
 test("station INTERACT works without an exact aim target", () => {
   const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
   const targeting=readFileSync("src/commander/targeting.ts","utf8");
-  assert.match(flight,/area && \(!target \|\| target\.kind === "station"\)/);
+  assert.match(flight,/areaAtPress && \(!target \|\| target\.kind === "station"\)/);
+  assert.match(flight,/const areaAtPress = livePosition \? nearby/);
   assert.match(targeting,/reachableDoor/);
 });
 test("rapid repeated INTERACT does not reverse a section door during its animation", () => {
@@ -1686,8 +1687,9 @@ test("door aim feedback matches the real physical interaction distance",()=>{
  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  assert.match(cabin,/MOVE CLOSER/);
- assert.match(flight,/Move closer to the illuminated hatch control/);
- assert.match(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
+ const ship=readFileSync("src/commander/campaign/ship.ts","utf8");
+ assert.match(ship,/Math\.abs\(s\.position\.z - d\.z\) > 1\.6/);
+ assert.doesNotMatch(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
 });
 
 test("new spacecraft visuals are instanced and do not relocate mission stations",()=>{
