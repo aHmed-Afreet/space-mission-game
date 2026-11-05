@@ -267,8 +267,12 @@ export function worldAction(
       return fail("Stand beside the section hatch.");
     if (s.world.doors[a.id].open && Math.abs(s.position.z - d.z) < 0.45)
       return fail("Clear the hatch opening before closing it.");
+    // A second INTERACT cannot reverse a moving hatch. After 650ms both
+    // the visible leaves and collision clearance are complete.
+    const gate = s.world.doors[a.id];
+    if (gate.readyAt > 0 && now < gate.readyAt) return s;
     n.world.doors[a.id] = {
-      open: !s.world.doors[a.id].open,
+      open: !gate.open,
       readyAt: now + 650,
     };
     return shipLog(

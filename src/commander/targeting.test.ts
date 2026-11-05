@@ -39,7 +39,10 @@ test("closed hatches occlude point targets and farther hatch surfaces", () => {
   s.world.doors.flight.open = true;
   s.world.doors.flight.readyAt = 650;
   assert.deepEqual(pickAimTarget(view(0, -4.95), s, false, 300), { kind: "door", id: "flight" });
-  assert.deepEqual(pickAimTarget(view(0, -4.95), s, false, 700), { kind: "door", id: "service" });
+  // A different hatch cannot be activated from across the cabin.
+  assert.equal(pickAimTarget(view(0, -4.95), s, false, 700), null);
+  // Approach the service hatch and the normal control becomes reachable.
+  assert.deepEqual(pickAimTarget(view(0, -2.5), s, false, 700), { kind: "door", id: "service" });
 });
 
 test("opening a hatch preserves its fixed frame and moving leaf controls", () => {
@@ -92,4 +95,23 @@ test("side bulkheads block remote targets even after the hatch opens", () => {
   assert.ok(Math.hypot(...remoteControl.clone().project(camera).toArray().slice(0, 2)) < .001);
   // The sight line crosses the solid side of the Flight bulkhead.
   assert.equal(pickAimTarget(camera, s, false), null);
+});
+
+test("unreachable hatch does not steal INTERACT from the nearby science bay", () => {
+  const s=state();
+  const camera=view(-1.7,-3.1);
+  camera.lookAt(0,1.35,-4.35);
+  assert.notDeepEqual(pickAimTarget(camera,s,false),{kind:"door",id:"flight"});
+  const lab=view(-1.7,-3.1);
+  lab.lookAt(-2.2,1.3,-2.62);
+  assert.deepEqual(pickAimTarget(lab,s,false),{kind:"station",id:"science"});
+});
+test("door candidates match actual 1.6m reach and 1.5m aisle width",()=>{
+  const s=state();
+  const camera=view(0,-4.95);
+  assert.deepEqual(pickAimTarget(camera,s,false),{kind:"door",id:"flight"});
+  camera.position.x=1.7;
+  assert.notDeepEqual(pickAimTarget(camera,s,false),{kind:"door",id:"flight"});
+  camera.position.x=0;camera.position.z=-2.65;
+  assert.notDeepEqual(pickAimTarget(camera,s,false),{kind:"door",id:"flight"});
 });

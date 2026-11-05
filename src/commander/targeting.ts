@@ -63,9 +63,14 @@ export function pickAimTarget(
   camera.updateMatrixWorld();
   const gates = hatches(state, supportsEva, now);
   const direction = camera.getWorldDirection(new THREE.Vector3());
+  // Prevent a distant or sideways hatch from stealing INTERACT from a nearby
+  // science station. These limits exactly match worldAction's door reach.
+  const reachableDoor = (gate: Hatch) => gate.kind !== "door" ||
+    (Math.abs(camera.position.z - gate.z) <= 1.6 &&
+      Math.abs(camera.position.x) <= 1.5);
   let blocking: Hatch | undefined, blockingDistance = Infinity;
   for (const gate of gates) {
-    if (!gate.closed) continue;
+    if (!gate.closed || !reachableDoor(gate)) continue;
     const hit = intersection(camera.position, direction, gate);
     if (!hit || hit.distance > (gate.kind === "door" ? 3.5 : 3.4) ||
       Math.abs(hit.x) > gate.halfWidth || hit.y < .02 || hit.y > gate.height) continue;
@@ -79,6 +84,7 @@ export function pickAimTarget(
 
   const targets: Target[] = [];
   for (const gate of gates) {
+    if (!reachableDoor(gate)) continue;
     const facingSide = camera.position.z > gate.z ? 1 : -1;
     // Fixed frame controls stay reachable after the leaf slides aside. The
     // moving leaf panel follows the same travel as the visible hatch hardware.
