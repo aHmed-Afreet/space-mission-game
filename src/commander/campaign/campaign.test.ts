@@ -1157,6 +1157,16 @@ import {
   nominalCondition,
   equipmentServiceCost,
 } from "./ship";
+test("INTERACT synchronizes live camera position before validated hatch and station actions",()=>{
+  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+  const sync=cabin.indexOf("current.current.onPosition(position);");
+  const act=cabin.indexOf("current.current.onInteract(target, position);");
+  assert.ok(sync>0 && act>sync && act-sync<140);
+  assert.match(cabin,/commitInteraction\.current\(\)/);
+  assert.match(flight,/const areaAtPress = livePosition \? nearby/);
+  assert.doesNotMatch(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
+});
 test("door interaction label stays OPENING or CLOSING until its clearance period ends",()=>{
   const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
   assert.match(cabin,/const inMotion = gateState/);

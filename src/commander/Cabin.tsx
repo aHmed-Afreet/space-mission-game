@@ -31,7 +31,7 @@ type Props = {
   settings?: PlayerPreferences;
   onArea: (area: Area | undefined) => void;
   onPosition: (p: Position) => void;
-  onInteract: (target: AimTarget | null) => void;
+  onInteract: (target: AimTarget | null, position?: Position) => void;
   onGraphicsError: () => void;
   locked: boolean;
   alarm: boolean;
@@ -65,6 +65,7 @@ export default function Cabin(props: Props) {
     clearInput = useRef(() => {}),
     flushMotion = useRef(() => {}),
     interactionTarget = useRef((): AimTarget | null => aim.current),
+    commitInteraction = useRef(() => {}),
     [error, setError] = useState("");
   current.current = props;
   useEffect(() => {
@@ -216,7 +217,7 @@ export default function Cabin(props: Props) {
       }
       if (k === "e" && !e.repeat && !current.current.locked) {
         e.preventDefault();
-        current.current.onInteract(interactionTarget.current());
+        commitInteraction.current();
       }
     };
     const up = (e: KeyboardEvent) => {
@@ -283,6 +284,16 @@ export default function Cabin(props: Props) {
       flushMotion.current();
       const session = current.current.world?.session;
       return session ? pickAimTarget(camera, session, missionForSession(session).eva) : aim.current;
+    };
+    commitInteraction.current = () => {
+      flushMotion.current();
+      // The camera moves continuously while onPosition updates session only
+      // every 150ms. Sync the live position before the queued world action:
+      // otherwise a player already at the hatch can be denied as too far away.
+      const position = {x: camera.position.x, z: camera.position.z, heading: look.current.yaw};
+      const target = interactionTarget.current();
+      current.current.onPosition(position);
+      current.current.onInteract(target, position);
     };
     const loop = (_timestamp: number) => {
       const now = performance.now();
@@ -398,6 +409,7 @@ export default function Cabin(props: Props) {
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       clear();
       flushMotion.current = () => {};
+      commitInteraction.current = () => {};
       fixtures?.dispose();
       interior.dispose();
       renderer.dispose();
@@ -546,7 +558,7 @@ export default function Cabin(props: Props) {
             onPointerCancel={stopSprint}
             onLostPointerCapture={stopSprint}>SPRINT</button>
           <TouchActionButton type="button" className="cmd-work" aria-label="Interact with aimed target"
-            disabled={props.locked} onActivate={() => props.onInteract(interactionTarget.current())}>INTERACT</TouchActionButton>
+            disabled={props.locked} onActivate={() => commitInteraction.current()}>INTERACT</TouchActionButton>
         </div>
       </>}
       {orbitalEva&&props.device!=="laptop"&&
