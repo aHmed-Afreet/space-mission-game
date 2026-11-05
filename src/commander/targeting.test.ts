@@ -39,7 +39,10 @@ test("closed hatches occlude point targets and farther hatch surfaces", () => {
   s.world.doors.flight.open = true;
   s.world.doors.flight.readyAt = 650;
   assert.deepEqual(pickAimTarget(view(0, -4.95), s, false, 300), { kind: "door", id: "flight" });
-  assert.deepEqual(pickAimTarget(view(0, -4.95), s, false, 700), { kind: "door", id: "service" });
+  // A different hatch cannot be activated from across the cabin.
+  assert.equal(pickAimTarget(view(0, -4.95), s, false, 700), null);
+  // Approach the service hatch and the normal control becomes reachable.
+  assert.deepEqual(pickAimTarget(view(0, -2.5), s, false, 700), { kind: "door", id: "service" });
 });
 
 test("opening a hatch preserves its fixed frame and moving leaf controls", () => {
