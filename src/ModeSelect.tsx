@@ -35,6 +35,7 @@ export default function ModeSelect() {
           <p>Build a sustainable Moon or Mars outpost, run spacecraft missions, or explore real space history. Balance oxygen, water, radiation protection, electricity and food to succeed. Progress is saved on this device.</p>
           <div className="orbital-hero-actions">
             <button type="button" className="orbital-hero-primary" onClick={() => setMode("outpost")}>RUN SPACE OUTPOST <span aria-hidden="true">↗</span></button>
+            <button type="button" className="orbital-hero-secondary" onClick={() => setMode("commander")}>PLAY COMMANDER ↗</button>
             <button type="button" className="orbital-hero-secondary" onClick={() => document.getElementById("orbital-experiences")?.scrollIntoView({behavior:"smooth"})}>CHOOSE AN EXPERIENCE ↓</button>
           </div>
         </div>
