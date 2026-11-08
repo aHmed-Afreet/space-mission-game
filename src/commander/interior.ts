@@ -8,6 +8,7 @@ import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { deck, type Position } from "./layout";
+import { sectionDoorLeafX, sectionDoorOpenFraction } from "./doorMotion";
 import type { Action, Area } from "./simulation";
 export type VisualAction = { id: number; action: Action };
 /** Shared primitive geometry and instanced static fittings keep the cabin inexpensive. */
@@ -298,6 +299,8 @@ export function createInterior(
     hatchLeaves.push(m);
     part(side * 1.35, 2.4, -4.2, 0.12, 0.055, 0.025, amber);
   }
+  // Engineering and Habitation leaves belong ONLY to createFixtures().
+  // Duplicating them here created two overlapping 3D doors at each hatch.
   // Two large lit buttons, one on each side of the moving flight-deck leaf.
   // They track the actual leaf position when it slides open.
   const doorKeyMat=mat("#e8fff3",.15,.26,"#72e8c0");
@@ -709,14 +712,15 @@ export function createInterior(
         : Math.abs(pos.z + 4.35) < 2.5
           ? 1
           : 0;
-      hatchLeaves.forEach((m, i) => {
-        const target = (i === 0 ? -1 : 1) * (0.53 + open * 1.05);
-        m.position.x += (target - m.position.x) * 0.08;
+      // The visible flight door and its controls reach their end state
+      // at precisely the same instant as the crossing collision interlock.
+      const doorReadyAt=world?.doors.flight.readyAt ?? 0;
+      const doorNowMs=Date.now();
+      hatchLeaves.forEach((m,i)=>{
+        m.position.x=sectionDoorLeafX(!!open,i===0?-1:1,doorReadyAt,doorNowMs);
       });
-      for(const key of flightDoorButtons){
-        const target=.54+open*1.05;
-        key.position.x+=(target-key.position.x)*.08;
-      }
+      const visibleOpen=sectionDoorOpenFraction(!!open,doorReadyAt,doorNowMs);
+      for(const key of flightDoorButtons) key.position.x=.54+visibleOpen*1.05;
       const age = t - fxStart;
       mealStores.visible=!!world?.lockers.food;
       cabinetPivot.rotation.y +=

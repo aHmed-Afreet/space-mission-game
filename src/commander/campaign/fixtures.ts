@@ -1,6 +1,7 @@
 import * as T from "three";
 import type { Session } from "./engine";
 import { doors, lockers, equipmentLocker, type LockerId } from "./ship";
+import { sectionDoorLeafX, sectionDoorOpenFraction } from "../doorMotion";
 export function createFixtures(scene: T.Scene) {
   const root = new T.Group();
   scene.add(root);
@@ -173,21 +174,21 @@ export function createFixtures(scene: T.Scene) {
   }
   return {
     update(s: Session) {
+      // Same wall-clock time as door.readyAt and the gameplay crossing rule.
+      const nowMs=Date.now();
       for(const {mesh,id} of hatchButtons)
        if(mesh.material instanceof T.MeshBasicMaterial)
         mesh.material.color.set(s.world.doors[id].open?"#70e7c8":"#e5b36f");
       for(const control of leafSwitches){
-        const open=s.world.doors[control.door].open;
-        const x=.54+(open?1.05:0);
-        control.plate.position.x+=(x-control.plate.position.x)*.14;
-        control.key.position.x+=(x-control.key.position.x)*.14;
+        const door=s.world.doors[control.door];
+        const x=.54+sectionDoorOpenFraction(door.open,door.readyAt,nowMs)*1.05;
+        control.plate.position.x=x;
+        control.key.position.x=x;
       }
       for (const [id, mesh] of Object.entries(leaves))
         mesh.forEach((o, i) => {
-          const target =
-            (i ? 1 : -1) *
-            (0.53 + (s.world.doors[id as keyof typeof doors].open ? 1.05 : 0));
-          o.position.x += (target - o.position.x) * 0.15;
+          const gate=s.world.doors[id as keyof typeof doors];
+          o.position.x=sectionDoorLeafX(gate.open,i?1:-1,gate.readyAt,nowMs);
         });
       for (const [id, c] of Object.entries(cabinets)) {
         const key = id as LockerId;

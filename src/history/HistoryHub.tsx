@@ -3,6 +3,8 @@ import { historyMissions, type HistoryMission } from "./missionHistory";
 import StoryFlight from "./StoryFlight";
 import StoryBriefingVideo from "./StoryBriefingVideo";
 import { officialFilmFor } from "./officialFilms";
+import InlineNasaVideo, {inlineNasaVideoFor} from "./InlineNasaVideo";
+import {FEATURED_STORY_IDS} from "./featuredStories";
 import { readHistoryProgress, readHistoryProgressStrict, mergeHistoryProgress, HISTORY_PROGRESS_KEY, HISTORY_RECEIPT_PREFIX, saveHistoryProgress, type HistoryProgress } from "./historyProgress";
 import { readStoryAttempt, clearCompletedStoryAttempt } from "./storyAttempt";
 import { createStoryScenario } from "./storyScenarios";
@@ -25,16 +27,16 @@ type EntryView="archive"|"live";
 type Stage="context"|"operations"|"decision"|"result";
 const stageOrder:Stage[]=["context","operations","decision","result"];
 
-export default function HistoryHub({onExit,startIn="archive"}:{
-  onExit:()=>void;startIn?:EntryView;
+export default function HistoryHub({onExit,startIn="archive",startCollection="featured"}:{
+  onExit:()=>void;startIn?:EntryView;startCollection?:"featured"|"archive";
 }) {
   const [view,setView]=useState<EntryView>(startIn);
   const [query,setQuery]=useState("");
+  const [collection,setCollection]=useState<"featured"|"archive">(startCollection);
   const [era,setEra]=useState("All periods");
   const [category,setCategory]=useState("All types");
   const [chosen,setChosen]=useState<HistoryMission|null>(null);
   const [stage,setStage]=useState<Stage>("context");
-  const [filmOpened,setFilmOpened]=useState(false);
   const [filmConfirmed,setFilmConfirmed]=useState(false);
   const [answer,setAnswer]=useState<number|null>(null);
   const [results,setResults]=useState<HistoryProgress>(readHistory);
@@ -43,12 +45,13 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   const chosenCount=Object.keys(results).length;
   const list=useMemo(()=>historyMissions.filter(m=>{
     const hay=[m.title,m.destination,m.agency,m.background,m.skill].join(" ").toLowerCase();
-    return hay.includes(query.toLowerCase().trim())&&(era==="All periods"||m.era===era)
+    return (collection==="archive"||FEATURED_STORY_IDS.has(m.id))
+      &&hay.includes(query.toLowerCase().trim())&&(era==="All periods"||m.era===era)
       &&(category==="All types"||m.category===category);
-  }),[query,era,category]);
+  }),[query,era,category,collection]);
   const shown=list.slice(0,page*12);
   const step=stageOrder.indexOf(stage);
-  useEffect(()=>{setPage(1)},[query,era,category]);
+  useEffect(()=>{setPage(1)},[query,era,category,collection]);
   useEffect(()=>{
     const reconcile=(event:StorageEvent)=>{
       if(event.key!==HISTORY_PROGRESS_KEY&&!event.key?.startsWith(HISTORY_RECEIPT_PREFIX))return;
@@ -60,12 +63,11 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   const open=(m:HistoryMission,mode:EntryView)=>{
     setSaveError("");
     setChosen(m);setView(mode);setStage("context");setAnswer(null);
-    setFilmOpened(false);
     try{setFilmConfirmed(mode==="live"&&readStoryAttempt(localStorage,createStoryScenario(m)).kind==="valid");}
     catch{setFilmConfirmed(false);}
     window.scrollTo({top:0,behavior:"smooth"});
   };
-  const close=()=>{setChosen(null);setAnswer(null);setStage("context");setFilmOpened(false);setFilmConfirmed(false)};
+  const close=()=>{setChosen(null);setAnswer(null);setStage("context");setFilmConfirmed(false)};
   const recordCompletion=(id:string,value:1|2)=>{
     try {
       const saved=saveHistoryProgress(localStorage,results,id,value);
@@ -87,7 +89,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
   const choice=chosen?preferences[chosen.category]:null;
   const officialFilm=chosen?officialFilmFor(chosen.title):undefined;
   const sourceReference=chosen?storyReferenceFor(chosen.id):undefined;
-  // Watch verified video on the publisher's own site; never rehost agency footage.
+  // Verified agency streams embed in-page; all others retain in-game animated briefings.
   if(chosen&&view==="live"&&!filmConfirmed)return <main className="history-hub history-film-screen">
     <header className="history-header">
       <button type="button" className="history-back" onClick={close}>← All missions</button>
@@ -97,28 +99,15 @@ export default function HistoryHub({onExit,startIn="archive"}:{
     <section className="history-film-card">
       <small>HISTORICAL MISSION · {chosen.year} · VIDEO FIRST</small>
       <h1>{chosen.title}: <em>watch the mission, then live it.</em></h1>
-      {officialFilm ? <>
-        <div className="history-film-banner"><strong>✓ VERIFIED OFFICIAL {officialFilm.publisher} VIDEO</strong>
-          <span>{officialFilm.kind} · {officialFilm.duration}</span></div>
-        <h2>{officialFilm.title}</h2>
-        <p>{officialFilm.scope}</p>
-        <a className="history-film-watch" href={officialFilm.url} target="_blank"
-           rel="noopener noreferrer" onClick={()=>setFilmOpened(true)}>▶ WATCH VIDEO AT {officialFilm.publisher} ↗</a>
-        <p className="history-film-instruction">The official video opens on NASA's website. Watch it there, then return to this tab to begin the interactive recreation.</p>
-        <h3>Recreate these documented actions in order</h3>
-        <ol className="history-film-steps">{officialFilm.order.map(item=><li key={item}>{item}</li>)}</ol>
-        <a className="history-film-record" href={officialFilm.record} target="_blank" rel="noopener noreferrer">Read the official historical timeline / mission record ↗</a>
-        <p className="history-training-note">If the publisher cannot play this film, you can still study the linked mission record and continue. Video availability and playback depend on the publisher.</p>
-        <button type="button" className="history-secondary" onClick={()=>setFilmConfirmed(true)}>VIDEO UNAVAILABLE · CONTINUE WITH MISSION RECORD →</button>
-        <button className="history-film-continue" disabled={!filmOpened}
-          onClick={()=>setFilmConfirmed(true)}>I WATCHED THE VIDEO · START LIVING THE MISSION →</button>
-        {!filmOpened&&<p className="history-training-note">Open the verified NASA video first to unlock this mission's replay.</p>}
-      </> : <>
-        <div className="history-film-banner history-film-pending"><strong>▶ ANIMATED HISTORICAL VIDEO · MADE FROM DOCUMENTED MISSION FACTS</strong>
-          <span>No verified original film for this mission</span></div>
-        <p>Watch this original animated mission briefing. It is not archival footage; every chapter is based on this story's historical record, and the source is linked below.</p>
-        <StoryBriefingVideo key={chosen.id} mission={chosen} onWatched={()=>setFilmConfirmed(true)}/>
-      </>}
+      {officialFilm && inlineNasaVideoFor(chosen.title)
+        ? <InlineNasaVideo key={chosen.id} mission={chosen} onWatched={()=>setFilmConfirmed(true)}/>
+        : <>
+          <div className="history-film-banner history-film-pending"><strong>▶ IN-GAME ANIMATED HISTORICAL BRIEFING</strong>
+            <span>{officialFilm?"Original film not embeddable here":"Based on documented history"}</span></div>
+          <p>Watch an illustrated animation right here, then play the mission. This is an educational reconstruction, not original footage.</p>
+          <StoryBriefingVideo key={chosen.id} mission={chosen} onWatched={()=>setFilmConfirmed(true)}/>
+          {officialFilm&&<p className="history-training-note">Optional original film reference: <a href={officialFilm.url} target="_blank" rel="noopener noreferrer">{officialFilm.publisher} archive ↗</a>. You do not have to leave the game.</p>}
+        </>}
       <p className="history-training-note">Only documented sequences are presented as history. Unrecorded movements, controls, distances and settings are educational reconstructions.</p>
     </section>
   </main>;
@@ -143,22 +132,26 @@ export default function HistoryHub({onExit,startIn="archive"}:{
       <section className="history-hero">
         <small>HUMANITY'S JOURNEY BEYOND EARTH</small>
         <h1>Real missions. <em>Remarkable stories.</em></h1>
-        <p>Every one of the 55 missions starts with a video: official agency footage where verified, otherwise a clearly labeled animated historical explainer. Then enter the 3D mission.</p>
-        <div className="history-tabs" role="group" aria-label="Space history experience">
+        <p>{collection==="featured"?"Start with 10 selected real missions.":"Explore all 55 historic missions."} Each starts with in-game footage or an animated briefing before the interactive experience.</p>
+        <div className="history-library-switch" role="group" aria-label="Story collections">
+         <button type="button" aria-pressed={collection==="featured"} onClick={()=>{setCollection("featured");setQuery("");setEra("All periods");setCategory("All types");}}>★ Featured Stories · 10</button>
+         <button type="button" aria-pressed={collection==="archive"} onClick={()=>{setCollection("archive");setQuery("");setEra("All periods");setCategory("All types");}}>Full Story Archive · 55</button>
+       </div>
+       <div className="history-tabs" role="group" aria-label="Space history experience">
           <button type="button" aria-pressed={view==="archive"} onClick={()=>setView("archive")}>READ HISTORY</button>
           <button type="button" aria-pressed={view==="live"} onClick={()=>setView("live")}>LIVE THE STORY</button>
         </div>
       </section>
       {view==="live"&&<section className="history-callout">
         <strong>Become the mission specialist</strong>
-        <p>All 55 missions now have a video-first experience. Official films are identified separately from original educational animation; both lead to interactive 3D.</p>
+        <p>These missions offer an in-game briefing first, then an interactive 3D recreation. Original agency footage is labeled separately from educational animations.</p>
       </section>}
       <div className="history-filters">
         <label>SEARCH MISSIONS<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Apollo, Mars, telescope, ISS…"/></label>
         <label>PERIOD<select value={era} onChange={e=>setEra(e.target.value)}>{eras.map(x=><option key={x}>{x}</option>)}</select></label>
         <label>TYPE<select value={category} onChange={e=>setCategory(e.target.value)}>{["All types","Crewed","Robotic","Space station","Telescope"].map(x=><option key={x}>{x}</option>)}</select></label>
       </div>
-      <p className="history-result-count">{list.length} missions found · Historical dates and outcomes reflect actual events. Each source states its scope; experience dates identify a launch, encounter, landing or other milestone.</p>
+      <p className="history-result-count">{list.length} {collection==='featured'?'featured stories':'archived stories'} found · Historical dates and outcomes reflect actual events. Each source states its scope; experience dates identify a launch, encounter, landing or other milestone.</p>
       <div className="history-grid">
         {shown.map(m=><article key={m.id} className="history-card">
           <div className="history-card-date"><span>{m.year}</span><small>{m.category.toUpperCase()}</small></div>
@@ -168,7 +161,7 @@ export default function HistoryHub({onExit,startIn="archive"}:{
           <div className="history-card-footer">
             {results[m.id]&&<span className="history-done">✓ Explored</span>}
             <button type="button" onClick={()=>open(m,view)}>
-              {view==="live"?(officialFilmFor(m.title)?"Watch official video → Live":"Watch animated video → Live"):"Read story →"}
+              {view==="live"?(inlineNasaVideoFor(m.title)?"Watch NASA video → Play":"Watch animation → Play"):"Read story →"}
             </button>
           </div>
         </article>)}

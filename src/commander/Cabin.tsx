@@ -14,7 +14,7 @@ import type { Area } from "./simulation";
 import type { Telemetry } from "./displays";
 import { joystickVector } from "./controls";
 import type { Session } from "./campaign/engine";
-import { campaignWalkable } from "./campaign/engine";
+import { campaignWalkable, currentObjective } from "./campaign/engine";
 import { doors, lockers } from "./campaign/ship";
 import { environments } from "./campaign/environments";
 import { missionForSession } from "./campaign/definitions";
@@ -31,7 +31,7 @@ type Props = {
   settings?: PlayerPreferences;
   onArea: (area: Area | undefined) => void;
   onPosition: (p: Position) => void;
-  onInteract: (target: AimTarget | null) => void;
+  onInteract: (target: AimTarget | null, position?: Position) => void;
   onGraphicsError: () => void;
   locked: boolean;
   alarm: boolean;
@@ -65,6 +65,7 @@ export default function Cabin(props: Props) {
     clearInput = useRef(() => {}),
     flushMotion = useRef(() => {}),
     interactionTarget = useRef((): AimTarget | null => aim.current),
+    commitInteraction = useRef(() => {}),
     [error, setError] = useState("");
   current.current = props;
   useEffect(() => {
@@ -216,7 +217,7 @@ export default function Cabin(props: Props) {
       }
       if (k === "e" && !e.repeat && !current.current.locked) {
         e.preventDefault();
-        current.current.onInteract(interactionTarget.current());
+        commitInteraction.current();
       }
     };
     const up = (e: KeyboardEvent) => {
@@ -284,6 +285,16 @@ export default function Cabin(props: Props) {
       const session = current.current.world?.session;
       return session ? pickAimTarget(camera, session, missionForSession(session).eva) : aim.current;
     };
+    commitInteraction.current = () => {
+      flushMotion.current();
+      // The camera moves continuously while onPosition updates session only
+      // every 150ms. Sync the live position before the queued world action:
+      // otherwise a player already at the hatch can be denied as too far away.
+      const position = {x: camera.position.x, z: camera.position.z, heading: look.current.yaw};
+      const target = interactionTarget.current();
+      current.current.onPosition(position);
+      current.current.onInteract(target, position);
+    };
     const loop = (_timestamp: number) => {
       const now = performance.now();
       advanceMotion(now);
@@ -292,6 +303,13 @@ export default function Cabin(props: Props) {
         const supportsEva=missionForSession(current.current.world.session).eva;
         const picked = pickAimTarget(camera, current.current.world.session, supportsEva);
         aim.current = picked;
+        const gateState = picked?.kind === "door"
+          ? current.current.world.session.world.doors[picked.id as keyof typeof doors]
+          : undefined;
+        const inMotion = gateState !== undefined && Date.now() < gateState.readyAt;
+        const doorVerb = inMotion
+          ? gateState?.open ? "OPENING" : "CLOSING"
+          : gateState?.open ? "CLOSE" : "OPEN";
         const label = picked
           ? picked.kind === "airlock" ? (supportsEva
               ? `${picked.id==="inner"?"INNER":"OUTER"} AIRLOCK CONTROL · INTERACT`
@@ -300,7 +318,7 @@ export default function Cabin(props: Props) {
               Math.abs(camera.position.z-doors[picked.id as keyof typeof doors].z)>1.55
               || Math.abs(camera.position.x)>1.45
               ? `MOVE CLOSER · ${doors[picked.id as keyof typeof doors].name.toUpperCase()}`
-              : `${current.current.world.session.world.doors[picked.id as keyof typeof doors].open?"CLOSE":"OPEN"} ${doors[picked.id as keyof typeof doors].name.toUpperCase()} · INTERACT`)
+              : `${doorVerb} ${doors[picked.id as keyof typeof doors].name.toUpperCase()} · ${inMotion?"WAIT FOR DOOR":"INTERACT"}`)
           : picked.kind === "locker" ? lockers[picked.id as keyof typeof lockers].name
           : deck[picked.id as keyof typeof deck].name
           : "";
@@ -391,6 +409,7 @@ export default function Cabin(props: Props) {
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       clear();
       flushMotion.current = () => {};
+      commitInteraction.current = () => {};
       fixtures?.dispose();
       interior.dispose();
       renderer.dispose();
@@ -465,12 +484,16 @@ export default function Cabin(props: Props) {
         Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<12;
       lookPointer.current=undefined;
       e.currentTarget.classList.remove("using");
-      if(wasTap && !props.locked && props.world) {
-        const a=interactionTarget.current(),loc=props.world.session.position;
-        // Tapping the actual cockpit console is equivalent to pressing
-        // INTERACT. In Mission 2 this opens the rendezvous control panel.
-        if(a || Math.hypot(loc.x-deck.cockpit.x,loc.z-deck.cockpit.z)<1.7)
-          props.onInteract(a);
+      if (wasTap && !props.locked && props.world) {
+        // The LOOK surface must NEVER toggle a section door. On iPad an
+        // ordinary tap used to turn the camera could otherwise open and then
+        // close the same hatch accidentally. INTERACT is the only door input.
+        // Preserve the intentional Mission-2 cockpit accessibility shortcut.
+        const s = props.world.session;
+        const cockpitTap = s.missionId === "mission-2" &&
+          currentObjective(s)?.action === "approach" &&
+          Math.hypot(s.position.x-deck.cockpit.x,s.position.z-deck.cockpit.z)<1.7;
+        if (cockpitTap) props.onInteract({ kind:"station", id:"cockpit" });
       }
     }
   };
@@ -535,7 +558,7 @@ export default function Cabin(props: Props) {
             onPointerCancel={stopSprint}
             onLostPointerCapture={stopSprint}>SPRINT</button>
           <TouchActionButton type="button" className="cmd-work" aria-label="Interact with aimed target"
-            disabled={props.locked} onActivate={() => props.onInteract(interactionTarget.current())}>INTERACT</TouchActionButton>
+            disabled={props.locked} onActivate={() => commitInteraction.current()}>INTERACT</TouchActionButton>
         </div>
       </>}
       {orbitalEva&&props.device!=="laptop"&&

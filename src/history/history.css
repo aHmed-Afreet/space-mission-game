@@ -105,3 +105,15 @@
 .history-film-steps{display:grid;gap:11px;padding-left:29px}
 .history-film-steps li{padding-left:6px}
 @media(max-width:700px){.history-film-card{margin:13px 10px 40px;padding:23px 16px}.history-film-watch{display:block}.history-film-banner{align-items:flex-start;flex-direction:column}}
+
+/* Curated featured collection and complete archive navigation. */
+.history-library-switch{display:flex;flex-wrap:wrap;gap:12px;margin:22px 0 14px}
+.history-library-switch button{padding:14px 19px;border-radius:10px;border:1px solid #8fc6cc6e;background:#112b3f;color:#dbeef8;font-size:14px;font-weight:650}
+.history-library-switch button[aria-pressed="true"]{background:#246457;border-color:#a8f0d3;color:white}
+.history-video-inline{margin:20px 0}
+.history-inline-player{aspect-ratio:16/9;width:100%;border:1px solid #79b0bf;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#203b5a,#060d1b 75%)}
+.history-inline-player iframe{display:block;width:100%;height:100%;border:0}
+.history-inline-play{display:flex;width:100%;height:100%;justify-content:center;align-items:center;gap:16px;color:#f0ffff;background:transparent;border:0;font-size:clamp(14px,2vw,22px);font-weight:700;cursor:pointer}
+.history-inline-play span{display:grid;place-items:center;background:#da3b3b;color:white;border-radius:50%;height:65px;width:65px;font-size:27px}
+.history-inline-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.history-inline-actions button{flex:1 1 240px;margin:0;min-height:52px}

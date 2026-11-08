@@ -60,3 +60,17 @@
 .orbital-hero-content p{color:#fff;text-shadow:0 2px 14px #021023;font-weight:500}
 .orbital-site-footer{background:rgba(3,12,24,.78);color:#c7e6f5}
 @media(max-width:730px){.orbital-landing-hero:before{background:linear-gradient(0deg,rgba(2,9,21,.87),rgba(2,10,22,.57) 45%,rgba(3,12,24,.08))}.orbital-experiences{border-radius:0}}
+
+/* Mission loading state: no fake percentage, reduced-motion support. */
+.orbital-loading{min-height:100dvh;background:radial-gradient(ellipse at 50% 35%,#1c425a,#05101e 62%,#020610);color:#ecfaff;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:17px;padding:30px;font-family:system-ui,sans-serif}
+.orbital-loading-orbit{height:100px;width:100px;border:2px solid #79d9ea65;border-top-color:#affbf2;border-radius:50%;display:grid;place-items:center;animation:orbital-spin 1.6s linear infinite}
+.orbital-loading-orbit span{height:46px;width:46px;border-radius:50%;background:radial-gradient(circle at 34% 25%,#acddf7,#286b86 55%,#0f2e46);box-shadow:0 0 24px #4cd1ed77}
+.orbital-loading h1{max-width:600px;font-size:clamp(23px,5vw,39px);letter-spacing:.09em;line-height:1.2}
+.orbital-loading small{letter-spacing:.25em;color:#9ce6e9}
+.orbital-loading p{font-size:14px;color:#c8e0ea;line-height:1.6}
+.orbital-loading-track{height:4px;width:min(320px,70vw);background:#618b9b46;border-radius:12px;overflow:hidden}
+.orbital-loading-track span{display:block;width:40%;height:100%;border-radius:12px;background:#9fefe8;animation:orbital-load 1.9s ease-in-out infinite alternate}
+.orbital-loading .orbital-loading-note{font-size:12px;color:#90aeb9}
+@keyframes orbital-spin{to{transform:rotate(360deg)}}
+@keyframes orbital-load{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@media(prefers-reduced-motion:reduce){.orbital-loading-orbit,.orbital-loading-track span{animation:none}}

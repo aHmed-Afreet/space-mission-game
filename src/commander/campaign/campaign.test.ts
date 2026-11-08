@@ -1157,6 +1157,34 @@ import {
   nominalCondition,
   equipmentServiceCost,
 } from "./ship";
+test("INTERACT synchronizes live camera position before validated hatch and station actions",()=>{
+  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+  const sync=cabin.indexOf("current.current.onPosition(position);");
+  const act=cabin.indexOf("current.current.onInteract(target, position);");
+  assert.ok(sync>0 && act>sync && act-sync<140);
+  assert.match(cabin,/commitInteraction\.current\(\)/);
+  assert.match(flight,/const areaAtPress = livePosition \? nearby/);
+  assert.doesNotMatch(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
+});
+test("door interaction label stays OPENING or CLOSING until its clearance period ends",()=>{
+  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
+  assert.match(cabin,/const inMotion = gateState/);
+  assert.match(cabin,/Date\.now\(\) < gateState\.readyAt/);
+  assert.match(cabin,/"OPENING"/);
+  assert.match(cabin,/"CLOSING"/);
+  assert.match(cabin,/WAIT FOR DOOR/);
+});
+test("exactly one rendered pair owns each section door, preventing overlapping hatch geometry",()=>{
+  const interior=readFileSync("src/commander/interior.ts","utf8");
+  const fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8");
+  assert.match(interior,/hatchLeaves\.push\(m\)/);
+  assert.match(interior,/Engineering and Habitation leaves belong ONLY to createFixtures/);
+  assert.doesNotMatch(interior,/hatchLeaves\.push\(dynamic/);
+  assert.match(fixtures,/if \(id === "flight"\) continue/);
+  assert.match(fixtures,/sectionDoorLeafX\(/);
+  assert.match(interior,/sectionDoorLeafX\(/);
+});
 test("physical section doors block crossing, animate before clearance and reject closure on the player", () => {
   let s = createSession(missions[0], design, life, [], emptyProgress());
   const before = s.position;
@@ -1174,6 +1202,25 @@ test("physical section doors block crossing, animate before clearance and reject
   s.position.z = -4.35;
   const close = worldAction(s, { kind: "door", id: "flight" });
   assert.equal(close.world.doors.flight.open, true);
+});
+test("station INTERACT works without an exact aim target", () => {
+  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
+  const targeting=readFileSync("src/commander/targeting.ts","utf8");
+  assert.match(flight,/areaAtPress && \(!target \|\| target\.kind === "station"\)/);
+  assert.match(flight,/const areaAtPress = livePosition \? nearby/);
+  assert.match(targeting,/reachableDoor/);
+});
+test("rapid repeated INTERACT does not reverse a section door during its animation", () => {
+  let s = createSession(missions[0], design, life, [], emptyProgress());
+  const now = 100_000;
+  s = worldAction(s, { kind: "door", id: "flight" }, now);
+  assert.equal(s.world.doors.flight.open, true);
+  const opening = s.world.doors.flight.readyAt;
+  const repeat = worldAction(s, { kind: "door", id: "flight" }, now + 100);
+  assert.equal(repeat.world.doors.flight.open, true);
+  assert.equal(repeat.world.doors.flight.readyAt, opening);
+  const late = worldAction(s, { kind: "door", id: "flight" }, now + 650);
+  assert.equal(late.world.doors.flight.open, false);
 });
 test("food lockers and water service require physical opening and meals can be returned without duplication", () => {
   let s = createSession(missions[0], design, life, [], emptyProgress());
@@ -1440,11 +1487,14 @@ test("published privacy page and release disclaimer exist", () => {
   assert.match(privacy,/NASA does not operate or endorse/i);
 });
 
-test("main menu contains exactly four commands with a combined history and story entry", () => {
+test("main menu offers five clear choices including featured and full history archive", () => {
   const menu = readFileSync("src/ModeSelect.tsx", "utf8");
   const history = readFileSync("src/history/HistoryHub.tsx", "utf8");
-  assert.equal((menu.match(/id: "(?:commander|strategy|history|guide)", number:/g) || []).length, 4);
-  assert.match(menu, /title: "Explore Space History"/);
+  assert.equal((menu.match(/id: "(?:commander|strategy|history|history_all|guide)", number:/g) || []).length, 5);
+  assert.match(menu, /title: "Featured Space Stories"/);
+  assert.match(menu, /title: "Full Story Archive"/);
+  assert.match(history, /FEATURED_STORY_IDS/);
+  assert.match(history, /setCollection\("archive"\)/);
   assert.match(menu, /experiences\.map\(item => <button/);
   assert.doesNotMatch(menu, /setMode\("stories"\)/);
   assert.match(history, />READ HISTORY<\/button>/);
@@ -1637,8 +1687,9 @@ test("door aim feedback matches the real physical interaction distance",()=>{
  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  assert.match(cabin,/MOVE CLOSER/);
- assert.match(flight,/Move closer to the illuminated hatch control/);
- assert.match(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
+ const ship=readFileSync("src/commander/campaign/ship.ts","utf8");
+ assert.match(ship,/Math\.abs\(s\.position\.z - d\.z\) > 1\.6/);
+ assert.doesNotMatch(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
 });
 
 test("new spacecraft visuals are instanced and do not relocate mission stations",()=>{
@@ -1704,7 +1755,8 @@ test("Mission 2 supports accessible tap-to-operate and an automatic alignment op
  assert.match(flight,/OPERATE RENDEZVOUS COMPUTER/);
  assert.match(flight,/onComplete=\{\(\)=>run\("approach"\)\}/);
  assert.match(cabin,/wasTap/);
- assert.match(cabin,/props.onInteract\(a\)/);
+ assert.match(cabin,/if \(cockpitTap\) props.onInteract\(\{ kind:"station", id:"cockpit" \}\)/);
+ assert.doesNotMatch(cabin,/if\(a \|\| Math\.hypot/);
  assert.match(panel,/Run auto-guidance/);
  assert.match(panel,/Confirm approach manoeuvre/);
  assert.match(panel,/role="dialog"/);
@@ -2027,10 +2079,10 @@ test("Commander type pages navigate independently, preserve saves and show each 
   assert.match(home,/session && \(/);
   assert.match(home,/disabled=\{!ready \|\| readOnly\}/);
   assert.match(commander,/onResume=\{\(\) => store\.session\?\.report \? dismissReport\(\) : setMode\("flight"\)\}/);
-  assert.match(portal,/ENTER COMMANDER/);
-  assert.match(portal,/Fly as an Astronaut/);
-  assert.match(portal,/Build & Launch Missions/);
-  assert.match(portal,/Explore Space History/);
+  assert.match(portal,/PLAY COMMANDER/);
+  assert.match(portal,/Commander — Be the Astronaut/);
+  assert.match(portal,/Mission Planner — Build & Launch/);
+  assert.match(portal,/Featured Space Stories/);
   assert.match(css,/orbital-landing-hero/);
 });
 
@@ -2188,19 +2240,21 @@ test("engineer receives astronaut instructions and never flies the spacecraft",(
  assert.match(app,/AUTHORIZE PILOT LAUNCH/);
  assert.match(app,/eventMessage\(selected\.title\)/);
  assert.match(app,/flightMessage\(progress,design\)/);
- assert.match(selection,/MISSION ENGINEER/);
+ assert.match(selection,/Mission Planner/);
 });
-test("official agency films open before the historical 3D scene",()=>{
+test("official agency footage embeds inside the game with a working animation fallback",()=>{
  const hub=readFileSync("src/history/HistoryHub.tsx","utf8");
  const films=Object.values(officialFilms);
  assert.ok(films.length>=5);
  assert.match(hub,/!filmConfirmed/);
- assert.match(hub,/disabled=\{!filmOpened\}/);
- assert.match(hub,/WATCH VIDEO AT/);
- assert.match(hub,/setFilmOpened\(true\)/);
+ const inline=readFileSync("src/history/InlineNasaVideo.tsx","utf8");
+ assert.match(hub,/inlineNasaVideoFor/);
+ assert.match(hub,/InlineNasaVideo/);
  assert.match(hub,/setFilmConfirmed\(true\)/);
- assert.match(hub,/href=\{officialFilm.record\}/);
- assert.match(hub,/VIDEO UNAVAILABLE · CONTINUE WITH MISSION RECORD/);
+ assert.match(inline,/youtube-nocookie.com/);
+ assert.match(inline,/setAnimated\(true\)/);
+ assert.match(inline,/CONTINUE TO INTERACTIVE MISSION/);
+ assert.match(hub,/StoryBriefingVideo/);
  const programRecords:Record<string,string>={"Voyager 1":"https://science.nasa.gov/mission/voyager/",
    "Voyager 2":"https://science.nasa.gov/mission/voyager/","Skylab 2":"https://www.nasa.gov/mission/skylab/"};
  for(const [title,v] of Object.entries(officialFilms)){
@@ -2264,10 +2318,23 @@ test("every one of the 55 Story Mode missions has a video chapter sequence backe
  assert.match(video,/onWatched/);
  assert.match(home,/StoryBriefingVideo/);
  assert.match(home,/mission=\{chosen\}/);
- assert.match(home,/Watch animated video → Live/);
+ assert.match(home,/Watch animation → Play/);
  assert.match(home,/!filmConfirmed/);
 });
 
+test("ten curated featured stories preserve the complete 55-mission archive",()=>{
+ const featured=readFileSync("src/history/featuredStories.ts","utf8");
+ const hub=readFileSync("src/history/HistoryHub.tsx","utf8");
+ const portal=readFileSync("src/ModeSelect.tsx","utf8");
+ const ids=[...featured.matchAll(/"history-\d+"/g)].map(x=>x[0].slice(1,-1));
+ assert.equal(ids.length,10);
+ assert.equal(new Set(ids).size,10);
+ assert.ok(ids.includes("history-16"));
+ for(const id of ids) assert.ok(historyMissions.some(m=>m.id===id));
+ assert.equal(historyMissions.length,55);
+ assert.match(hub,/collection==="archive"\|\|FEATURED_STORY_IDS.has\(m.id\)/);
+ assert.match(portal,/startCollection=\{mode==="history_all"\?"archive":"featured"\}/);
+});
 test("recovery, failed actions and tutorials cannot open instructions without player input",()=>{
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  assert.match(flight,/\[helpOpen,setHelpOpen\] = useState\(false\)/);
