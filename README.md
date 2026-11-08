@@ -282,3 +282,10 @@ Cabin material improvement: offline-generated brushed-metal bump and roughness
 maps, textile seat harnesses, curved utility cables, mechanical gauges, and
 instrument retaining bolts add scale detail without a large texture download.
 These are still artistic approximations, not scanned spacecraft interiors.
+
+
+## 2026 NASA Space Apps — Junior Astronaut Mission Trainer
+
+**Home → Junior Astronaut — Space Outpost** introduces a separate playable ten-sol lunar and Martian outpost game for younger learners. Students operate six inspectable facilities, budget construction credits, choose power priorities and monitor interdependent **oxygen, water, food, radiation shielding, solar electricity, battery storage and greenhouse crop growth**. Lunar night, Martian dust storms and radiation events change resource availability. Each day ends in a transparent mission-control report; depleted essential supplies end the run. Both destinations have independent, versioned browser-local saves and reset controls.
+
+All percentages, radiation indices, fictional event timing and resource rates are educational game units, not real NASA mission predictions. Three NASA reading links appear inside the trainer. Existing Commander, Strategy, History and browser saves remain separate. For the challenge checklist, teaching assumptions, judge demo and example winning paths see [Junior Outpost requirements](docs/JUNIOR_OUTPOST_REQUIREMENTS.md). The project predates the event, so check organizers' rules on eligibility and prior work before submission.
