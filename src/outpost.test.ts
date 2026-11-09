@@ -263,3 +263,23 @@ test("save validation rejects invalid crop and fabricated crisis responses",()=>
   assert.equal(isValidOutpost({...base,incidentSol:-9}),false);
   assert.equal(isValidOutpost({...base,plannedCrop:"potato"}),true);
 });
+
+
+test("emergency response reserves credits so a second operation cannot overspend",()=>{
+  const base={...initialOutpost("mars"),sol:4,credits:25};
+  const chosen=chooseIncident(base,"sweep");
+  assert.equal(chosen.incidentChoice,"sweep");
+  assert.equal(availableAction(chosen,"solar").ok,false,"solar purchase would exceed remaining after emergency fee");
+  assert.equal(availableAction(chosen,"battery").ok,true);
+  const result=advanceSol(perform(chosen,"battery"));
+  assert.ok(result.credits>=0);
+});
+
+test("shelter battery cost counts towards real life-support shortage",()=>{
+  const base={...initialOutpost("moon"),sol:3,battery:22,solar:0,selected:"monitor" as const};
+  const shelter=advanceSol(chooseIncident(base,"shelter"));
+  const excursion=advanceSol(chooseIncident(base,"expedition"));
+  assert.ok(shelter.lastReport.some(x=>x.includes("POWER SHORTAGE")));
+  assert.ok(shelter.safety<base.safety);
+  assert.ok(excursion.radiation>shelter.radiation);
+});
