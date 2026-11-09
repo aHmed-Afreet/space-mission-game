@@ -75,7 +75,8 @@ export function availableAction(state: Outpost, action: Action): { ok: boolean; 
   if (state.selected) return { ok: false, reason: "Already performed one operation this sol." };
   const item = ACTIONS.find(a => a.id === action);
   if (!item) return { ok: false, reason: "Unknown operation." };
-  if (state.credits < item.cost) return { ok: false, reason: "Insufficient mission credits." };
+  const incidentReserved = state.incidentSol===state.sol ? (state.incidentChoice==="sweep"?8:state.incidentChoice==="patch"?12:0) : 0;
+  if (state.credits - incidentReserved < item.cost) return { ok: false, reason: "Insufficient credits after reserving the emergency-response cost." };
   if (action === "plant" && state.cropType === state.plannedCrop) return {ok:false,reason:"Select a different crop in the greenhouse first."};
   if (action === "harvest" && state.crop < 10) return { ok: false, reason: "At least 10 grown crop points are needed." };
   if (action === "shield" && state.shielding >= 4) return { ok: false, reason: "Shelter is already fully reinforced." };
@@ -161,9 +162,9 @@ export function advanceSol(s: Outpost): Outpost {
   const response=s.incidentSol===s.sol?s.incidentChoice:null;
   const n: Outpost = { ...s, log: [...s.log], lastReport: [] };
   const p = projectPower(s);
-  const supplied = s.battery + p.generation;
+  const supplied = s.battery + p.generation - (response==="shelter"?7:0);
   const shortage = Math.max(0, p.demand - supplied);
-  n.battery = clamp(supplied - p.demand-(response==="shelter"?7:0));
+  n.battery = clamp(supplied - p.demand);
   n.oxygen = clamp(s.oxygen - 6 + s.recycling * (shortage > 0 ? 1 : 3));
   n.water = clamp(s.water - 6 + s.recycling * (shortage > 0 ? 1 : 3) -
     (s.priority === "crops" ? 3 : s.priority === "balanced" ? 1 : 0) - (s.priority==="crew"?0:CROPS[s.cropType].water));
