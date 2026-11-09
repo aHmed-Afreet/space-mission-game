@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {advanceSol,chooseIncident,currentIncident,initialOutpost,isValidOutpost,perform,setCropPlan,setPriority,type Destination,type Outpost} from "./outpost/engine";
 import {dayBrief,dayLesson,dailyChanges} from "./outpost/missionFlow";
-import {FACILITIES} from "./outpost/FacilityScene";
+const facilityIds=["habitat","solar","shield","recycle","greenhouse","battery"];
 
 test("each of ten Moon and Mars mission days gives a clear, actionable building goal",()=>{
   for(const destination of ["moon","mars"] as Destination[]){
@@ -14,7 +14,7 @@ test("each of ten Moon and Mars mission days gives a clear, actionable building 
       assert.ok(info.title.length>=12);
       assert.ok(info.description.length>=32);
       assert.ok(info.tip.length>=20);
-      assert.ok(FACILITIES.some(f=>f.id===info.focus));
+      assert.ok(facilityIds.includes(info.focus));
       titles.add(info.title);
     }
     assert.equal(titles.size,10,"No repetitive placeholder missions");
