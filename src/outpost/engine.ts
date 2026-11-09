@@ -226,9 +226,28 @@ export function missionCriteria(s: Outpost): { title: string; met: boolean }[] {
     { title: "Produce at least 22 food units", met: s.foodProduced >= 22 },
   ];
 }
+/**
+ * A mission ending in failure must never look like an 80/100 success.
+ * Failure scores are capped at 39; completed missions earn 70–100 according
+ * to surviving resources, efficiency, meaningful food output, and crew safety.
+ * Nothing is awarded for merely clicking random buttons or advancing a sol.
+ */
 export function missionScore(s: Outpost): number {
-  const criteria = missionCriteria(s).filter(x => x.met).length;
-  return Math.max(0, Math.min(100, Math.round(criteria * 10 + s.safety * .25 + (100 - Math.min(100, s.radiation)) * .15)));
+  if (s.phase === "active") return 0;
+  const met=missionCriteria(s).filter(x => x.met).length;
+  if (s.phase === "lost") {
+    const progress=Math.min(1,(s.sol-1)/MISSION_LENGTH);
+    return Math.max(0,Math.min(39,Math.round(
+      met * 3 + progress * 10 + Math.min(s.safety,100) * .08
+    )));
+  }
+  const reserves=(Math.min(100,s.oxygen)+Math.min(100,s.water)+
+    Math.min(100,s.food)+Math.min(100,s.battery))/400;
+  const crew=Math.min(1,s.safety/100);
+  const food=Math.min(1,s.foodProduced/66);
+  const radiation=Math.max(0,1-s.radiation/75);
+  const efficiency=Math.min(1,s.credits/105);
+  return Math.max(70,Math.min(100,Math.round(70+10*reserves+7*crew+5*food+5*radiation+3*efficiency)));
 }
 /** Reject corrupted/legacy or improperly shaped browser saves instead of crashing. */
 export function isValidOutpost(v: unknown): v is Outpost {

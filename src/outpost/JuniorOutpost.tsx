@@ -1,4 +1,2 @@
-/** Junior Astronaut mode: compact mission-first user interface.
- * The previous resource simulation and browser save schema remain unchanged.
- */
-export { default } from "./JuniorMission";
+/** Third-person 3D Junior Astronaut outpost game. The resource engine and save keys are unchanged. */
+export {default} from "./Junior3D";

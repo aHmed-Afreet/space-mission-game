@@ -56,7 +56,7 @@ test("new mission UI supports touch entry, one-action rule, power choice and eme
   const ux=readFileSync("src/outpost/JuniorMission.tsx","utf8");
   const entry=readFileSync("src/outpost/JuniorOutpost.tsx","utf8");
   const scene=readFileSync("src/outpost/FacilityScene.tsx","utf8");
-  assert.match(entry,/export \{ default \} from "\.\/JuniorMission"/);
+  assert.match(entry,/export \{default\} from "\.\/Junior3D"/);
   assert.match(ux,/sceneOnly/);
   assert.match(scene,/sceneOnly/);
   assert.match(ux,/onSelect=\{\(id\)=>\{setRoom\(id\)/);

@@ -1,0 +1,59 @@
+import type {FacilityId} from "./FacilityScene";
+
+/**
+ * Deterministic movement and proximity rules, independent of React/WebGL.
+ * A building has a real circular exterior collision boundary; its front
+ * airlock opens only via INTERACT and allows the astronaut to walk inside.
+ */
+export type Point2={x:number;z:number};
+export type Place={id:FacilityId;title:string;x:number;z:number;radius:number};
+export const BASE_FACILITIES:Place[]=[
+  {id:"habitat",title:"Crew Habitat",x:0,z:-16,radius:3.45},
+  {id:"solar",title:"Solar Field",x:-17,z:-10,radius:3.1},
+  {id:"shield",title:"Storm Shelter",x:17,z:-10,radius:3.25},
+  {id:"recycle",title:"Life Support",x:-17,z:11,radius:3.15},
+  {id:"greenhouse",title:"Greenhouse",x:17,z:11,radius:3.45},
+  {id:"battery",title:"Battery Storage",x:0,z:18,radius:3.25},
+];
+export function doorPosition(f:Place):Point2 {
+  const n=Math.hypot(f.x,f.z)||1;
+  return {x:f.x-f.x/n*f.radius,z:f.z-f.z/n*f.radius};
+}
+export function distance(a:Point2,b:Point2){return Math.hypot(a.x-b.x,a.z-b.z);}
+export function nearestDoor(pos:Point2,max=2.4):Place|null{
+  const ordered=BASE_FACILITIES.map(f=>({f,d:distance(pos,doorPosition(f))})).sort((a,b)=>a.d-b.d);
+  return ordered[0]&&ordered[0].d<=max?ordered[0].f:null;
+}
+export function clampWalk(position:Point2,inside:boolean,openDoor:FacilityId|null):Point2{
+  let p={x:Math.max(-29,Math.min(29,position.x)),z:Math.max(-29,Math.min(29,position.z))};
+  if(inside)return {x:Math.max(-4,Math.min(4,p.x)),z:Math.max(-3.8,Math.min(4.3,p.z))};
+  for(const f of BASE_FACILITIES){
+    if(openDoor===f.id)continue;
+    const dx=p.x-f.x,dz=p.z-f.z,dist=Math.hypot(dx,dz);
+    // Exterior collisions preserve a gap for approaching the actual door.
+    const min=f.radius-0.32;
+    if(dist<min){
+      // Exactly at the centre, choose the outward front-door direction:
+      // dividing a zero displacement by epsilon would leave the player
+      // inside an otherwise solid 3D structure.
+      const n=dist>.001?dist:Math.hypot(f.x,f.z)||1;
+      const ox=dist>.001?dx:-f.x,oz=dist>.001?dz:-f.z;
+      p={x:f.x+ox/n*min,z:f.z+oz/n*min};
+    }
+  }
+  return p;
+}
+export function walkStep(pos:Point2,yaw:number,strafe:number,forward:number,dt:number,inside:boolean,openDoor:FacilityId|null):Point2{
+  const mag=Math.max(1,Math.hypot(strafe,forward));
+  const x=strafe/mag,z=forward/mag;
+  const speed=inside?2.8:4.2;
+  const step=Math.min(.06,Math.max(0,dt))*speed;
+  return clampWalk({x:pos.x+(-Math.sin(yaw)*z+Math.cos(yaw)*x)*step,
+                    z:pos.z+(-Math.cos(yaw)*z-Math.sin(yaw)*x)*step},inside,openDoor);
+}
+export function doorwayCrossed(pos:Point2,id:FacilityId):boolean{
+  const f=BASE_FACILITIES.find(x=>x.id===id)!;
+  return distance(pos,{x:f.x,z:f.z})<f.radius-1.0;
+}
+export function nearConsole(pos:Point2){return distance(pos,{x:0,z:-2.6})<2.7;}
+export function nearExit(pos:Point2){return distance(pos,{x:0,z:3.85})<2.0;}
