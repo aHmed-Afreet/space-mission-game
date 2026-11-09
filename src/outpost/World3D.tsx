@@ -130,8 +130,17 @@ function createScene(session:Outpost,room:FacilityId|null){
      geometries.push(circleGeo);
      const ring=mesh(circleGeo,glow,goal);ring.rotation.x=-Math.PI/2;ring.castShadow=false;
      markers.set(f.id,goal);
-     const base=cylinder(group,f.radius,1.15,0,.58,0,trim,24);
+     // A low foundation and curved wall panels leave a true front entry.
+     // A full-height solid foundation would hide the open airlock.
+     const base=cylinder(group,f.radius,.28,0,.15,0,trim,24);
      const platform=cylinder(group,f.radius+1.0,.16,0,.03,0,darkSteel,24);
+     for(let i=1;i<18;i++){
+       if(i>=16)continue; // omit the front-wall sections around the airlock
+       const angle=i/18*Math.PI*2;
+       const wall=box(group,(2*Math.PI*f.radius/18)*1.06,2.18,.23,
+         Math.sin(angle)*f.radius,1.33,Math.cos(angle)*f.radius,hull);
+       wall.rotation.y=angle;
+     }
      for(let i=0;i<16;i++){
        const a=i*Math.PI/8;box(group,.22,.2,.45,Math.sin(a)*(f.radius+.5),.2,Math.cos(a)*(f.radius+.5),hull);
      }
