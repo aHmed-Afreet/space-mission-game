@@ -2,6 +2,7 @@ import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
 import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
+import {dayBrief} from "./missionFlow";
 import type {FacilityId} from "./FacilityScene";
 import "./world3d.css";
 export type Movement={x:number;y:number;run:boolean};
@@ -71,6 +72,20 @@ function createScene(session:Outpost,room:FacilityId|null){
  const lamps:T.PointLight[]=[];
  const solarPanels:T.Group[]=[];
  const doors=new Map<FacilityId,{mesh:T.Mesh;open:number}>();
+ const markers=new Map<FacilityId,T.Object3D>();
+ function nameplate(text:string,parent:T.Object3D,y:number){
+   const label=document.createElement("canvas");label.width=512;label.height=128;
+   const ctx=label.getContext("2d");if(!ctx)return;
+   ctx.fillStyle="#092535d9";ctx.fillRect(0,11,512,96);
+   ctx.strokeStyle="#89e4ce";ctx.lineWidth=5;ctx.strokeRect(6,15,500,88);
+   ctx.font="bold 35px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
+   ctx.fillStyle="#e8fff5";ctx.fillText(text.toUpperCase(),256,61,470);
+   const tex=new T.CanvasTexture(label);textures.push(tex);
+   const sm=new T.SpriteMaterial({map:tex,depthTest:false,transparent:true});
+   materials.push(sm);const sprite=new T.Sprite(sm);
+   sprite.position.set(0,y,0);sprite.scale.set(4.8,1.2,1);parent.add(sprite);
+   return sprite;
+ }
  if(!room){
    const surface=mat(session.destination==="mars"?0x8e6252:0x686973,.03,.96);
    const tx=textureSurface();if(tx){surface.map=tx;surface.needsUpdate=true;}
@@ -109,6 +124,12 @@ function createScene(session:Outpost,room:FacilityId|null){
      const group=new T.Group();group.position.set(f.x,0,f.z);
      const facing=Math.atan2(-f.x,-f.z);group.rotation.y=facing;world.add(group);
      const colorMat=mat(buildingColor(f.id),.42,.39);
+     nameplate(f.title,group,5.6);
+     const goal=new T.Group();goal.position.set(0,.1,0);group.add(goal);
+     const circleGeo=new T.RingGeometry(f.radius+.7,f.radius+.83,48);
+     geometries.push(circleGeo);
+     const ring=mesh(circleGeo,glow,goal);ring.rotation.x=-Math.PI/2;ring.castShadow=false;
+     markers.set(f.id,goal);
      const base=cylinder(group,f.radius,1.15,0,.58,0,trim,24);
      const platform=cylinder(group,f.radius+1.0,.16,0,.03,0,darkSteel,24);
      for(let i=0;i<16;i++){
@@ -393,6 +414,9 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
        :(()=>{const f=nearestDoor(state.position,2.5);return f?{kind:"door",id:f.id,title:state.open===f.id?"AIRLOCK OPEN · WALK INSIDE":"OPEN "+f.title.toUpperCase()+" AIRLOCK"}:null;})();
      const label=near?near.title:"";
      if(label!==lastPrompt){lastPrompt=label;latest.current.onNear(near);}
+     // Light the current mission target on the actual 3D terrain.
+     const target=dayBrief(data).focus;
+     markers.forEach((o,id)=>{o.visible=id===target;o.rotation.y+=dt*.18;});
      // Make the environment react immediately to the actual game resources.
      const power=data.battery/100;
      if(Math.round(data.battery)!==lastBattery){
