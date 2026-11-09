@@ -305,7 +305,7 @@ function createScene(session:Outpost,room:FacilityId|null){
    world.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.InstancedMesh){o.geometry.dispose();}});
    materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());
  };
- return {scene,camera,astro,limbs,doors,solarPanels,foliage,lamps,batteryLights,dispose};
+ return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,dispose};
 }
 export default function World3D({session,room,movement,interactSeq,onEnter,onConsole,onNear,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
@@ -416,7 +416,7 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
      if(label!==lastPrompt){lastPrompt=label;latest.current.onNear(near);}
      // Light the current mission target on the actual 3D terrain.
      const target=dayBrief(data).focus;
-     markers.forEach((o,id)=>{o.visible=id===target;o.rotation.y+=dt*.18;});
+     scene.markers.forEach((o,id)=>{o.visible=id===target;o.rotation.y+=dt*.18;});
      // Make the environment react immediately to the actual game resources.
      const power=data.battery/100;
      if(Math.round(data.battery)!==lastBattery){
