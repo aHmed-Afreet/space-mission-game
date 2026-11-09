@@ -33,8 +33,12 @@ export function clampWalk(position:Point2,inside:boolean,openDoor:FacilityId|nul
     // Exterior collisions preserve a gap for approaching the actual door.
     const min=f.radius-0.32;
     if(dist<min){
-      const n=Math.max(.0001,dist);
-      p={x:f.x+dx/n*min,z:f.z+dz/n*min};
+      // Exactly at the centre, choose the outward front-door direction:
+      // dividing a zero displacement by epsilon would leave the player
+      // inside an otherwise solid 3D structure.
+      const n=dist>.001?dist:Math.hypot(f.x,f.z)||1;
+      const ox=dist>.001?dx:-f.x,oz=dist>.001?dz:-f.z;
+      p={x:f.x+ox/n*min,z:f.z+oz/n*min};
     }
   }
   return p;
