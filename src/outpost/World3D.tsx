@@ -120,9 +120,17 @@ function createScene(session:Outpost,room:FacilityId|null){
      for(let i=0;i<4;i++){const a=i*Math.PI/2;
        box(group,.23,1.2,.2,Math.sin(a)*f.radius*.85,1.65,Math.cos(a)*f.radius*.85,hull);
      }
-     // Front-facing airlock surround and the one actual sliding door leaf.
-     box(group,2.35,2.7,.32,0,1.36,f.radius-.22,hull);
-     box(group,1.84,2.23,.16,0,1.35,f.radius-.02,darkSteel);
+     // Real openable airlock: left/right metal jambs, overhead lintel and
+     // recessed dark passage. Never place a solid box behind the door leaf:
+     // that made earlier "opening" animations look blocked.
+     box(group,.32,2.75,.46,-1.10,1.37,f.radius-.02,hull);
+     box(group,.32,2.75,.46,1.10,1.37,f.radius-.02,hull);
+     box(group,2.40,.36,.46,0,2.66,f.radius-.02,hull);
+     box(group,2.10,.16,.52,0,.16,f.radius-.02,gold);
+     box(group,2.00,2.16,.05,0,1.40,f.radius-.48,rubber);
+     for(const side of [-1,1]){
+       box(group,.09,2.12,.16,side*.93,1.4,f.radius+.10,glow);
+     }
      const leaf=box(group,1.72,2.10,.16,0,1.35,f.radius+.10,glass);
      const doorLight=box(group,.16,.17,.17,.79,2.5,f.radius+.25,glow);
      doors.set(f.id,{mesh:leaf,open:0});
