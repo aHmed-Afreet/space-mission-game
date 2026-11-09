@@ -61,7 +61,7 @@ test("the greenhouse consumes extra resources when crop production is prioritize
 test("higher radiation shielding lowers simulated crew exposure", () => {
   const base = { ...initialOutpost("moon"), sol: 3, selected: "monitor" as const };
   const safer = { ...base, shielding: 3 };
-  assert.ok(advanceSol(safer).radiation < advanceSol(base).radiation);
+  assert.ok(advanceSol(chooseIncident(safer,"shelter")).radiation < advanceSol(chooseIncident(base,"shelter")).radiation);
 });
 
 test("harvesting converts grown crops into edible crew food and verified production", () => {
