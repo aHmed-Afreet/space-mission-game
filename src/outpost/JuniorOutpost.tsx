@@ -1,26 +1,20 @@
 import { useEffect, useState } from "react";
 import {
-  ACTIONS, GAME_KEY, MISSION_LENGTH, WORLD, advanceSol, availableAction,
-  forecast, initialOutpost, isValidOutpost, missionCriteria, missionScore,
+  ACTIONS, CROPS, GAME_KEY, LEGACY_GAME_KEY, MISSION_LENGTH, WORLD, advanceSol, availableAction, chooseIncident,currentIncident,migrateOutpost,setCropPlan,
+  forecast, initialOutpost, missionCriteria, missionScore,
   perform, projectPower, setPriority, type Destination, type Outpost, type Priority,
 } from "./engine";
 import "./outpost.css";
-
-const modules = [
-  { id: "habitat", icon: "◈", title: "Crew Habitat", blurb: "Oxygen, water and food keep astronauts alive. The cabin must remain powered." },
-  { id: "solar", icon: "☀", title: "Solar Field", blurb: "Generates electricity when sunlight is available. Mars dust and lunar night reduce output." },
-  { id: "shield", icon: "⬡", title: "Storm Shelter", blurb: "Protects the crew during radiation events. Better shielding reduces cumulative exposure." },
-  { id: "recycle", icon: "↻", title: "Life Support", blurb: "Reclaims oxygen and water, but competes with the greenhouse for electricity." },
-  { id: "greenhouse", icon: "✿", title: "Greenhouse", blurb: "Grows crops using water and electricity. Harvest crops to produce usable food." },
-  { id: "battery", icon: "▰", title: "Battery Bank", blurb: "Stores power for eclipse, night and dust storms. Empty batteries interrupt recycling." },
-] as const;
+import {FacilityScene,type FacilityId} from "./FacilityScene";
 
 function readSaved(destination: Destination): Outpost | null {
   try {
-    const raw = window.localStorage.getItem(GAME_KEY + "-" + destination);
-    if (!raw) return null;
-    const value: unknown = JSON.parse(raw);
-    return isValidOutpost(value) && value.destination === destination ? value : null;
+    const raw=window.localStorage.getItem(GAME_KEY+"-"+destination)
+      ??window.localStorage.getItem(LEGACY_GAME_KEY+"-"+destination);
+    if(!raw)return null;
+    const value:unknown=JSON.parse(raw);
+    const upgraded=migrateOutpost(value);
+    return upgraded?.destination===destination?upgraded:null;
   } catch { return null; }
 }
 function statusColor(value: number, dangerLow = true) {
@@ -40,7 +34,7 @@ function Resource({ title, value, unit = "", icon, caution, reverse = false }: {
 }
 export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
   const [session, setSession] = useState<Outpost | null>(null);
-  const [inspected, setInspected] = useState<string>("habitat");
+  const [inspected, setInspected] = useState<FacilityId>("habitat");
   const [showLog, setShowLog] = useState(false);
   const [saveNote, setSaveNote] = useState("");
   useEffect(() => {
@@ -93,7 +87,9 @@ export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
   const next = forecast(session.destination, session.sol);
   const criteria = missionCriteria(session);
   const score = missionScore(session);
-  const details = modules.find(x => x.id === inspected) ?? modules[0];
+  const incident=currentIncident(session);
+  const emergencyPending=Boolean(incident && session.incidentSol!==session.sol);
+  const emergencyChoice=incident && session.incidentSol===session.sol?session.incidentChoice:null;
   const complete = session.phase !== "active";
   return <div className="outpost-app">
     <header className="outpost-topbar">
@@ -115,6 +111,14 @@ export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
             <h2>{complete ? session.phase === "won" ? "Outpost mission complete" : "Mission targets not met" : next.title}</h2>
             <p>{complete ? "Review what worked, what failed and how competing systems affected the outcome." : next.detail}</p>
           </section>
+          {!complete && incident && <section className="op-incident" aria-label="Emergency response">
+            <div className="op-incident-label">⚠ MISSION CONTROL / DECISION REQUIRED</div>
+            <h2>{incident.title}</h2><p>{incident.detail}</p>
+            {emergencyPending?<><div className="op-incident-options">{incident.options.map(choice=><button key={choice.id} type="button" onClick={()=>setSession(s=>s?chooseIncident(s,choice.id):s)} disabled={(choice.id==="sweep"&&session.credits<8)||(choice.id==="patch"&&session.credits<12)}>
+              <strong>{choice.title}</strong><small>{choice.detail}</small></button>)}</div>
+              <div className="op-incident-lock">Choose a response before advancing. This choice changes what happens today.</div></>:
+              <div className="op-incident-done">✓ Response committed: {incident.options.find(x=>x.id===emergencyChoice)?.title}. Your forecast and daily report reflect this decision.</div>}
+          </section>}
           <section className="outpost-resources" aria-label="Outpost resource readings">
             <Resource title="OXYGEN" value={session.oxygen} icon="◉" unit="%" />
             <Resource title="WATER" value={session.water} icon="◈" unit="%" />
@@ -124,15 +128,10 @@ export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
             <Resource title="RADIATION" value={session.radiation} icon="☢" unit=" index" reverse />
           </section>
           <section className="outpost-panel">
-            <div className="outpost-section-title"><div><span className="outpost-eyebrow">YOUR RESEARCH BASE</span><h2>Explore the outpost</h2></div><small>Select a facility to inspect it</small></div>
-            <div className={"outpost-map outpost-map-" + session.destination}>
-              <div className="outpost-horizon" aria-hidden="true" />
-              {modules.map((m,i) => <button key={m.id} className={"outpost-module outpost-module-" + m.id + (inspected === m.id ? " selected" : "")} style={{["--module-index" as string]:i}} onClick={() => setInspected(m.id)} aria-pressed={inspected === m.id}>
-                <span aria-hidden="true">{m.icon}</span><b>{m.title}</b>
-              </button>)}
-            </div>
-            <div className="outpost-facility-detail" aria-live="polite"><div><strong>{details.title}</strong><p>{details.blurb}</p></div>
-              <small>{details.id === "solar" ? "Array level " + session.solar : details.id === "shield" ? "Shield level " + session.shielding : details.id === "recycle" ? "Recycler level " + session.recycling : details.id === "greenhouse" ? "Greenhouse level " + session.greenhouses : details.id === "battery" ? Math.round(session.battery) + "% stored" : "Habitat integrity " + session.integrity + "%"}</small></div>
+            <div className="outpost-section-title"><div><span className="outpost-eyebrow">YOUR RESEARCH BASE</span><h2>Explore the outpost</h2></div><small>Tap a facility to enter its control console</small></div>
+            <FacilityScene s={session} selected={inspected} onSelect={setInspected}
+              onAction={id=>setSession(s=>s?perform(s,id):s)}
+              onCropPlan={crop=>setSession(s=>s?setCropPlan(s,crop):s)}/>
           </section>
           <section className="outpost-panel">
             <div className="outpost-section-title"><div><span className="outpost-eyebrow">YOUR ENGINEERING CHOICES</span><h2>Make a mission decision</h2></div><small>{session.selected ? "Operation recorded. Advance the sol." : "Choose one operation this sol"}</small></div>
@@ -150,7 +149,7 @@ export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
         <aside className="outpost-sidecol" aria-label="Mission control dashboard">
           <section className="outpost-panel">
             <span className="outpost-eyebrow">LIVE POWER TRADE-OFF</span><h2>Energy allocation</h2>
-            <p className="outpost-muted">Choose where limited electricity goes. This affects greenhouse output and available battery reserve.</p>
+            <p className="outpost-muted">Choose where limited electricity goes. This affects greenhouse output and battery reserves. Different crops consume different amounts.</p>
             <div className="outpost-priorities">
               {([
                 ["crew", "Life support first", "Suspend crop lighting to conserve electricity."],
@@ -169,6 +168,7 @@ export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
           <section className="outpost-panel">
             <span className="outpost-eyebrow">GREENHOUSE & MAINTENANCE</span><h2>Outpost operations</h2>
             <dl className="outpost-power">
+              <div><dt>Current crop</dt><dd>{CROPS[session.cropType].label}</dd></div>
               <div><dt>Grown crops</dt><dd>{Math.round(session.crop)}/100</dd></div>
               <div><dt>Food produced</dt><dd>{session.foodProduced}</dd></div>
               <div><dt>Habitat condition</dt><dd>{Math.round(session.integrity)}%</dd></div>
@@ -185,8 +185,8 @@ export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
               <div className="outpost-score">{score}<small>/100 GAME SCORE</small></div>
               <p className="outpost-muted">{session.phase === "won" ? "All six objectives achieved. Review your engineering record." : "You can retry with a different engineering strategy. No real-world success probability is implied."}</p>
               <button className="outpost-next" onClick={restart}>RESTART MISSION ↻</button></> :
-              <><h2>Advance mission</h2><p className="outpost-muted">{session.selected ? "Operation chosen: " + ACTIONS.find(x=>x.id===session.selected)?.title : "Select one operation before advancing."}</p>
-              <button className="outpost-next" disabled={!session.selected} onClick={() => setSession(s => s ? advanceSol(s) : s)}>ADVANCE SOL {session.sol} →</button></>}
+              <><h2>Advance mission</h2><p className="outpost-muted">{emergencyPending?"Resolve the active emergency first.":session.selected ? "Operation chosen: " + ACTIONS.find(x=>x.id===session.selected)?.title : "Select one operation before advancing."}</p>
+              <button className="outpost-next" disabled={!session.selected || emergencyPending} onClick={() => setSession(s => s ? advanceSol(s) : s)}>ADVANCE SOL {session.sol} →</button></>}
             <p className="outpost-save">{saveNote}</p>
             <button className="outpost-minor" onClick={restart}>Reset this mission</button>
           </section>
@@ -200,7 +200,7 @@ export default function JuniorOutpost({ onExit }: { onExit: () => void }) {
       </section>
       <section className="outpost-panel outpost-learning">
         <div><span className="outpost-eyebrow">LEARN THE SCIENCE</span><h2>What is real, what is simplified?</h2>
-          <p>Real engineering involves interdependent life support, solar energy, radiation protection and crop cultivation. This game's power, food, oxygen, radiation and time quantities are deliberately simplified and are not actual mission predictions.</p></div>
+          <p>Real engineering involves interdependent life support, solar energy, radiation protection and crop cultivation. Choose crops with different yields, water and energy demands, respond to simulated emergencies and operate each facility directly. This game's quantities and event timing are simplified educational rules, not real mission predictions.</p></div>
         <div className="outpost-links">
           <a href="https://science.nasa.gov/moon/by-the-numbers/" rel="noopener noreferrer" target="_blank">NASA: Moon facts ↗</a>
           <a href="https://science.nasa.gov/mars/facts/" rel="noopener noreferrer" target="_blank">NASA: Mars facts ↗</a>
