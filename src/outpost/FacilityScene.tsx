@@ -21,7 +21,7 @@ function metric(s:Outpost,id:FacilityId){
     case "battery":return "ENERGY RESERVE "+Math.round(s.battery)+"%";
   }
 }
-function FacilityIllustration({id,s}:{id:FacilityId;s:Outpost}){
+export function FacilityIllustration({id,s}:{id:FacilityId;s:Outpost}){
   if(id==="greenhouse")return <div className="op-interior op-greenhouse-interior" aria-hidden="true">
     <div className="op-interior-top">HYDROPONICS / {CROPS[s.cropType].label.toUpperCase()}</div>
     <div className="op-crop-tank"><span>{Array.from({length:6},(_,i)=><b key={i} style={{height:(16+Math.min(s.crop,90)*.4)+(i%2)*4+"px"}}>✿</b>)}</span></div>
@@ -33,7 +33,7 @@ function FacilityIllustration({id,s}:{id:FacilityId;s:Outpost}){
   if(id==="battery")return <div className="op-interior op-battery-interior" aria-hidden="true"><div className="op-interior-top">ENERGY STORAGE</div><div className="op-charge"><span style={{width:Math.max(0,Math.min(100,s.battery))+"%"}}/></div><div className="op-interior-bottom">{Math.round(s.battery)}% CHARGE · NIGHT RESERVE</div></div>;
   return <div className="op-interior op-habitat-interior" aria-hidden="true"><div className="op-interior-top">PRESSURIZED CREW HABITAT</div><div className="op-habitat-status"><span>O₂ <b>{Math.round(s.oxygen)}%</b></span><span>H₂O <b>{Math.round(s.water)}%</b></span><span>CREW <b>{Math.round(s.safety)}%</b></span></div><div className="op-interior-bottom">CABIN INTEGRITY {Math.round(s.integrity)}%</div></div>;
 }
-export function FacilityScene({s,selected,onSelect,onAction,onCropPlan}:{s:Outpost;selected:FacilityId;onSelect:(id:FacilityId)=>void;onAction:(a:Action)=>void;onCropPlan:(crop:CropType)=>void}){
+export function FacilityScene({s,selected,onSelect,onAction,onCropPlan,sceneOnly=false}:{s:Outpost;selected:FacilityId;onSelect:(id:FacilityId)=>void;onAction:(a:Action)=>void;onCropPlan:(crop:CropType)=>void;sceneOnly?:boolean}){
   const facility=FACILITIES.find(x=>x.id===selected)!;
   return <div className="op-facility">
     <div className={"op-landscape "+(s.destination==="mars"?"op-mars":"op-moon")+(s.destination==="moon"&&(s.sol===5||s.sol===6)?" op-night":"")+(s.destination==="mars"&&[4,5,8].includes(s.sol)?" op-dust":"")} aria-label="Interactive view of the outpost facility layout">
@@ -63,7 +63,7 @@ export function FacilityScene({s,selected,onSelect,onAction,onCropPlan}:{s:Outpo
       {FACILITIES.map(f=><button key={f.id} type="button" onClick={()=>onSelect(f.id)} className={"op-hotspot"+(selected===f.id?" active":"")} style={{left:f.x+"%",top:f.y+"%"}} aria-pressed={selected===f.id} aria-label={"Operate "+f.title}><b aria-hidden="true">{f.icon}</b><span>{f.title}</span></button>)}
       <div className="op-scene-caption">TAP ANY FACILITY TO ENTER ITS CONTROL PANEL</div>
     </div>
-    <div className="op-console" aria-live="polite">
+    {!sceneOnly && <div className="op-console" aria-live="polite">
       <div className="op-console-heading"><div><span className="outpost-eyebrow">FACILITY CONTROL / {selected.toUpperCase()}</span><h3>{facility.title}</h3><p>{facility.description}</p></div><strong>{metric(s,selected)}</strong></div>
       <div className="op-console-body"><FacilityIllustration id={selected} s={s}/><div className="op-console-actions">
         {selected==="greenhouse" && <div className="op-crop-picker"><strong>SELECT NEXT CROP TO PLANT</strong><div>{(Object.keys(CROPS) as CropType[]).map(crop=><button key={crop} type="button" disabled={s.phase!=="active" || Boolean(s.selected)} aria-pressed={s.plannedCrop===crop} className={s.plannedCrop===crop?"active":""} onClick={()=>onCropPlan(crop)}><b>{CROPS[crop].label}</b><small>+{CROPS[crop].growth} growth · {CROPS[crop].water} water · {CROPS[crop].harvest} harvest food</small></button>)}</div><p>{CROPS[s.plannedCrop].description} Planting costs 9 credits, takes your one daily operation, and resets current growth.</p></div>}
@@ -71,6 +71,6 @@ export function FacilityScene({s,selected,onSelect,onAction,onCropPlan}:{s:Outpo
         {facility.operations.map(id=>{const action=id as Action,info=ACTIONS.find(a=>a.id===action)!,ok=availableAction(s,action);return <button key={action} type="button" className="op-console-button" onClick={()=>onAction(action)} disabled={!ok.ok} title={ok.reason??info.description}><span>{info.title} <b>{info.cost?"−"+info.cost+" credits":"FREE"}</b></span><small>{ok.ok?info.note:ok.reason}</small></button>})}
         <small>One engineering operation per sol. Emergency responses are separate safety decisions.</small>
       </div></div>
-    </div>
+    </div>}
   </div>;
 }
