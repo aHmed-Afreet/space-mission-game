@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ACTIONS, CROPS, GAME_KEY, LEGACY_GAME_KEY, MISSION_LENGTH, WORLD, advanceSol, availableAction, chooseIncident,currentIncident,migrateOutpost,setCropPlan,
-  forecast, initialOutpost, isValidOutpost, missionCriteria, missionScore,
+  forecast, initialOutpost, missionCriteria, missionScore,
   perform, projectPower, setPriority, type Destination, type Outpost, type Priority,
 } from "./engine";
 import "./outpost.css";
