@@ -82,8 +82,10 @@ function createScene(session:Outpost,room:FacilityId|null){
    const dummy=new T.Object3D();
    for(let i=0;i<175;i++){
      const a=i*2.39996,r=7+Math.sqrt(i)*2.9,x=Math.cos(a)*r,z=Math.sin(a)*r;
-     if(Math.abs(x)<21&&Math.abs(z)<23)continue;
-     dummy.position.set(x,.15,z);dummy.rotation.y=a;dummy.scale.set(.24+(i%7)*.12,.12+(i%4)*.12,.3+(i%5)*.1);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
+     // Never skip a matrix in InstancedMesh: uninitialized instances at the
+     // origin would appear as a pile of rocks blocking the player's spawn.
+     const hidden=Math.abs(x)<21&&Math.abs(z)<23;
+     dummy.position.set(hidden?200+i:hidden?200:x,.15,hidden?200+i:z);dummy.rotation.y=a;dummy.scale.set(.24+(i%7)*.12,.12+(i%4)*.12,.3+(i%5)*.1);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
    }rocks.instanceMatrix.needsUpdate=true;rocks.castShadow=true;rocks.receiveShadow=true;world.add(rocks);
    // Elevated horizon ridges and distant planet give large-scene depth.
    for(let i=0;i<18;i++){
@@ -299,7 +301,14 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
    let lookPointer:number|null=null,px=0,py=0;
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
    let entered=false,lastBattery=-1;
-   const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){if(e.target===document.body)e.preventDefault();keys.add(k);}};
+   let interactRequest=false;
+   const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();
+     if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){
+       if(e.target===document.body)e.preventDefault();
+       if(k==="e"&&!e.repeat)interactRequest=true;
+       keys.add(k);
+     }
+   };
    const up=(e:KeyboardEvent)=>keys.delete(e.key.toLowerCase());
    const release=()=>{keys.clear();lookPointer=null;};
    document.addEventListener("keydown",down);document.addEventListener("keyup",up);window.addEventListener("blur",release);
@@ -353,8 +362,8 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
      const desired=new T.Vector3(state.position.x+back.x*(room?4.2:6.2),3.4+state.pitch*4,state.position.z+back.z*(room?4.2:6.2));
      scene.camera.position.lerp(desired,Math.min(1,dt*8));
      scene.camera.lookAt(state.position.x,1.43+state.pitch*.2,state.position.z);
-     if(latest.current.interactSeq!==lastInteraction){
-       lastInteraction=latest.current.interactSeq;interact();
+     if(latest.current.interactSeq!==lastInteraction || interactRequest){
+       lastInteraction=latest.current.interactSeq;interactRequest=false;interact();
      }
      // Render physical airlock slide and require walking across the doorway.
      for(const [id,gate] of scene.doors){
