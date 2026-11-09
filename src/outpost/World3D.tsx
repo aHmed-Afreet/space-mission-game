@@ -118,7 +118,15 @@ function createScene(session:Outpost,room:FacilityId|null){
    starGeo.setAttribute("position",new T.BufferAttribute(starPositions,3));
    const starMat=new T.PointsMaterial({color:0xc9e7ef,size:.19,sizeAttenuation:true,transparent:true,opacity:dark?1:.55});materials.push(starMat);
    const stars=new T.Points(starGeo,starMat);scene.add(stars);
-   const planet=mesh(sphereGeom,mat(session.destination==="moon"?0x438ca9:0xd8a48e,.05,.85));
+   // NASA Blue Marble Earth texture already preserved in this repository.
+   // From the Moon, Earth is a real mapped globe instead of a flat blue orb.
+   const planetMaterial=mat(session.destination==="moon"?0xffffff:0xd8a48e,.05,.85);
+   if(session.destination==="moon"){
+     const earth=new T.TextureLoader().load("/assets/planetary/earth-bluemarble-svs2915-1024-d1d3cb36ae6a.png");
+     earth.colorSpace=T.SRGBColorSpace;textures.push(earth);
+     planetMaterial.map=earth;planetMaterial.needsUpdate=true;
+   }
+   const planet=mesh(sphereGeom,planetMaterial);
    planet.scale.setScalar(session.destination==="moon"?4.7:2.2);planet.position.set(48,35,-85);planet.castShadow=false;
    for(const f of BASE_FACILITIES){
      const group=new T.Group();group.position.set(f.x,0,f.z);
