@@ -65,9 +65,14 @@ test("3D camera uses actual interior geometry collision and restores pose on sce
 test("iPad game viewport is fixed and does not allow a page swipe to scroll",()=>{
  const code=readFileSync("src/outpost/Junior3D.tsx","utf8");
  const css=readFileSync("src/outpost/world3d.css","utf8");
- assert.match(code,/body\.style\.position="fixed"/);
- assert.match(code,/html\.style\.overflow="hidden"/);
- assert.match(code,/html\.style\.overflow=previous\.htmlOverflow/,"browser styles must restore after gameplay");
+ const lock=readFileSync("src/outpost/scrollLock.ts","utf8");
+ assert.match(code,/useLayoutEffect\(\(\)=>lockOutpostViewport\(\),\[\]\)/);
+ assert.match(lock,/body\.style\.position="fixed"/);
+ assert.match(lock,/html\.style\.overflow="hidden"/);
+ assert.match(lock,/html\.style\.overflow=previous\.htmlOverflow/,"browser styles must restore after gameplay");
+ assert.match(lock,/document\.addEventListener\("touchmove",blockPanning,\{capture:true,passive:false\}\)/);
+ assert.match(lock,/window\.scrollTo\(0,0\)/);
+ assert.match(css,/html\.outpost-viewport-locked #root\{/);
  assert.match(css,/\.j3-root\{\s*position:fixed;inset:0/);
  assert.match(css,/\.j3-root \.j3-world,\.j3-root \.jm-world-host/);
  assert.match(css,/overscroll-behavior:none/);

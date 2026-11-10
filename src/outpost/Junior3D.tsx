@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useRef,useState,type PointerEvent as ReactPointer} from "react";
+import {useCallback,useEffect,useLayoutEffect,useRef,useState,type PointerEvent as ReactPointer} from "react";
 import {ACTIONS,CROPS,GAME_KEY,LEGACY_GAME_KEY,WORLD,advanceSol,availableAction,
  chooseIncident,currentIncident,forecast,initialOutpost,migrateOutpost,missionCriteria,
  missionScore,perform,projectPower,setCropPlan,setPriority,
@@ -9,6 +9,7 @@ import World3D,{type Movement,type Proximity,type CameraDelta,type WorldPose} fr
 import OutpostMap from "./OutpostMap";
 import {destinationGuide,missionDestination} from "./navigation";
 import {distance,exteriorDoorSpawn,type Point2} from "./worldLogic";
+import {lockOutpostViewport} from "./scrollLock";
 import "./world3d.css";
 
 type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map";
@@ -94,31 +95,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    try{localStorage.setItem(GAME_KEY+"-"+session.destination,JSON.stringify(session));setSaveOk(true);}
    catch{setSaveOk(false);}
  },[session]);
- // Lock the document while playing to prevent Chrome/Safari from
- // scrolling the entire page when a finger is steering the astronaut.
- useEffect(()=>{
-   if(!session)return;
-   const html=document.documentElement,body=document.body,scrollY=window.scrollY;
-   const previous={
-     htmlOverflow:html.style.overflow,htmlOverscroll:html.style.overscrollBehavior,
-     bodyOverflow:body.style.overflow,bodyPosition:body.style.position,
-     bodyTop:body.style.top,bodyWidth:body.style.width,
-     bodyOverscroll:body.style.overscrollBehavior
-   };
-   html.style.overflow="hidden";html.style.overscrollBehavior="none";
-   body.style.overflow="hidden";body.style.overscrollBehavior="none";
-   body.style.position="fixed";body.style.top="-"+scrollY+"px";body.style.width="100%";
-   return ()=>{
-     html.style.overflow=previous.htmlOverflow;
-     html.style.overscrollBehavior=previous.htmlOverscroll;
-     body.style.overflow=previous.bodyOverflow;
-     body.style.position=previous.bodyPosition;
-     body.style.top=previous.bodyTop;
-     body.style.width=previous.bodyWidth;
-     body.style.overscrollBehavior=previous.bodyOverscroll;
-     window.scrollTo(0,scrollY);
-   };
- },[Boolean(session)]);
+ // Lock scroll before paint; restore homepage scroll on exit.
+ useLayoutEffect(()=>lockOutpostViewport(),[]);
  // Avoid permanent key capture when an overlay hides movement controls.
  useEffect(()=>{if(panel){movement.current.x=0;movement.current.y=0;movement.current.run=false;}},[panel]);
  function start(destination:Destination){
