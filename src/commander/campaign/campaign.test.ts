@@ -2346,7 +2346,7 @@ test("recovery, failed actions and tutorials cannot open instructions without pl
  assert.doesNotMatch(flight,/useEffect\(\(\) => \{\s*const t = o\?\.tutorial/);
  assert.match(flight,/setHelpOpen\(false\); \/\/ Free the movement area/);
 });
-test("iPad right half captures pointer for rotation without sprint",()=>{
+test("iPad screen camera drag works independently of sprint, with interact drag safety",()=>{
  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
  const css=readFileSync("src/commander/commander.css","utf8");
  assert.match(cabin,/className="cmd-look-surface"/);
@@ -2356,7 +2356,9 @@ test("iPad right half captures pointer for rotation without sprint",()=>{
  assert.match(cabin,/look\.current\.yaw -=/);
  assert.match(cabin,/DRAG ANYWHERE RIGHT TO LOOK/);
  assert.match(css,/\.cmd-session \.cmd-world \.cmd-look-surface/);
- assert.match(css,/inset:0 0 0 48%;z-index:5/);
+ assert.match(css,/inset:0;z-index:5/);
+ assert.match(cabin,/onPointerMoveCapture=\{workMove\}/);
+ assert.match(cabin,/suppressWorkAction\.current=p\.dragged/);
  assert.match(css,/pointer-events:auto/);
 });
 test("report settlement is acknowledged once: success advances only within campaign, failure retries",()=>{
