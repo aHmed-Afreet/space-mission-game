@@ -5,10 +5,10 @@ import {ACTIONS,CROPS,GAME_KEY,LEGACY_GAME_KEY,WORLD,advanceSol,availableAction,
  type Action,type CropType,type Destination,type Outpost,type Priority} from "./engine";
 import {FACILITIES,type FacilityId} from "./FacilityScene";
 import {dayBrief,dailyChanges,dayLesson} from "./missionFlow";
-import World3D,{type Movement,type Proximity,type CameraDelta} from "./World3D";
+import World3D,{type Movement,type Proximity,type CameraDelta,type WorldPose} from "./World3D";
 import OutpostMap from "./OutpostMap";
 import {destinationGuide,missionDestination} from "./navigation";
-import {distance,type Point2} from "./worldLogic";
+import {distance,exteriorDoorSpawn,type Point2} from "./worldLogic";
 import "./world3d.css";
 
 type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map";
@@ -32,7 +32,7 @@ function readSaved(destination:Destination){
    return restored?.destination===destination?restored:null;
  }catch{return null;}
 }
-/** Dynamically floating movement joystick in the lower-right touch zone. */
+/** Dynamically floating movement joystick in the lower-left touch zone. */
 function Stick({move}:{move:React.RefObject<Movement>}){
  const active=useRef<number|null>(null);
  const origin=useRef({x:0,y:0});
@@ -62,7 +62,7 @@ function Stick({move}:{move:React.RefObject<Movement>}){
    thumb.current?.style.setProperty("--jy","0px");
    ring.current?.classList.remove("using");
  }
- return <div className="j3-move-zone" role="group" aria-label="Touch anywhere in this lower-right area to walk"
+ return <div className="j3-move-zone" role="group" aria-label="Touch anywhere in this lower-left area to walk"
    onPointerDown={down} onPointerMove={e=>{if(active.current===e.pointerId)update(e);}}
    onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}>
    <div className="j3-joystick" ref={ring} aria-hidden="true"><div className="j3-thumb" ref={thumb}/></div>
@@ -84,6 +84,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [playerPosition,setPlayerPosition]=useState<Point2>({x:0,z:0});
  const movement=useRef<Movement>({x:0,y:0,run:false});
  const cameraDelta=useRef<CameraDelta>({yaw:0,pitch:0});
+ const spawn=useRef<WorldPose>({position:{x:0,z:0},yaw:0,pitch:.15});
+ const enteredBuilding=useRef<FacilityId|null>(null);
+ const outsideYaw=useRef(0);
  const buttonContacts=useRef<{run:ButtonContact|null;interact:ButtonContact|null}>({run:null,interact:null});
  const lastTouchActivation=useRef(0),skipInteractClick=useRef(false);
  useEffect(()=>{
@@ -91,12 +94,39 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    try{localStorage.setItem(GAME_KEY+"-"+session.destination,JSON.stringify(session));setSaveOk(true);}
    catch{setSaveOk(false);}
  },[session]);
+ // Lock the document while playing to prevent Chrome/Safari from
+ // scrolling the entire page when a finger is steering the astronaut.
+ useEffect(()=>{
+   if(!session)return;
+   const html=document.documentElement,body=document.body,scrollY=window.scrollY;
+   const previous={
+     htmlOverflow:html.style.overflow,htmlOverscroll:html.style.overscrollBehavior,
+     bodyOverflow:body.style.overflow,bodyPosition:body.style.position,
+     bodyTop:body.style.top,bodyWidth:body.style.width,
+     bodyOverscroll:body.style.overscrollBehavior
+   };
+   html.style.overflow="hidden";html.style.overscrollBehavior="none";
+   body.style.overflow="hidden";body.style.overscrollBehavior="none";
+   body.style.position="fixed";body.style.top="-"+scrollY+"px";body.style.width="100%";
+   return ()=>{
+     html.style.overflow=previous.htmlOverflow;
+     html.style.overscrollBehavior=previous.htmlOverscroll;
+     body.style.overflow=previous.bodyOverflow;
+     body.style.position=previous.bodyPosition;
+     body.style.top=previous.bodyTop;
+     body.style.width=previous.bodyWidth;
+     body.style.overscrollBehavior=previous.bodyOverscroll;
+     window.scrollTo(0,scrollY);
+   };
+ },[Boolean(session)]);
  // Avoid permanent key capture when an overlay hides movement controls.
  useEffect(()=>{if(panel){movement.current.x=0;movement.current.y=0;movement.current.run=false;}},[panel]);
  function start(destination:Destination){
    const saved=readSaved(destination);
    setSession(saved??initialOutpost(destination));setNear(null);setRoom(null);
    setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
+   spawn.current={position:{x:0,z:0},yaw:0,pitch:.15};
+   enteredBuilding.current=null;outsideYaw.current=0;
    setLastResult(null);setNotice("");setError("");
    setPanel(saved?(saved.phase!=="active"?"outcome":null):"help");
  }
@@ -105,6 +135,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    if(!window.confirm("Restart this "+session.destination+" mission? Your existing outpost progress will be replaced."))return;
    setSession(initialOutpost(session.destination));setRoom(null);setPanel("help");
    setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
+   spawn.current={position:{x:0,z:0},yaw:0,pitch:.15};
+   enteredBuilding.current=null;outsideYaw.current=0;
    setLastResult(null);setNotice("");setNear(null);
  }
  function operate(action:Action){
@@ -126,7 +158,22 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    setLastResult({before:session,after:next});setSession(next);setPanel("outcome");
    setNotice("");setNear(null);
  }
- const enter=useCallback((id:FacilityId|null)=>{setRoom(id);setPanel(null);setNear(null);setNotice(id?"Entered "+focusAction(id).title+". Find the illuminated control panel.":"Exited to the surface.");},[]);
+ const enter=useCallback((id:FacilityId|null,pose:WorldPose)=>{
+   if(id){
+     enteredBuilding.current=id;
+     outsideYaw.current=pose.yaw;
+     spawn.current={position:{x:0,z:2.85},yaw:0,pitch:pose.pitch};
+   }else{
+     // Return to the SAME door the player used, never the central spawn.
+     const previous=enteredBuilding.current;
+     const position=previous?exteriorDoorSpawn(previous):pose.position;
+     spawn.current={position,yaw:outsideYaw.current,pitch:pose.pitch};
+     setPlayerPosition(position);
+     enteredBuilding.current=null;
+   }
+   setRoom(id);setPanel(null);setNear(null);
+   setNotice(id?"Entered "+focusAction(id).title+". Find the illuminated control panel.":"Exited through the same airlock.");
+ },[]);
  const openConsole=useCallback((id:FacilityId)=>{setRoom(id);setPanel("console");setNotice("");},[]);
  const nearCallback=useCallback((q:Proximity)=>setNear(prev=>
    prev?.kind===q?.kind&&prev?.id===q?.id&&prev?.title===q?.title?prev:q),[]);
@@ -193,7 +240,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const nav=destinationGuide(playerPosition,room,goal);
  return <div className="j3-root">
    <div className="j3-world">
-     <World3D room={room} session={session} movement={movement} lookDelta={cameraDelta}
+     <World3D room={room} session={session} movement={movement} lookDelta={cameraDelta} spawn={spawn}
        target={goal} interactSeq={seq} onPosition={positionCallback}
        onEnter={enter} onConsole={openConsole} onNear={nearCallback} onError={setError}/>
    </div>
@@ -226,7 +273,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          <small>{selected?"✓ Action completed: "+ACTIONS.find(x=>x.id===selected)?.title:"Find a facility and perform one task."}
            {pending?" · ⚠ Emergency response required":""}</small>
        </div>
-       <div className="j3-helptext">BOTTOM-RIGHT: TOUCH TO WALK · DRAG TO LOOK · RUN / INTERACT SUPPORT CAMERA DRAG</div>
+       <div className="j3-helptext">BOTTOM-LEFT: TOUCH TO WALK · DRAG TO LOOK · RUN / INTERACT SUPPORT CAMERA DRAG</div>
      </div>
    </div>
    {!panel&&<div className="j3-controls">
@@ -308,7 +355,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <span className="j3-kicker">WELCOME TO THE 3D MISSION</span><h2>YOU ARE THE ASTRONAUT.</h2>
        <p>This is a walkable Moon/Mars base. The equipment you operate changes your mission resources and the world you see.</p>
        <div className="j3-tutorial-steps">
-         <div><b>1. WALK</b><br/>Touch anywhere in the bottom-right movement zone to make a joystick appear. Move your finger to walk (or use WASD).</div>
+         <div><b>1. WALK</b><br/>Touch anywhere in the bottom-left movement zone to make a joystick appear. Move your finger to walk (or use WASD).</div>
          <div><b>2. FIND YOUR WAY</b><br/>Open MAP to see yourself, your mission target and what every building does. Follow the highlighted building.</div>
          <div><b>3. OPEN AND OPERATE</b><br/>Approach the door, press INTERACT, walk inside and operate the glowing console. Drag from RUN or INTERACT to turn the camera.</div>
          <div><b>4. SAVE THE CREW</b><br/>Respond to hazards in the right building, balance resources and finish the day. Learn from the result.</div>

@@ -1,18 +1,19 @@
 import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
-import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,type Point2} from "./worldLogic";
+import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,confinedInteriorCamera,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
 import type {FacilityId} from "./FacilityScene";
+import {buildDistinctExterior,furnishDistinctInterior,type StructureKit} from "./architectures";
 import "./world3d.css";
 export type Movement={x:number;y:number;run:boolean};
 export type CameraDelta={yaw:number;pitch:number};
+export type WorldPose={position:Point2;yaw:number;pitch:number};
 export type Proximity={title:string;kind:"door"|"console"|"exit";id:FacilityId}|null;
 type Props={
- session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;interactSeq:number;target:FacilityId;
- onEnter:(id:FacilityId|null)=>void;onConsole:(id:FacilityId)=>void;
+ session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
+ onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;
  onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
-function buildingColor(id:FacilityId){return id==="greenhouse"?0x376a60:id==="solar"?0x2f5578:id==="shield"?0x747b86:id==="recycle"?0x2c777f:id==="battery"?0x3c5d76:0x758792;}
 function createScene(session:Outpost,room:FacilityId|null){
  const scene=new T.Scene(),dark=session.destination==="moon"&&[5,6].includes(session.sol);
  const dust=session.destination==="mars"&&[4,5,8].includes(session.sol);
@@ -62,17 +63,44 @@ function createScene(session:Outpost,room:FacilityId|null){
    const t=new T.CanvasTexture(canvas);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(22,22);t.anisotropy=4;textures.push(t);
    return t;
  }
+ // Subtle deterministic panel wear, seams, and rivets make the structural
+ // material more convincing than a single flat-colored Three.js primitive.
+ function engineeringPanelTexture(){
+  const canvas=document.createElement("canvas");canvas.width=256;canvas.height=256;
+  const ctx=canvas.getContext("2d");if(!ctx)return null;
+  ctx.fillStyle="#d2dbde";ctx.fillRect(0,0,256,256);
+  for(let i=0;i<1100;i++){
+   const x=(i*71)%256,y=(i*137+(i*i*3)%251)%256;
+   const v=155+(i*37)%83;
+   ctx.fillStyle="rgba("+v+","+v+","+v+",0.15)";
+   ctx.fillRect(x,y,1+(i%3),1);
+  }
+  ctx.strokeStyle="#84979a";ctx.lineWidth=2;
+  ctx.strokeRect(5,5,246,246);
+  ctx.beginPath();ctx.moveTo(128,5);ctx.lineTo(128,251);ctx.moveTo(5,128);ctx.lineTo(251,128);ctx.stroke();
+  for(const a of [12,118,138,244])for(const b of [12,118,138,244]){
+   ctx.fillStyle="#64797f";ctx.beginPath();ctx.arc(a,b,2.5,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle="#f0fbfb";ctx.fillRect(a-1,b-1,1,1);
+  }
+  const tex=new T.CanvasTexture(canvas);tex.wrapS=tex.wrapT=T.RepeatWrapping;
+  tex.repeat.set(2,2);tex.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;textures.push(tex);
+  return tex;
+ }
+ const metalDetail=engineeringPanelTexture();
+ if(metalDetail){hull.map=metalDetail;hull.needsUpdate=true;}
  const sun=new T.DirectionalLight(dark?0x6475a8:dust?0xe8ae8a:0xffedd3,dark?.34:2.45);
  sun.position.set(-27,42,-20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
  sun.shadow.camera.left=-36;sun.shadow.camera.right=36;sun.shadow.camera.top=36;sun.shadow.camera.bottom=-36;
  sun.shadow.normalBias=.035;scene.add(sun);
- scene.add(new T.HemisphereLight(dark?0x2b395b:dust?0x996d64:0xb0cce2,0x171b27,dark?.34:1.15));
+ scene.add(new T.HemisphereLight(room?0xe3effa:dark?0x2b395b:dust?0x996d64:0xb0cce2,room?0x526675:0x171b27,room?1.75:dark?.34:1.15));
  const foliage: T.Object3D[]=[];
  const batteryLights:T.MeshStandardMaterial[]=[];
  const lamps:T.PointLight[]=[];
  const solarPanels:T.Group[]=[];
  const doors=new Map<FacilityId,{mesh:T.Mesh;open:number}>();
  const markers=new Map<FacilityId,T.Object3D>();
+ const kit:StructureKit={box,cylinder,dome,mesh,mat,light,glass,hull,trim,darkSteel,gold,glow,
+   solarMat,green,soil,solarPanels,foliage,batteryLights,lamps};
  function nameplate(text:string,parent:T.Object3D,y:number){
    const label=document.createElement("canvas");label.width=512;label.height=128;
    const ctx=label.getContext("2d");if(!ctx)return;
@@ -131,97 +159,16 @@ function createScene(session:Outpost,room:FacilityId|null){
    for(const f of BASE_FACILITIES){
      const group=new T.Group();group.position.set(f.x,0,f.z);
      const facing=Math.atan2(-f.x,-f.z);group.rotation.y=facing;world.add(group);
-     const colorMat=mat(buildingColor(f.id),.42,.39);
-     nameplate(f.title,group,5.6);
-     const goal=new T.Group();goal.position.set(0,.1,0);group.add(goal);
-     const circleGeo=new T.RingGeometry(f.radius+.7,f.radius+.83,48);
+     nameplate(f.title,group,5.8);
+     const goal=new T.Group();goal.position.set(0,.10,0);group.add(goal);
+     const circleGeo=new T.RingGeometry(f.radius+.90,f.radius+1.04,48);
      geometries.push(circleGeo);
      const ring=mesh(circleGeo,glow,goal);ring.rotation.x=-Math.PI/2;ring.castShadow=false;
      markers.set(f.id,goal);
-     // A low foundation and curved wall panels leave a true front entry.
-     // A full-height solid foundation would hide the open airlock.
-     const base=cylinder(group,f.radius,.28,0,.15,0,trim,24);
-     const platform=cylinder(group,f.radius+1.0,.16,0,.03,0,darkSteel,24);
-     for(let i=1;i<18;i++){
-       if(i>=16)continue; // omit the front-wall sections around the airlock
-       const angle=i/18*Math.PI*2;
-       const wall=box(group,(2*Math.PI*f.radius/18)*1.06,2.18,.23,
-         Math.sin(angle)*f.radius,1.33,Math.cos(angle)*f.radius,hull);
-       wall.rotation.y=angle;
-     }
-     for(let i=0;i<16;i++){
-       const a=i*Math.PI/8;box(group,.22,.2,.45,Math.sin(a)*(f.radius+.5),.2,Math.cos(a)*(f.radius+.5),hull);
-     }
-     dome(group,f.radius*.92,0,1.1,0,colorMat);
-     const stripe=cylinder(group,f.radius*.98,.12,0,1.1,0,gold,24);
-     stripe.receiveShadow=false;
-     for(let i=0;i<4;i++){const a=i*Math.PI/2;
-       box(group,.23,1.2,.2,Math.sin(a)*f.radius*.85,1.65,Math.cos(a)*f.radius*.85,hull);
-     }
-     // Real openable airlock: left/right metal jambs, overhead lintel and
-     // recessed dark passage. Never place a solid box behind the door leaf:
-     // that made earlier "opening" animations look blocked.
-     box(group,.32,2.75,.46,-1.10,1.37,f.radius-.02,hull);
-     box(group,.32,2.75,.46,1.10,1.37,f.radius-.02,hull);
-     box(group,2.40,.36,.46,0,2.66,f.radius-.02,hull);
-     box(group,2.10,.16,.52,0,.16,f.radius-.02,gold);
-     box(group,2.00,2.16,.05,0,1.40,f.radius-.48,rubber);
-     for(const side of [-1,1]){
-       box(group,.09,2.12,.16,side*.93,1.4,f.radius+.10,glow);
-     }
-     const leaf=box(group,1.72,2.10,.16,0,1.35,f.radius+.10,glass);
-     const doorLight=box(group,.16,.17,.17,.79,2.5,f.radius+.25,glow);
+     // Each structure gets a genuine purpose-specific silhouette and details.
+     // Only the airlock interface is consistent across the six designs.
+     const leaf=buildDistinctExterior(f.id,kit,group,f);
      doors.set(f.id,{mesh:leaf,open:0});
-     for(let i=0;i<3;i++){
-       const a=-.72+i*.72;
-       box(group,.15,.09,.25,a,2.65,f.radius+.20,gold);
-     }
-     const status=box(group,1,.17,.08,0,2.6,f.radius+.34,glow);status.castShadow=false;
-     if(f.id==="solar"){
-       for(let j=0;j<4;j++){
-         const px=(j-1.5)*2.75,pz=-3.5;
-         const mount=new T.Group();mount.position.set(px,.75,pz);group.add(mount);
-         cylinder(mount,.1,1.5,0,0,0,hull);
-         const panel=box(mount,2.4,.08,2.0,0,.65,0,solarMat);
-         panel.rotation.x=-.27;solarPanels.push(mount);
-         for(let k=-1;k<=1;k++){const rib=box(mount,.07,.13,2.2,k*.7,.69,0,hull);rib.rotation.x=-.27;}
-       }
-     }else if(f.id==="greenhouse"){
-       const shellGlass=mat(0x7aceb9,.1,.19,0x267b58,.08);
-       shellGlass.transparent=true;shellGlass.opacity=.31;shellGlass.depthWrite=false;
-       dome(group,f.radius*.9,0,1.18,0,shellGlass);
-       for(let i=0;i<8;i++){
-         const x=(i%4-1.5)*.86,z=Math.floor(i/4)*1.4-1.0;
-         cylinder(group,.2,.35,x,1.0,z,soil);
-         const plant=new T.Group();plant.position.set(x,1.25,z);group.add(plant);
-         cylinder(plant,.04,.33,0,.15,0,green);
-         for(let k=0;k<3;k++){const leaf=mesh(sphereGeom,green,plant);
-           leaf.position.set(Math.sin(k*2.1)*.18,.35+Math.cos(k)*.05,Math.cos(k*2.1)*.18);leaf.scale.set(.25,.11,.15);
-         }foliage.push(plant);
-       }
-       const greenhouseLight=light(group,0,2.3,0,0x8cf3c3,1.5,7);lamps.push(greenhouseLight);
-     }else if(f.id==="shield"){
-       for(let i=0;i<4;i++)dome(group,f.radius*(.94+i*.055),0,1.08,0,
-         mat(i%2===0?0x666f7e:0x34485b,.34,.52));
-       light(group,0,2.6,0,0xefbf88,.7,5);
-     }else if(f.id==="battery"){
-       for(let i=0;i<6;i++){const x=(i%3-1)*1.55,z=Math.floor(i/3)*1.3-1.2;
-         box(group,1.1,.6,.85,x,1.1,z,darkSteel);
-         const cell=box(group,.9,.1,.08,x,1.45,z+.48,glow);
-         batteryLights.push(cell.material as T.MeshStandardMaterial);
-       }
-     }else if(f.id==="recycle"){
-       for(let i=0;i<3;i++){
-         cylinder(group,.5,2.15,(i-1)*1.6,1.7,-1,whiteMaterial(i));
-         cylinder(group,.52,.14,(i-1)*1.6,2.84,-1,gold);
-       }
-     }else{
-       for(let i=0;i<5;i++){
-         box(group,.7,1.2,.8,(i-2)*1.15,1.3,-1.0,glass);
-         box(group,.5,.12,.1,(i-2)*1.15,1.65,-.52,glow);
-       }
-     }
-     function whiteMaterial(i:number){return i===1?glass:hull;}
    }
    // Walkway lights indicate routes to every building.
    for(const f of BASE_FACILITIES){const door=doorPosition(f);
@@ -262,40 +209,27 @@ function createScene(session:Outpost,room:FacilityId|null){
    for(let i=0;i<6;i++){const x=(i-2.5)*1.15;
      box(world,.08,.12,8,x,3.74,0,glow);
    }
-   for(let i=0;i<4;i++){const p=light(world,(i%2?2.5:-2.5),3.45,i<2?-2.6:2.7,0xa6eaff,1.8,7);lamps.push(p);}
-   // Physically rendered room-specific machinery.
-   if(room==="greenhouse"){
-     for(let row=0;row<2;row++)for(let col=0;col<6;col++){
-       const x=(col-2.5)*.92,z=row===0?-.5:1.2;
-       box(world,.78,.24,1.1,x,.5,z,soil);
-       const plant=new T.Group();plant.position.set(x,.72,z);world.add(plant);
-       const stem=cylinder(plant,.055,.66,0,.3,0,green,8);
-       for(let j=0;j<5;j++){
-         const leaf=mesh(sphereGeom,green,plant);leaf.scale.set(.3,.09,.18);leaf.position.set(Math.sin(j*2.3)*.26,.45+j*.052,Math.cos(j*2.3)*.26);
-       }foliage.push(plant);
-     }
-     for(let i=0;i<4;i++){
-       box(world,2.5,.10,.24,0,3.35,-1.8+i*1.35,glow);
-     }
-   }
-   if(room==="battery")for(let i=0;i<7;i++){
-     box(world,.73,1.25,.64,(i-3)*.9,.87,0,trim);
-     box(world,.58,.12,.12,(i-3)*.9,1.32,.34,glow);
-   }
-   if(room==="solar")for(let i=0;i<3;i++){
-     cylinder(world,.35,1.5,(i-1)*2,.9,0,hull);
-     const rotator=box(world,1.4,.08,1.8,(i-1)*2,1.7,0,solarMat);
-     solarPanels.push(rotator.parent as T.Group);
-   }
-   if(room==="recycle")for(let i=0;i<3;i++){
-     cylinder(world,.65,2.2,(i-1)*2,1.35,-.6,hull);
-     cylinder(world,.67,.12,(i-1)*2,2.52,-.6,glow);
-   }
-   if(room==="shield")for(let i=0;i<4;i++)box(world,1.15,2.2,.7,(i-1.5)*1.65,1.3,.1,trim);
-   if(room==="habitat")for(let i=0;i<4;i++){
-     box(world,1.6,.6,.85,(i%2?1:-1)*3.1,.52,(i<2?0:1.5),hull);
-     box(world,1.5,.14,.8,(i%2?1:-1)*3.1,.88,(i<2?0:1.5),glow);
-   }
+   for(let i=0;i<4;i++){const p=light(world,(i%2?2.5:-2.5),3.45,i<2?-2.6:2.7,0xd5f2ff,2.6,9);lamps.push(p);}
+   lamps.push(light(world,0,3.45,0,0xe4f8ff,1.9,10));
+   // Every room now contains equipment appropriate to that facility.
+   furnishDistinctInterior(room,kit,world);
+ }
+ // Gather the large opaque static structures once for third-person camera
+ // obstruction tests. Ray/box tests are far cheaper than raycasting every
+ // triangle of each machine on every animation frame.
+ const cameraSolids:T.Box3[]=[];
+ if(room){
+  world.updateMatrixWorld(true);
+  world.traverse(o=>{
+   if(!(o instanceof T.Mesh))return;
+   const mat=o.material;
+   if(mat instanceof T.MeshStandardMaterial&&(mat.transparent||mat.emissiveIntensity>1))return;
+   const bounds=new T.Box3().setFromObject(o);
+   const dims=new T.Vector3();bounds.getSize(dims);
+   if(dims.x<.30||dims.y<.23||dims.z<.12)return;
+   if(bounds.max.y<.45||bounds.min.y>3.7)return;
+   cameraSolids.push(bounds);
+  });
  }
  const astro=new T.Group();world.add(astro);
  const suit=mat(0xd7e0e2,.22,.64),visor=mat(0x152c40,.7,.10,0x19394d,.35),suitDark=mat(0x344b59,.4,.58);
@@ -322,9 +256,9 @@ function createScene(session:Outpost,room:FacilityId|null){
    world.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.InstancedMesh){o.geometry.dispose();}});
    materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());
  };
- return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,dispose};
+ return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,dispose};
 }
-export default function World3D({session,room,movement,lookDelta,interactSeq,target,onEnter,onConsole,onNear,onPosition,onError}:Props){
+export default function World3D({session,room,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
  const latest=useRef({session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target});
  latest.current={session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target};
@@ -341,12 +275,13 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
    renderer.toneMappingExposure=1.12;
    container.appendChild(renderer.domElement);
    renderer.domElement.className="jm-world-canvas";
-   const player:Point2=room?{x:0,z:2.9}:{x:0,z:0};
-   const state={position:player,yaw:room?0:0,pitch:.15,open:null as FacilityId|null,openAt:0};
+   const initial=spawn.current;
+   const player:Point2={...initial.position};
+   const state={position:player,yaw:initial.yaw,pitch:initial.pitch,open:null as FacilityId|null,openAt:0};
    const keys=new Set<string>();
    let lookPointer:number|null=null,px=0,py=0;
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
-   let entered=false,lastBattery=-1,lastReported=0;
+   let entered=false,lastBattery=-1,lastReported=0,cameraInitialized=false;
    let interactRequest=false;
    const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();
      if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){
@@ -413,11 +348,36 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      if(speed>.04){const facing=Math.atan2(-Math.sin(state.yaw)*y+Math.cos(state.yaw)*x,-Math.cos(state.yaw)*y-Math.sin(state.yaw)*x);
        scene.astro.rotation.y=facing-Math.PI;}
      scene.limbs.forEach((limb,i)=>{limb.rotation.x=Math.sin(now*.012+(i%2?Math.PI:0))*.42*speed;});
-     // Third person orbit camera, drag right side to rotate camera independently of the left joystick.
+     // Collision-aware 3rd-person camera: every indoor position stays below
+     // the ceiling and inside the room shell, with no wall/console clipping.
      const back=new T.Vector3(Math.sin(state.yaw),0,Math.cos(state.yaw));
-     const desired=new T.Vector3(state.position.x+back.x*(room?4.2:6.2),3.4+state.pitch*4,state.position.z+back.z*(room?4.2:6.2));
-     scene.camera.position.lerp(desired,Math.min(1,dt*8));
-     scene.camera.lookAt(state.position.x,1.43+state.pitch*.2,state.position.z);
+     const focus=new T.Vector3(state.position.x,1.54+state.pitch*.2,state.position.z);
+     const wanted=new T.Vector3(
+       state.position.x+back.x*(room?3.3:6.2),
+       (room?2.92:3.4)+state.pitch*(room?2.0:4),
+       state.position.z+back.z*(room?3.3:6.2));
+     const capped=room?confinedInteriorCamera(wanted):wanted;
+     const desired=new T.Vector3(capped.x,capped.y,capped.z);
+     if(room){
+       const vec=desired.clone().sub(focus);
+       const length=vec.length();
+       if(length>.01){
+         const ray=new T.Ray(focus,vec.normalize());
+         let safe=length;
+         const hit=new T.Vector3();
+         for(const wall of scene.cameraSolids){
+           if(wall.containsPoint(focus))continue;
+           if(ray.intersectBox(wall,hit)){
+             const dist=hit.distanceTo(focus);
+             if(dist>.48&&dist<safe)safe=Math.max(.58,dist-.26);
+           }
+         }
+         if(safe<length)desired.copy(focus).addScaledVector(vec,safe);
+       }
+     }
+     if(!cameraInitialized){scene.camera.position.copy(desired);cameraInitialized=true;}
+     else scene.camera.position.lerp(desired,Math.min(1,dt*(room?11:8)));
+     scene.camera.lookAt(focus);
      if(latest.current.interactSeq!==lastInteraction || interactRequest){
        lastInteraction=latest.current.interactSeq;interactRequest=false;interact();
      }
@@ -430,9 +390,11 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      }
      if(state.open&&now-state.openAt>350&&!entered){
        if(room){
-         if(state.position.z>4.05){entered=true;latest.current.onEnter(null);return;}
+         if(state.position.z>4.05){entered=true;
+             latest.current.onEnter(null,{position:{...state.position},yaw:state.yaw,pitch:state.pitch});return;}
        }else if(doorwayCrossed(state.position,state.open)){
-         entered=true;latest.current.onEnter(state.open);return;
+         entered=true;
+         latest.current.onEnter(state.open,{position:{...state.position},yaw:state.yaw,pitch:state.pitch});return;
        }
      }
      const near:Proximity=room?
@@ -447,7 +409,7 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      const power=data.battery/100;
      if(Math.round(data.battery)!==lastBattery){
        lastBattery=Math.round(data.battery);
-       scene.lamps.forEach(l=>l.intensity=power<.08?.08:power<.22?.4:1.7);
+       scene.lamps.forEach(l=>l.intensity=power<.08?.55:power<.22?1.05:2.1);
        scene.batteryLights.forEach(m=>m.emissiveIntensity=power<.08?.08:power<.22?.25:1.4);
      }
      scene.foliage.forEach((o,i)=>{const growth=Math.max(.2,.35+data.crop/75);
@@ -463,6 +425,6 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      renderer.domElement.removeEventListener("pointerup",pointerEnd);renderer.domElement.removeEventListener("pointercancel",pointerEnd);
      scene.dispose();renderer.dispose();renderer.domElement.remove();
    };
- },[room,movement,lookDelta]);
+ },[room,movement,lookDelta,spawn]);
  return <div className="jm-world-host" ref={host} role="img" aria-label={"Walkable three-dimensional "+session.destination+" research outpost. Move with left joystick or WASD, drag to look, and press interact at airlocks and control panels."}/>;
 }

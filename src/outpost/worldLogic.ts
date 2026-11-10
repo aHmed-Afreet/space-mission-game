@@ -57,3 +57,24 @@ export function doorwayCrossed(pos:Point2,id:FacilityId):boolean{
 }
 export function nearConsole(pos:Point2){return distance(pos,{x:0,z:-2.6})<2.7;}
 export function nearExit(pos:Point2){return distance(pos,{x:0,z:3.85})<2.0;}
+
+
+/** Return the astronaut just outside the same door they used to enter. */
+export function exteriorDoorSpawn(id:FacilityId,clearance=1.45):Point2 {
+ const place=BASE_FACILITIES.find(f=>f.id===id);
+ if(!place)throw new Error("Unknown outpost facility");
+ const entry=doorPosition(place);
+ const dx=entry.x-place.x,dz=entry.z-place.z;
+ const n=Math.hypot(dx,dz)||1;
+ return {x:entry.x+dx/n*clearance,z:entry.z+dz/n*clearance};
+}
+
+/** Confine the indoor third-person camera inside the actual 9m room shell. */
+export type Point3={x:number;y:number;z:number};
+export function confinedInteriorCamera(candidate:Point3):Point3{
+ return {
+  x:Math.max(-3.72,Math.min(3.72,candidate.x)),
+  y:Math.max(1.30,Math.min(3.59,candidate.y)),
+  z:Math.max(-3.72,Math.min(3.72,candidate.z))
+ };
+}
