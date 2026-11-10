@@ -1,14 +1,14 @@
 import {useCallback,useEffect,useLayoutEffect,useRef,useState,type PointerEvent as ReactPointer} from "react";
 import {ACTIONS,CROPS,GAME_KEY,LEGACY_GAME_KEY,WORLD,advanceSol,availableAction,
  chooseIncident,currentIncident,forecast,initialOutpost,migrateOutpost,missionCriteria,
- missionScore,perform,projectPower,setCropPlan,setPriority,
+ missionScore,perform,projectPower,setCropPlan,setPriority,crewMealStatus,eatCrewMeal,crewSleepStatus,
  type Action,type CropType,type Destination,type Outpost,type Priority} from "./engine";
 import {FACILITIES,type FacilityId} from "./FacilityScene";
 import {dayBrief,dailyChanges,dayLesson} from "./missionFlow";
 import World3D,{type Movement,type Proximity,type CameraDelta,type WorldPose} from "./World3D";
 import OutpostMap from "./OutpostMap";
 import {destinationGuide,missionDestination} from "./navigation";
-import {distance,exteriorDoorSpawn,type Point2} from "./worldLogic";
+import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} from "./worldLogic";
 import {lockOutpostViewport} from "./scrollLock";
 import "./world3d.css";
 
@@ -87,7 +87,6 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const cameraDelta=useRef<CameraDelta>({yaw:0,pitch:0});
  const spawn=useRef<WorldPose>({position:{x:0,z:0},yaw:0,pitch:.15});
  const enteredBuilding=useRef<FacilityId|null>(null);
- const outsideYaw=useRef(0);
  const buttonContacts=useRef<{run:ButtonContact|null;interact:ButtonContact|null}>({run:null,interact:null});
  const lastTouchActivation=useRef(0),skipInteractClick=useRef(false);
  useEffect(()=>{
@@ -101,20 +100,20 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  useEffect(()=>{if(panel){movement.current.x=0;movement.current.y=0;movement.current.run=false;}},[panel]);
  function start(destination:Destination){
    const saved=readSaved(destination);
-   setSession(saved??initialOutpost(destination));setNear(null);setRoom(null);
-   setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
-   spawn.current={position:{x:0,z:0},yaw:0,pitch:.15};
-   enteredBuilding.current=null;outsideYaw.current=0;
+   setSession(saved??initialOutpost(destination));setNear(null);setRoom("habitat");
+   setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
+   spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
+   enteredBuilding.current="habitat";
    setLastResult(null);setNotice("");setError("");
    setPanel(saved?(saved.phase!=="active"?"outcome":null):"help");
  }
  function restart(){
    if(!session)return;
    if(!window.confirm("Restart this "+session.destination+" mission? Your existing outpost progress will be replaced."))return;
-   setSession(initialOutpost(session.destination));setRoom(null);setPanel("help");
-   setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
-   spawn.current={position:{x:0,z:0},yaw:0,pitch:.15};
-   enteredBuilding.current=null;outsideYaw.current=0;
+   setSession(initialOutpost(session.destination));setRoom("habitat");setPanel("help");
+   setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
+   spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
+   enteredBuilding.current="habitat";
    setLastResult(null);setNotice("");setNear(null);
  }
  function operate(action:Action){
@@ -131,21 +130,39 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  }
  function advance(){
    if(!session)return;
+   if(room!=="habitat"||near?.kind!=="sleep"){
+     setNotice("Return to Crew Habitat and press INTERACT at a sleeping bunk.");
+     return;
+   }
+   const ready=crewSleepStatus(session);
+   if(!ready.ok){setNotice(ready.message);return;}
    const next=advanceSol(session);
-   if(next===session){setNotice("Complete one facility operation and resolve any emergency first.");return;}
+   if(next===session){setNotice("Resolve today's engineering task and emergency first.");return;}
+   spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
+   enteredBuilding.current="habitat";
+   setRoom("habitat");setPlayerPosition({...HABITAT_WAKE});
    setLastResult({before:session,after:next});setSession(next);setPanel("outcome");
-   setNotice("");setNear(null);
+   setNotice("");setNear(null);movement.current.x=0;movement.current.y=0;
+ }
+ function routineInteraction(kind:"meal"|"sleep"){
+   if(!session||session.phase!=="active")return;
+   if(kind==="sleep"){advance();return;}
+   const meal=session.breakfastSol!==session.sol?"breakfast":"dinner";
+   const status=crewMealStatus(session,meal);
+   if(!status.ok){setNotice(status.message);return;}
+   setSession(eatCrewMeal(session,meal));
+   setNotice(meal==="breakfast"?"✓ Breakfast complete. Leave the habitat and complete your mission.":"✓ Dinner complete. Go to your bunk and sleep to finish the day.");
  }
  const enter=useCallback((id:FacilityId|null,pose:WorldPose)=>{
    if(id){
      enteredBuilding.current=id;
-     outsideYaw.current=pose.yaw;
+     
      spawn.current={position:{x:0,z:2.85},yaw:0,pitch:pose.pitch};
    }else{
      // Return to the SAME door the player used, never the central spawn.
      const previous=enteredBuilding.current;
      const position=previous?exteriorDoorSpawn(previous):pose.position;
-     spawn.current={position,yaw:outsideYaw.current,pitch:pose.pitch};
+     spawn.current={position,yaw:previous?exteriorDoorYaw(previous):pose.yaw,pitch:pose.pitch};
      setPlayerPosition(position);
      enteredBuilding.current=null;
    }
@@ -212,15 +229,27 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const power=projectPower(session);
  const currentFacility=room?focusAction(room):null;
  const localEmergency=room!==null&&room===required&&pending;
- const canAdvance=Boolean(selected)&&!pending&&!complete;
+ const canAdvance=crewSleepStatus(session).ok;
  const needs=missionCriteria(session);
- const goal=missionDestination(session);
- const nav=destinationGuide(playerPosition,room,goal);
+ const mustBreakfast=session.breakfastSol!==session.sol;
+ const mustDinner=Boolean(selected)&&!pending&&session.dinnerSol!==session.sol;
+ const readyForBed=crewSleepStatus(session).ok;
+ const goal=mustBreakfast||mustDinner||readyForBed?"habitat":missionDestination(session);
+ const guidance=destinationGuide(playerPosition,room,goal);
+ const nav=mustBreakfast?
+   {title:"EAT BREAKFAST",description:"In Crew Habitat, walk to the illuminated dining table on the right and press INTERACT."}:
+   mustDinner?
+   {title:room==="habitat"?"EAT DINNER":"RETURN TO CREW HABITAT FOR DINNER",
+     description:room==="habitat"?"Find the lit dining table on the right and press INTERACT.":"Follow the Crew Habitat marker, enter, and eat dinner."}:
+   readyForBed?
+   {title:room==="habitat"?"SLEEP IN YOUR BUNK":"RETURN TO CREW HABITAT TO SLEEP",
+     description:room==="habitat"?"Find the illuminated bunk on the left and press INTERACT.":"Head to Crew Habitat, enter, and use the sleeping bunk."}:
+   guidance;
  return <div className="j3-root">
    <div className="j3-world">
-     <World3D room={room} session={session} movement={movement} lookDelta={cameraDelta} spawn={spawn}
+     <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} movement={movement} lookDelta={cameraDelta} spawn={spawn}
        target={goal} interactSeq={seq} onPosition={positionCallback}
-       onEnter={enter} onConsole={openConsole} onNear={nearCallback} onError={setError}/>
+       onEnter={enter} onConsole={openConsole} onRoutine={routineInteraction} onNear={nearCallback} onError={setError}/>
    </div>
    <div className="j3-vignette"/>
    <div className="j3-hud">
@@ -248,7 +277,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          <strong>{brief.title}</strong><p>{brief.description}</p>
          <div className="j3-direction"><b>★ {nav.title}</b><span>{nav.description}</span>
            <button onClick={()=>setPanel("map")}>OPEN MAP ↗</button></div>
-         <small>{selected?"✓ Action completed: "+ACTIONS.find(x=>x.id===selected)?.title:"Find a facility and perform one task."}
+         <div className="j3-crew-routine"><b>{session.breakfastSol===session.sol?"✓":"○"} Breakfast</b><b>{selected?"✓":"○"} Mission</b><b>{session.dinnerSol===session.sol?"✓":"○"} Dinner</b><b>○ Sleep</b></div>
+          <small>{selected?"✓ Action completed: "+ACTIONS.find(x=>x.id===selected)?.title:
+            session.breakfastSol!==session.sol?"Start with breakfast in Crew Habitat.":"Find a facility and perform one task."}
            {pending?" · ⚠ Emergency response required":""}</small>
        </div>
        <div className="j3-helptext">BOTTOM-LEFT: TOUCH TO WALK · DRAG TO LOOK · RUN / INTERACT SUPPORT CAMERA DRAG</div>
@@ -267,7 +298,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
            const drag=skipInteractClick.current;skipInteractClick.current=false;
            if(!recent&&!drag)setSeq(n=>n+1);
          }}>INTERACT</button>
-       {canAdvance&&<button onClick={advance}>FINISH DAY {session.sol} →</button>}
+       
      </div>
      {near&&<div className="j3-prompt">{near.title} · PRESS INTERACT</div>}
    </div>}
@@ -307,7 +338,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          onClick={()=>operate("monitor")}><b>Check equipment without upgrading</b><small>Free operation. Advance today without a construction purchase.</small></button></div>
        {notice&&<div className="j3-info" role="status">{notice}</div>}
        <div className="j3-row"><button className="j3-primary" onClick={()=>{setPanel(null);setNotice("");}}>RETURN TO 3D ROOM</button>
-         {canAdvance&&<button onClick={advance}>FINISH DAY {session.sol} →</button>}</div>
+         </div>
      </section>}
      {panel==="event"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="Emergency briefing">
        <span className="j3-kicker">⚠ MISSION CONTROL</span><h2>{incident?.title||"Mission Status"}</h2>
@@ -326,7 +357,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <div className="j3-checks">{needs.map((v,i)=><span key={i}>{v.met?"✓":"○"} {v.title}</span>)}</div>
        {pending&&<button onClick={()=>setPanel("event")}>⚠ VIEW EMERGENCY BRIEFING</button>}
        <div className="j3-row"><button onClick={()=>setPanel(null)} className="j3-primary">BACK TO 3D GAME</button>
-         {canAdvance&&<button onClick={advance}>FINISH DAY {session.sol} →</button>}
+         
          <button onClick={restart}>RESTART RUN</button></div>
      </section>}
      {panel==="help"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="3D astronaut controls">
@@ -336,7 +367,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          <div><b>1. WALK</b><br/>Touch anywhere in the bottom-left movement zone to make a joystick appear. Move your finger to walk (or use WASD).</div>
          <div><b>2. FIND YOUR WAY</b><br/>Open MAP to see yourself, your mission target and what every building does. Follow the highlighted building.</div>
          <div><b>3. OPEN AND OPERATE</b><br/>Approach the door, press INTERACT, walk inside and operate the glowing console. Drag from RUN or INTERACT to turn the camera.</div>
-         <div><b>4. SAVE THE CREW</b><br/>Respond to hazards in the right building, balance resources and finish the day. Learn from the result.</div>
+         <div><b>4. CREW'S DAILY ROUTINE</b><br/>In Crew Habitat, INTERACT at the dining table for breakfast. Complete your engineering task, return for dinner, then INTERACT at the bed to sleep. Each new day begins here.</div>
        </div>
        <p className="j3-small">The visual environment and resource calculations are stylized educational simulations, not photorealistic NASA engineering predictions. Your mission is saved on this device.</p>
        <button className="j3-primary" onClick={()=>setPanel(null)}>ENTER 3D WORLD →</button>
@@ -354,12 +385,12 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <details><summary>ENGINEERING REPORT — WHY?</summary>{session.lastReport.map((s,i)=><p key={i}>{s}</p>)}</details>
        <div className="j3-row">{complete?<><button className="j3-primary" onClick={restart}>TRY AGAIN ↻</button>
            <button onClick={()=>{setSession(null);setRoom(null);setPanel(null);}}>CHOOSE ANOTHER PLANET</button></>:
-           <button className="j3-primary" onClick={()=>{setPanel(null);setNotice("");}}>CONTINUE TO DAY {session.sol} →</button>}
+           <button className="j3-primary" onClick={()=>{setPanel(null);setNotice("");}}>WAKE IN CREW HABITAT · DAY {session.sol} →</button>}
        </div>
      </section>}
    </div>}
    {!panel&&pending&&<button className="j3-status" style={{cursor:"pointer"}} onClick={()=>setPanel("event")}>⚠ EMERGENCY! GO TO {required?focusAction(required).title.toUpperCase():"FACILITY"} · TAP FOR DETAILS</button>}
-   {!panel&&canAdvance&&<button className="j3-status" style={{cursor:"pointer",top:145}} onClick={advance}>✓ ENGINEERING TASK COMPLETE · FINISH DAY {session.sol} →</button>}
+   {!panel&&canAdvance&&<div className="j3-status" style={{top:145}}>✓ BREAKFAST · MISSION · DINNER COMPLETE — GO TO YOUR BUNK AND PRESS INTERACT TO SLEEP</div>}
    {!saveOk&&!panel&&<div className="j3-status" style={{top:185}}>⚠ Browser cannot save progress. Do not close the tab.</div>}
  </div>;
 }

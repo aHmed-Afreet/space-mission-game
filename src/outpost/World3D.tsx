@@ -1,6 +1,6 @@
 import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
-import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,confinedInteriorCamera,type Point2} from "./worldLogic";
+import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,confinedInteriorCamera,nearHabitatRoutine,CREW_BED,CREW_DINING,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
 import type {FacilityId} from "./FacilityScene";
 import {buildDistinctExterior,furnishDistinctInterior,type StructureKit} from "./architectures";
@@ -8,10 +8,10 @@ import "./world3d.css";
 export type Movement={x:number;y:number;run:boolean};
 export type CameraDelta={yaw:number;pitch:number};
 export type WorldPose={position:Point2;yaw:number;pitch:number};
-export type Proximity={title:string;kind:"door"|"console"|"exit";id:FacilityId}|null;
+export type Proximity={title:string;kind:"door"|"console"|"exit"|"meal"|"sleep";id:FacilityId}|null;
 type Props={
  session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
- onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;
+ onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;onRoutine:(kind:"meal"|"sleep")=>void;
  onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
 function createScene(session:Outpost,room:FacilityId|null){
@@ -213,6 +213,14 @@ function createScene(session:Outpost,room:FacilityId|null){
    lamps.push(light(world,0,3.45,0,0xe4f8ff,1.9,10));
    // Every room now contains equipment appropriate to that facility.
    furnishDistinctInterior(room,kit,world);
+   if(room==="habitat"){
+     for(const [x,z,color] of [[CREW_BED.x,CREW_BED.z,0x9dd4fc],[CREW_DINING.x,CREW_DINING.z,0xe6d7a0]]){
+       const markerMat=mat(color,.18,.35,color,.45);
+       const marker=box(world,.75,.045,.75,x,.055,z,markerMat);
+       marker.castShadow=false;
+       lamps.push(light(world,x,2.6,z,color,1.25,4.5));
+     }
+   }
  }
  // Gather the large opaque static structures once for third-person camera
  // obstruction tests. Ray/box tests are far cheaper than raycasting every
@@ -258,10 +266,10 @@ function createScene(session:Outpost,room:FacilityId|null){
  };
  return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,dispose};
 }
-export default function World3D({session,room,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onNear,onPosition,onError}:Props){
+export default function World3D({session,room,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
- const latest=useRef({session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target});
- latest.current={session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target};
+ const latest=useRef({session,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
+ latest.current={session,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
  useEffect(()=>{
    const container=host.current;if(!container)return;
    let renderer:T.WebGLRenderer;
@@ -278,6 +286,9 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
    const initial=spawn.current;
    const player:Point2={...initial.position};
    const state={position:player,yaw:initial.yaw,pitch:initial.pitch,open:null as FacilityId|null,openAt:0};
+   // Restore the avatar's visible facing direction immediately, not only
+   // after walking. After a door exit the astronaut must face away from it.
+   scene.astro.rotation.y=Math.atan2(-Math.sin(initial.yaw),-Math.cos(initial.yaw))-Math.PI;
    const keys=new Set<string>();
    let lookPointer:number|null=null,px=0,py=0;
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
@@ -313,6 +324,10 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
    const ro=new ResizeObserver(resize);ro.observe(container);resize();
    const interact=()=>{
      if(room){
+       if(room==="habitat"){
+         const routine=nearHabitatRoutine(state.position);
+         if(routine){latest.current.onRoutine(routine);return;}
+       }
        if(nearConsole(state.position)){latest.current.onConsole(room);return;}
        if(nearExit(state.position)){state.open=room;state.openAt=performance.now();return;}
      }else{
@@ -397,7 +412,10 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
          latest.current.onEnter(state.open,{position:{...state.position},yaw:state.yaw,pitch:state.pitch});return;
        }
      }
+     const routine=room==="habitat"?nearHabitatRoutine(state.position):null;
      const near:Proximity=room?
+       routine==="meal"?{kind:"meal",id:"habitat",title:data.breakfastSol!==data.sol?"EAT BREAKFAST":data.dinnerSol!==data.sol?"EAT DINNER":"DINING AREA"}:
+       routine==="sleep"?{kind:"sleep",id:"habitat",title:"SLEEP IN CREW BED"}:
        nearConsole(state.position)?{kind:"console",id:room,title:"OPERATE "+room.toUpperCase()}:
        nearExit(state.position)?{kind:"exit",id:room,title:state.open?"EXIT THROUGH AIRLOCK":"OPEN EXIT AIRLOCK"}:null
        :(()=>{const f=nearestDoor(state.position,2.5);return f?{kind:"door",id:f.id,title:state.open===f.id?"AIRLOCK OPEN · WALK INSIDE":"OPEN "+f.title.toUpperCase()+" AIRLOCK"}:null;})();
