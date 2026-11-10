@@ -69,6 +69,24 @@ export function exteriorDoorSpawn(id:FacilityId,clearance=1.45):Point2 {
  return {x:entry.x+dx/n*clearance,z:entry.z+dz/n*clearance};
 }
 
+/** After exiting, face OUTWARD from the same entrance toward the base paths. */
+export function exteriorDoorYaw(id:FacilityId):number{
+ const f=BASE_FACILITIES.find(x=>x.id===id);
+ if(!f)throw new Error("Unknown outpost facility");
+ // Forward is (-sin(yaw),-cos(yaw)); outward from this facility points
+ // from its centre toward (0,0). This makes the astronaut face AWAY
+ // from the external door on every side of the base.
+ return Math.atan2(f.x,f.z);
+}
+/** Bed and dining locations are in the actual crew-habitat 3D interior. */
+export const CREW_BED:Point2={x:-2.75,z:.75};
+export const CREW_DINING:Point2={x:2.55,z:1.35};
+export const HABITAT_WAKE:Point2={x:-1.7,z:1.1};
+export function nearHabitatRoutine(pos:Point2):"meal"|"sleep"|null{
+ if(distance(pos,CREW_DINING)<1.5)return "meal";
+ if(distance(pos,CREW_BED)<1.4)return "sleep";
+ return null;
+}
 /** Confine the indoor third-person camera inside the actual 9m room shell. */
 export type Point3={x:number;y:number;z:number};
 export function confinedInteriorCamera(candidate:Point3):Point3{
