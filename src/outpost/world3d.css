@@ -226,3 +226,35 @@
  .j3-root .j3-objective{top:112px;left:10px;width:58vw;max-height:36dvh;}
  .j3-root .j3-move-hint{left:12px;font-size:9px;}
 }
+
+
+/* iPad Safari/Chrome scroll chain guard. The html class is applied only
+   while the Junior Astronaut mode is mounted; every other game mode keeps its
+   normal page layout when the class is removed. */
+html.outpost-viewport-locked,
+html.outpost-viewport-locked body,
+html.outpost-viewport-locked #root{
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+html.outpost-viewport-locked #root{
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+}
+html.outpost-viewport-locked .j3-root{
+  position:absolute;
+  inset:0;
+  height:100%;
+  max-height:100%;
+  min-height:0;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+html.outpost-viewport-locked .j3-world,
+html.outpost-viewport-locked .j3-hud,
+html.outpost-viewport-locked .j3-controls{
+  overscroll-behavior:none;
+}
