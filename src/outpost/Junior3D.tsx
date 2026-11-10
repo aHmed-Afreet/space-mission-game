@@ -5,10 +5,13 @@ import {ACTIONS,CROPS,GAME_KEY,LEGACY_GAME_KEY,WORLD,advanceSol,availableAction,
  type Action,type CropType,type Destination,type Outpost,type Priority} from "./engine";
 import {FACILITIES,type FacilityId} from "./FacilityScene";
 import {dayBrief,dailyChanges,dayLesson} from "./missionFlow";
-import World3D,{type Movement,type Proximity} from "./World3D";
+import World3D,{type Movement,type Proximity,type CameraDelta} from "./World3D";
+import OutpostMap from "./OutpostMap";
+import {destinationGuide,missionDestination} from "./navigation";
+import {distance,type Point2} from "./worldLogic";
 import "./world3d.css";
 
-type Panel=null|"console"|"event"|"help"|"outcome"|"mission";
+type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map";
 type Result={before:Outpost;after:Outpost};
 const meters=[
  {key:"oxygen",label:"OXYGEN",icon:"◉"},{key:"water",label:"WATER",icon:"◈"},
@@ -29,32 +32,44 @@ function readSaved(destination:Destination){
    return restored?.destination===destination?restored:null;
  }catch{return null;}
 }
+/** Dynamically floating movement joystick in the lower-right touch zone. */
 function Stick({move}:{move:React.RefObject<Movement>}){
- const ref=useRef<HTMLDivElement>(null),active=useRef<number|null>(null),thumb=useRef<HTMLDivElement>(null);
+ const active=useRef<number|null>(null);
+ const origin=useRef({x:0,y:0});
+ const ring=useRef<HTMLDivElement>(null),thumb=useRef<HTMLDivElement>(null);
  function update(e:ReactPointer<HTMLDivElement>){
-   const rect=ref.current?.getBoundingClientRect();if(!rect)return;
-   const dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);
-   const max=42,mag=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,max/mag);
-   const x=dx*scale,y=dy*scale;
-   move.current.x=x/max;move.current.y=-y/max;
-   if(thumb.current){thumb.current.style.setProperty("--jx",x+"px");thumb.current.style.setProperty("--jy",y+"px");}
+   const dx=e.clientX-origin.current.x,dy=e.clientY-origin.current.y;
+   const radius=58,len=Math.hypot(dx,dy),dead=5,ratio=len<=dead?0:Math.min(1,(len-dead)/(radius-dead));
+   const vx=len>0?dx/len*ratio:0,vy=len>0?dy/len*ratio:0;
+   move.current.x=vx;move.current.y=-vy;
+   thumb.current?.style.setProperty("--jx",vx*radius*.75+"px");
+   thumb.current?.style.setProperty("--jy",vy*radius*.75+"px");
  }
  function down(e:ReactPointer<HTMLDivElement>){
    if(active.current!==null)return;
-   active.current=e.pointerId;ref.current?.setPointerCapture(e.pointerId);update(e);
+   e.preventDefault();active.current=e.pointerId;
+   e.currentTarget.setPointerCapture(e.pointerId);
+   origin.current={x:e.clientX,y:e.clientY};
+   const rect=e.currentTarget.getBoundingClientRect();
+   if(ring.current){ring.current.style.left=e.clientX-rect.left+"px";
+     ring.current.style.top=e.clientY-rect.top+"px";ring.current.classList.add("using");}
+   update(e);
  }
  function end(e:ReactPointer<HTMLDivElement>){
-   if(active.current!==e.pointerId)return;active.current=null;
-   move.current.x=0;move.current.y=0;
+   if(active.current!==e.pointerId)return;
+   active.current=null;move.current.x=0;move.current.y=0;
    thumb.current?.style.setProperty("--jx","0px");
    thumb.current?.style.setProperty("--jy","0px");
+   ring.current?.classList.remove("using");
  }
- return <div className="j3-joystick" ref={ref} role="group" aria-label="Virtual walking joystick"
-  onPointerDown={down} onPointerMove={e=>{if(active.current===e.pointerId)update(e);}}
-  onPointerUp={end} onPointerCancel={end} onLostPointerCapture={e=>end(e)}>
-   <div className="j3-thumb" ref={thumb}/>
+ return <div className="j3-move-zone" role="group" aria-label="Touch anywhere in this lower-right area to walk"
+   onPointerDown={down} onPointerMove={e=>{if(active.current===e.pointerId)update(e);}}
+   onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}>
+   <div className="j3-joystick" ref={ring} aria-hidden="true"><div className="j3-thumb" ref={thumb}/></div>
+   <span className="j3-move-hint">TOUCH HERE TO WALK</span>
  </div>;
 }
+type ButtonContact={id:number;x:number;y:number;startX:number;startY:number;dragged:boolean};
 const focusAction=(id:FacilityId)=>FACILITIES.find(x=>x.id===id)!;
 export default function Junior3D({onExit}:{onExit:()=>void}){
  const [session,setSession]=useState<Outpost|null>(null);
@@ -66,7 +81,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
  const [saveOk,setSaveOk]=useState(true);
+ const [playerPosition,setPlayerPosition]=useState<Point2>({x:0,z:0});
  const movement=useRef<Movement>({x:0,y:0,run:false});
+ const cameraDelta=useRef<CameraDelta>({yaw:0,pitch:0});
+ const buttonContacts=useRef<{run:ButtonContact|null;interact:ButtonContact|null}>({run:null,interact:null});
+ const lastTouchActivation=useRef(0),skipInteractClick=useRef(false);
  useEffect(()=>{
    if(!session)return;
    try{localStorage.setItem(GAME_KEY+"-"+session.destination,JSON.stringify(session));setSaveOk(true);}
@@ -77,6 +96,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  function start(destination:Destination){
    const saved=readSaved(destination);
    setSession(saved??initialOutpost(destination));setNear(null);setRoom(null);
+   setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
    setLastResult(null);setNotice("");setError("");
    setPanel(saved?(saved.phase!=="active"?"outcome":null):"help");
  }
@@ -84,6 +104,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    if(!session)return;
    if(!window.confirm("Restart this "+session.destination+" mission? Your existing outpost progress will be replaced."))return;
    setSession(initialOutpost(session.destination));setRoom(null);setPanel("help");
+   setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
    setLastResult(null);setNotice("");setNear(null);
  }
  function operate(action:Action){
