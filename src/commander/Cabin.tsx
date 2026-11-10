@@ -55,6 +55,8 @@ export default function Cabin(props: Props) {
     pointer = useRef<number | undefined>(undefined),
     sprint = useRef(false),
     sprintTouch = useRef<{id:number;x:number;y:number}|null>(null),
+    workLook = useRef<{id:number;x:number;y:number;startX:number;startY:number;dragged:boolean}|null>(null),
+    suppressWorkAction = useRef(false),
     aim = useRef<AimTarget | null>(null),
     [aimLabel, setAimLabel] = useState(""),
     lookPointer = useRef<{ id: number; x: number; y: number; startX:number; startY:number; dragged:boolean } | undefined>(
@@ -231,6 +233,8 @@ export default function Cabin(props: Props) {
       sprint.current = false;
       orbitalContacts.current.clear();
       sprintTouch.current = null;
+      workLook.current = null;
+      suppressWorkAction.current = false;
       lookPointer.current = undefined;
       movement.forward=0; movement.sideways=0;
       el.parentElement?.querySelectorAll(".cmd-look-surface.using").forEach(element=>element.classList.remove("using"));
@@ -521,10 +525,39 @@ export default function Cabin(props: Props) {
     sprintTouch.current=null;
     sprint.current=false;
   };
+  // Touches that begin on INTERACT can turn the camera, but a drag MUST NOT
+  // operate equipment or toggle doors. Capture-phase handlers continue to see
+  // the pointer even when TouchActionButton owns pointer capture.
+  const workDown = (e: ReactPointer<HTMLDivElement>) => {
+    if(props.locked || e.pointerType!=="touch" || !(e.target as Element).closest(".cmd-work"))return;
+    workLook.current={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,dragged:false};
+    suppressWorkAction.current=false;
+  };
+  const workMove=(e:ReactPointer<HTMLDivElement>)=>{
+    const p=workLook.current;
+    if(!p||p.id!==e.pointerId||props.locked)return;
+    const dx=e.clientX-p.x,dy=e.clientY-p.y;
+    if(Math.hypot(e.clientX-p.startX,e.clientY-p.startY)>12)p.dragged=true;
+    flushMotion.current();
+    const factor=.0035*(current.current.settings?.lookSensitivity??1);
+    look.current.yaw-=dx*factor;
+    look.current.pitch=Math.max(-1.15,Math.min(1.15,look.current.pitch-dy*factor));
+    p.x=e.clientX;p.y=e.clientY;
+  };
+  const workEnd=(e:ReactPointer<HTMLDivElement>)=>{
+    const p=workLook.current;
+    if(!p||p.id!==e.pointerId)return;
+    suppressWorkAction.current=p.dragged;
+    workLook.current=null;
+  };
   const orbitalEva = !!props.world && props.world.session.position.z > 10.4 &&
     missionForSession(props.world.session).destination === "earth";
   return (
-    <div className={`cmd-world${orbitalEva ? " cmd-world-orbital" : ""}`}>
+    <div className={`cmd-world${orbitalEva ? " cmd-world-orbital" : ""}`}
+      onPointerDownCapture={workDown}
+      onPointerMoveCapture={workMove}
+      onPointerUpCapture={workEnd}
+      onPointerCancelCapture={workEnd}>
       <div className="cmd-canvas" ref={host} />
       <div
         className="cmd-look-surface"
@@ -558,7 +591,11 @@ export default function Cabin(props: Props) {
             onPointerCancel={stopSprint}
             onLostPointerCapture={stopSprint}>SPRINT</button>
           <TouchActionButton type="button" className="cmd-work" aria-label="Interact with aimed target"
-            disabled={props.locked} onActivate={() => commitInteraction.current()}>INTERACT</TouchActionButton>
+            disabled={props.locked} onActivate={() => {
+              const drag=suppressWorkAction.current;
+              suppressWorkAction.current=false;
+              if(!drag)commitInteraction.current();
+            }}>INTERACT</TouchActionButton>
         </div>
       </>}
       {orbitalEva&&props.device!=="laptop"&&
