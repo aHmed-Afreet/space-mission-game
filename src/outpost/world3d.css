@@ -270,3 +270,53 @@ html.outpost-viewport-locked .j3-root .j3-buttons {
 html.outpost-viewport-locked .j3-root .j3-move-zone {
   bottom:0;
 }
+
+
+/* HUD reliability: iPad Chrome may report a document viewport taller than
+   its truly visible area. Anchoring controls to the bottom has repeatedly
+   hidden them. Anchor them from the VISIBLE TOP instead, below the resource
+   HUD. No viewport-height or browser-bar assumption is needed. */
+html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons{
+  top:clamp(160px,28vh,290px)!important;
+  bottom:auto!important;
+  right:max(18px,env(safe-area-inset-right,0px))!important;
+  left:auto!important;
+  display:grid;
+  gap:10px;
+  z-index:8;
+}
+html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons button{
+  display:block;visibility:visible;opacity:1;
+  touch-action:none;
+}
+html.outpost-viewport-locked .j3-root .j3-controls .j3-move-zone{
+  top:clamp(320px,49vh,510px)!important;
+  bottom:auto!important;
+  height:clamp(150px,24vh,220px)!important;
+  left:0!important;
+  right:auto!important;
+  width:min(40%,480px)!important;
+}
+html.outpost-viewport-locked .j3-root .j3-controls .j3-move-hint{
+  bottom:10px;
+}
+.j3-crew-routine{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;
+}
+.j3-crew-routine b{
+  background:#193c47;border:1px solid #4d887f;border-radius:6px;
+  padding:4px 7px;font-size:10px;letter-spacing:.2px;
+  color:#cbf7e8;
+}
+/* On narrow and short screens, stay below the top HUD but above the bottom.
+   The action dock is independent of the world object's reported height. */
+@media(max-height:650px){
+ html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons{
+   top:clamp(130px,26vh,175px)!important;
+ }
+ html.outpost-viewport-locked .j3-root .j3-controls .j3-move-zone{
+   top:clamp(245px,44vh,310px)!important;
+   height:155px!important;
+ }
+ .j3-crew-routine b{font-size:9px;padding:3px 5px;}
+}
