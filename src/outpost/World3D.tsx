@@ -331,7 +331,8 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
        state.position.x+back.x*(room?3.3:6.2),
        (room?2.92:3.4)+state.pitch*(room?2.0:4),
        state.position.z+back.z*(room?3.3:6.2));
-     const desired=room?new T.Vector3(...Object.values(confinedInteriorCamera(wanted))):wanted;
+     const capped=room?confinedInteriorCamera(wanted):wanted;
+     const desired=new T.Vector3(capped.x,capped.y,capped.z);
      if(room){
        const vec=desired.clone().sub(focus);
        const length=vec.length();
