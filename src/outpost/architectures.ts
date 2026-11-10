@@ -162,7 +162,16 @@ function greenhouse(k:StructureKit,g:T.Object3D){
   arch.position.set(0,2.0,z);arch.rotation.z=0;
   for(const x of [-2.65,2.65])k.box(g,.13,1.95,.13,x,1.02,z,frame);
  }
- const roof=k.box(g,5.3,.12,5.4,0,4.25,-.42,transparent);roof.castShadow=false;
+ // Translucent curved glass panels form a greenhouse tunnel rather than
+ // another opaque dome; growers and pipework remain visible from outside.
+ for(let j=0;j<9;j++){
+  const angle=(j+.5)*Math.PI/9;
+  const x=Math.cos(angle)*2.63,y=2.0+Math.sin(angle)*2.63;
+  const pane=k.box(g,.93,.055,5.12,x,y,-.42,transparent);
+  pane.rotation.z=angle+Math.PI/2;
+  pane.castShadow=false;
+ }
+ const roof=k.box(g,2.1,.06,5.4,0,4.63,-.42,transparent);roof.castShadow=false;
  k.box(g,5.8,.13,5.5,0,3.98,-.42,frame);
  for(let j=0;j<3;j++){
   k.box(g,1.75,.25,4.25,(j-1)*1.83,1.03,-.53,k.soil);
@@ -197,9 +206,9 @@ function battery(k:StructureKit,g:T.Object3D){
  }
  for(let i=0;i<3;i++){
   const x=(i-1)*1.5;
-  k.cylinder(g,.30,1.3,x,.78,3.2,k.hull,12);
-  for(let j=0;j<3;j++)k.cylinder(g,.42,.10,x,.52+j*.36,3.2,power,12);
-  pipe(k,g,v3(x,1.58,3.2),v3(x,1.58,2.0),.08,k.gold);
+  k.cylinder(g,.30,1.3,x,.78,-3.35,k.hull,12);
+  for(let j=0;j<3;j++)k.cylinder(g,.42,.10,x,.52+j*.36,-3.35,power,12);
+  pipe(k,g,v3(x,1.58,-3.35),v3(x,1.58,-2.0),.08,k.gold);
  }
  k.batteryLights.push(k.glow);
  k.light(g,0,2.4,2.35,0xa3e4ff,1.2,8);
