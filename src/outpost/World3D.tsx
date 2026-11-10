@@ -286,6 +286,9 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
    const initial=spawn.current;
    const player:Point2={...initial.position};
    const state={position:player,yaw:initial.yaw,pitch:initial.pitch,open:null as FacilityId|null,openAt:0};
+   // Restore the avatar's visible facing direction immediately, not only
+   // after walking. After a door exit the astronaut must face away from it.
+   scene.astro.rotation.y=Math.atan2(-Math.sin(initial.yaw),-Math.cos(initial.yaw))-Math.PI;
    const keys=new Set<string>();
    let lookPointer:number|null=null,px=0,py=0;
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
