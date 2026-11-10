@@ -184,3 +184,45 @@
  .j3-map-pin{min-width:59px!important;font-size:9px!important;padding:5px 3px!important}
  .j3-map-pin b{font-size:9px}
 }
+
+
+/* v4 immersive iPad layout: never scroll the webpage behind gameplay. */
+.j3-root{
+ position:fixed;inset:0;width:100%;height:100dvh;max-height:100dvh;
+ overflow:hidden;overscroll-behavior:none;
+}
+.j3-root .j3-world,.j3-root .jm-world-host,.j3-root .jm-world-canvas{
+ touch-action:none;overscroll-behavior:none;
+}
+.j3-select{touch-action:pan-y;overscroll-behavior:contain;}
+.j3-overlay{overflow:hidden;touch-action:auto;overscroll-behavior:contain;}
+.j3-panel{touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+/* Left: floating MOVE. Right: RUN / INTERACT. */
+.j3-root .j3-move-zone{
+ left:0;right:auto;bottom:0;width:41%;height:31%;
+ touch-action:none;overscroll-behavior:none;
+}
+.j3-root .j3-buttons{
+ left:auto;right:clamp(17px,3.2vw,56px);bottom:clamp(18px,3vw,42px);
+ justify-items:end;
+}
+.j3-root .j3-move-hint{left:clamp(19px,3vw,56px);right:auto;bottom:14px;}
+/* Keep the objective and its clickable map button out of the joystick's
+   touch-capture area, including on iPad landscape. */
+.j3-root .j3-objective{
+ position:absolute;left:clamp(14px,2vw,30px);top:clamp(140px,24vh,255px);
+ width:min(440px,35vw);max-height:34dvh;margin:0;
+ overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;
+ background:#0b2436ed;backdrop-filter:blur(10px);
+}
+.j3-root .j3-helptext{bottom:20px;pointer-events:none;}
+@media(max-width:900px){
+ .j3-root .j3-move-zone{width:43%;height:28%;}
+ .j3-root .j3-objective{top:clamp(130px,25vh,210px);max-height:35dvh;width:43vw;}
+}
+@media(max-width:600px){
+ .j3-root .j3-move-zone{width:47%;height:29%;}
+ .j3-root .j3-buttons{right:14px;bottom:17px;left:auto;}
+ .j3-root .j3-objective{top:112px;left:10px;width:58vw;max-height:36dvh;}
+ .j3-root .j3-move-hint{left:12px;font-size:9px;}
+}
