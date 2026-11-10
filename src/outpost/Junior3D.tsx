@@ -231,8 +231,20 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const localEmergency=room!==null&&room===required&&pending;
  const canAdvance=crewSleepStatus(session).ok;
  const needs=missionCriteria(session);
- const goal=missionDestination(session);
- const nav=destinationGuide(playerPosition,room,goal);
+ const mustBreakfast=session.breakfastSol!==session.sol;
+ const mustDinner=Boolean(selected)&&!pending&&session.dinnerSol!==session.sol;
+ const readyForBed=crewSleepStatus(session).ok;
+ const goal=mustBreakfast||mustDinner||readyForBed?"habitat":missionDestination(session);
+ const guidance=destinationGuide(playerPosition,room,goal);
+ const nav=mustBreakfast?
+   {title:"EAT BREAKFAST",description:"In Crew Habitat, walk to the illuminated dining table on the right and press INTERACT."}:
+   mustDinner?
+   {title:room==="habitat"?"EAT DINNER":"RETURN TO CREW HABITAT FOR DINNER",
+     description:room==="habitat"?"Find the lit dining table on the right and press INTERACT.":"Follow the Crew Habitat marker, enter, and eat dinner."}:
+   readyForBed?
+   {title:room==="habitat"?"SLEEP IN YOUR BUNK":"RETURN TO CREW HABITAT TO SLEEP",
+     description:room==="habitat"?"Find the illuminated bunk on the left and press INTERACT.":"Head to Crew Habitat, enter, and use the sleeping bunk."}:
+   guidance;
  return <div className="j3-root">
    <div className="j3-world">
      <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} movement={movement} lookDelta={cameraDelta} spawn={spawn}
@@ -378,7 +390,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      </section>}
    </div>}
    {!panel&&pending&&<button className="j3-status" style={{cursor:"pointer"}} onClick={()=>setPanel("event")}>⚠ EMERGENCY! GO TO {required?focusAction(required).title.toUpperCase():"FACILITY"} · TAP FOR DETAILS</button>}
-   {!panel&&canAdvance&&<button className="j3-status" style={{cursor:"pointer",top:145}} onClick={advance}>✓ ENGINEERING TASK COMPLETE · FINISH DAY {session.sol} →</button>}
+   {!panel&&canAdvance&&<div className="j3-status" style={{top:145}}>✓ BREAKFAST · MISSION · DINNER COMPLETE — GO TO YOUR BUNK AND PRESS INTERACT TO SLEEP</div>}
    {!saveOk&&!panel&&<div className="j3-status" style={{top:185}}>⚠ Browser cannot save progress. Do not close the tab.</div>}
  </div>;
 }
