@@ -235,7 +235,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <button className="j3-run" onPointerDown={e=>actionDown("run",e)}
          onPointerMove={e=>actionMove("run",e)} onPointerUp={e=>actionEnd("run",e)}
          onPointerCancel={e=>actionEnd("run",e)} onLostPointerCapture={e=>actionEnd("run",e)}>RUN</button>
-       <button disabled={!near} onPointerDown={e=>actionDown("interact",e)}
+       <button aria-label="Interact or drag to turn the camera" title={near?.title??"Drag to look; approach an airlock or console to interact"} onPointerDown={e=>actionDown("interact",e)}
          onPointerMove={e=>actionMove("interact",e)} onPointerUp={e=>actionEnd("interact",e)}
          onPointerCancel={e=>actionEnd("interact",e)} onLostPointerCapture={e=>actionEnd("interact",e)}
          onClick={()=>{const recent=performance.now()-lastTouchActivation.current<750;
