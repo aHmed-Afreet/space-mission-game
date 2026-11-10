@@ -73,6 +73,8 @@ test("iPad game viewport is fixed and does not allow a page swipe to scroll",()=
  assert.match(lock,/document\.addEventListener\("touchmove",blockPanning,\{capture:true,passive:false\}\)/);
  assert.match(lock,/window\.scrollTo\(0,0\)/);
  assert.match(css,/html\.outpost-viewport-locked #root\{/);
+ assert.match(css,/height:var\(--outpost-visible-height,100dvh\)!important/);
+ assert.match(css,/html\.outpost-viewport-locked \.j3-root \.j3-buttons/);
  assert.match(css,/\.j3-root\{\s*position:fixed;inset:0/);
  assert.match(css,/\.j3-root \.j3-world,\.j3-root \.jm-world-host/);
  assert.match(css,/overscroll-behavior:none/);
