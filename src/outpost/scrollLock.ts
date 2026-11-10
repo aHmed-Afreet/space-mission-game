@@ -7,7 +7,7 @@
 // when browser tabs and the address bar are showing. Use WebKit's measured
 // visualViewport instead of guessing a fixed pixel offset.
 export function outpostVisibleHeight(visualHeight:number|undefined,innerHeight:number):number {
- const h=Number.isFinite(visualHeight)&&visualHeight!>200?visualHeight!:innerHeight;
+ const h=typeof visualHeight==="number"&&Number.isFinite(visualHeight)&&visualHeight>200?visualHeight:innerHeight;
  return Math.max(240,Math.floor(Number.isFinite(h)?h:768));
 }
 export function lockOutpostViewport():()=>void {
