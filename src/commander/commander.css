@@ -2181,9 +2181,14 @@ select {
 
 /* Camera drag independent of Sprint. Above visual overlays, below HUD controls. */
 .cmd-session .cmd-world .cmd-look-surface{
- position:absolute;inset:0 0 0 48%;z-index:5;
+ position:absolute;inset:0;z-index:5;
  touch-action:none;pointer-events:auto;user-select:none;
  -webkit-user-select:none;-webkit-touch-callout:none;
 }
 .cmd-session .cmd-world .cmd-floating-zone{width:48%}
 .cmd-session .cmd-world .cmd-look-surface>span{pointer-events:none}
+
+/* Camera gestures reach the full scene; the raised movement zone and touch
+   actions retain their own independently captured pointers. */
+.cmd-session .cmd-world .cmd-look-surface { touch-action:none; }
+.cmd-session .cmd-world .cmd-touch-actions .cmd-work { touch-action:none; }

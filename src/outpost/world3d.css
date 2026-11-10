@@ -86,3 +86,101 @@
 @media(max-width:1120px){.j3-brand{display:none}.j3-meters{max-width:76vw}.j3-quick{flex-shrink:0}.j3-meter{min-width:92px}.j3-meter strong{font-size:21px}}
 @media(max-width:730px){.j3-hud{padding:8px}.j3-top{flex-wrap:wrap}.j3-meters{width:100%;max-width:100%}.j3-quick{position:absolute;right:8px;top:88px}.j3-meter{padding:7px 9px;min-width:0}.j3-meter>span{font-size:10px}.j3-meter strong{font-size:20px}.j3-objective{width:76vw;margin-bottom:132px;padding:10px}.j3-objective strong{font-size:15px}.j3-objective p{font-size:11px}.j3-helptext{display:none}.j3-joystick{height:116px;width:116px;bottom:18px;left:19px}.j3-buttons{right:16px;bottom:18px}.j3-buttons button{min-width:125px;min-height:55px;padding:12px;font-size:12px}.j3-prompt{bottom:99px;font-size:11px;padding:8px;max-width:90vw}.j3-split,.j3-worlds{grid-template-columns:1fr}.j3-select{justify-content:flex-start}.j3-result{grid-template-columns:repeat(2,minmax(0,1fr))}.j3-panel{max-height:90dvh}.j3-tutorial-steps{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.j3-root *, .j3-root *:before{animation:none!important;transition:none!important}}
+
+
+/* v3.1: Commander-style floating joystick, requested in the lower-RIGHT zone.
+   RUN and INTERACT move to the opposite side and keep camera drags alive. */
+.j3-move-zone{
+ position:absolute;right:0;bottom:0;width:47%;height:61%;z-index:2;
+ touch-action:none;user-select:none;pointer-events:auto;
+ -webkit-user-select:none;-webkit-touch-callout:none;
+}
+.j3-move-zone .j3-joystick{
+ position:absolute;left:0;top:0;right:auto;bottom:auto;
+ transform:translate(-50%,-50%);opacity:0;pointer-events:none;
+ width:132px;height:132px;
+ transition:opacity .09s ease;
+}
+.j3-move-zone .j3-joystick.using{opacity:1}
+.j3-move-zone .j3-thumb{pointer-events:none}
+.j3-move-hint{position:absolute;right:clamp(22px,4vw,65px);bottom:19px;
+ color:#c8f4e8c9;font-size:10px;letter-spacing:1.2px;font-weight:800;
+ pointer-events:none;text-shadow:0 2px 7px #000}
+.j3-buttons{left:clamp(15px,3vw,50px);right:auto;justify-items:start}
+.j3-buttons button{touch-action:none;user-select:none;-webkit-user-select:none}
+.j3-objective{max-height:40dvh;overflow-y:auto;scrollbar-width:thin;margin-bottom:141px;
+ pointer-events:auto}
+.j3-direction{display:grid;gap:5px;background:#0c3c42df;border:1px solid #88d1c590;
+ border-radius:8px;padding:9px;margin-top:10px}
+.j3-direction b{color:#d5fff1;font-size:12px;line-height:1.35}
+.j3-direction span{color:#c2e4e2;font-size:11px;line-height:1.45}
+.j3-direction button{justify-self:start;border:1px solid #72bfb0;background:#23685d;
+ border-radius:6px;color:#f1fff7;padding:7px 12px;font-weight:850;font-size:11px;min-height:35px}
+.j3-map-panel{width:min(1040px,100%);gap:15px}
+.j3-map-header{display:flex;align-items:start;justify-content:space-between;gap:12px}
+.j3-map-header h2{font-size:clamp(23px,3vw,33px);margin-top:7px}
+.j3-map-header button{flex-shrink:0}
+.j3-map-direction{display:grid;gap:4px;padding:12px 15px;background:#194b4b;
+ border:1px solid #84c8b8;border-radius:10px}
+.j3-map-direction b{color:#ceffe9;font-size:14px}
+.j3-map-direction span{color:#d4ece7;font-size:12px;line-height:1.6}
+.j3-map-content{display:grid;grid-template-columns:minmax(300px,1.35fr) minmax(215px,1fr);gap:15px}
+.j3-map-ground{aspect-ratio:1.28;min-height:330px;position:relative;overflow:hidden;
+ border:1px solid #719b98;border-radius:12px;background:
+ radial-gradient(ellipse at 51% 50%,#34645b90 0,#203e47 33%,#121f33 73%),
+ repeating-linear-gradient(0deg,transparent,transparent 37px,#47717c44 38px),
+ repeating-linear-gradient(90deg,transparent,transparent 37px,#47717c44 38px)}
+.j3-map-north{position:absolute;right:12px;top:10px;z-index:2;font-size:14px;
+ font-weight:950;color:#cefbed}
+.j3-map-paths{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.j3-map-centre{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+ font-size:9px;color:#d6eddd;border:1px solid #72b8a7;background:#0c3542bb;
+ padding:7px;border-radius:50%;z-index:2;pointer-events:none}
+.j3-map-pin{position:absolute;transform:translate(-50%,-50%);z-index:3;
+ background:#244c5eee;color:#ebfaf4;border:1px solid #9cbabc;border-radius:7px;
+ padding:8px 6px!important;min-height:38px!important;min-width:75px!important;
+ max-width:112px;text-align:center!important;line-height:1.25;font-size:10px!important;
+ box-shadow:0 4px 15px #0008}
+.j3-map-pin b{color:inherit;display:block;font-size:10px}
+.j3-map-pin.target{border:2px solid #e7ec91;background:#42675e;color:#f6ffcb;box-shadow:0 0 17px #dbe88a88}
+.j3-map-pin.selected{outline:2px solid #c0f8e1;outline-offset:2px}
+.j3-map-player{position:absolute;transform:translate(-50%,-50%);z-index:5;
+ border:2px solid #a2f5fd;background:#087896;color:#fff;text-align:center;
+ font-size:10px;font-weight:900;border-radius:50%;min-width:39px;min-height:39px;
+ display:grid;place-items:center;box-shadow:0 0 17px #6ddefc}
+.j3-map-indoor{position:absolute;bottom:10px;left:10px;z-index:4;background:#16464a;
+ border:1px solid #9cf2d0;border-radius:8px;padding:9px;color:#effff8;font-size:10px;font-weight:850}
+.j3-map-details{border:1px solid #466f79;background:#112c3a;border-radius:11px;
+ padding:17px;display:flex;flex-direction:column;gap:9px}
+.j3-map-details h3{margin:0;font-size:24px;color:#e8fcf5}
+.j3-map-details p{margin:0;color:#cadfdd;line-height:1.65;font-size:13px}
+.j3-map-details strong{margin-top:6px;font-size:11px;color:#bdf6d8;letter-spacing:1px}
+.j3-map-entrance{border-top:1px solid #4a7276;padding-top:12px}
+.j3-map-legend{margin-top:auto;display:grid;gap:8px;border-top:1px solid #4a7276;padding-top:11px;
+ color:#b5ded9;font-size:11px}
+.j3-map-legend span{display:flex;gap:8px;align-items:center}
+.j3-map-shortlist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.j3-map-shortlist button{display:grid;gap:5px;background:#173d4a;border:1px solid #598788;
+ min-height:70px;text-align:left;font-size:12px;font-weight:800}
+.j3-map-shortlist button.selected{background:#2d6557;border-color:#b1e9cf}
+.j3-map-shortlist button small{font-size:10px;line-height:1.4;color:#c4dcd8;font-weight:400}
+@media(max-width:780px){
+ .j3-map-content{grid-template-columns:1fr}
+ .j3-map-ground{min-height:270px}
+ .j3-map-shortlist{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .j3-objective{max-height:33dvh;margin-bottom:122px;width:48vw}
+ .j3-move-zone{width:50%;height:57%}
+ .j3-move-zone .j3-joystick{width:116px;height:116px}
+ .j3-buttons{left:14px;right:auto;bottom:19px}
+ .j3-buttons button{min-width:116px}
+ .j3-move-hint{right:16px;bottom:15px;font-size:9px}
+}
+@media(max-width:520px){
+ .j3-objective{width:52vw;max-height:30dvh;margin-bottom:132px}
+ .j3-direction{padding:6px}
+ .j3-direction b{font-size:10px}
+ .j3-direction span{font-size:9px}
+ .j3-map-shortlist{grid-template-columns:1fr}
+ .j3-map-pin{min-width:59px!important;font-size:9px!important;padding:5px 3px!important}
+ .j3-map-pin b{font-size:9px}
+}

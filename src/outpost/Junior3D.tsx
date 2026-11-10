@@ -5,10 +5,13 @@ import {ACTIONS,CROPS,GAME_KEY,LEGACY_GAME_KEY,WORLD,advanceSol,availableAction,
  type Action,type CropType,type Destination,type Outpost,type Priority} from "./engine";
 import {FACILITIES,type FacilityId} from "./FacilityScene";
 import {dayBrief,dailyChanges,dayLesson} from "./missionFlow";
-import World3D,{type Movement,type Proximity} from "./World3D";
+import World3D,{type Movement,type Proximity,type CameraDelta} from "./World3D";
+import OutpostMap from "./OutpostMap";
+import {destinationGuide,missionDestination} from "./navigation";
+import {distance,type Point2} from "./worldLogic";
 import "./world3d.css";
 
-type Panel=null|"console"|"event"|"help"|"outcome"|"mission";
+type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map";
 type Result={before:Outpost;after:Outpost};
 const meters=[
  {key:"oxygen",label:"OXYGEN",icon:"◉"},{key:"water",label:"WATER",icon:"◈"},
@@ -29,32 +32,44 @@ function readSaved(destination:Destination){
    return restored?.destination===destination?restored:null;
  }catch{return null;}
 }
+/** Dynamically floating movement joystick in the lower-right touch zone. */
 function Stick({move}:{move:React.RefObject<Movement>}){
- const ref=useRef<HTMLDivElement>(null),active=useRef<number|null>(null),thumb=useRef<HTMLDivElement>(null);
+ const active=useRef<number|null>(null);
+ const origin=useRef({x:0,y:0});
+ const ring=useRef<HTMLDivElement>(null),thumb=useRef<HTMLDivElement>(null);
  function update(e:ReactPointer<HTMLDivElement>){
-   const rect=ref.current?.getBoundingClientRect();if(!rect)return;
-   const dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);
-   const max=42,mag=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,max/mag);
-   const x=dx*scale,y=dy*scale;
-   move.current.x=x/max;move.current.y=-y/max;
-   if(thumb.current){thumb.current.style.setProperty("--jx",x+"px");thumb.current.style.setProperty("--jy",y+"px");}
+   const dx=e.clientX-origin.current.x,dy=e.clientY-origin.current.y;
+   const radius=58,len=Math.hypot(dx,dy),dead=5,ratio=len<=dead?0:Math.min(1,(len-dead)/(radius-dead));
+   const vx=len>0?dx/len*ratio:0,vy=len>0?dy/len*ratio:0;
+   move.current.x=vx;move.current.y=-vy;
+   thumb.current?.style.setProperty("--jx",vx*radius*.75+"px");
+   thumb.current?.style.setProperty("--jy",vy*radius*.75+"px");
  }
  function down(e:ReactPointer<HTMLDivElement>){
    if(active.current!==null)return;
-   active.current=e.pointerId;ref.current?.setPointerCapture(e.pointerId);update(e);
+   e.preventDefault();active.current=e.pointerId;
+   e.currentTarget.setPointerCapture(e.pointerId);
+   origin.current={x:e.clientX,y:e.clientY};
+   const rect=e.currentTarget.getBoundingClientRect();
+   if(ring.current){ring.current.style.left=e.clientX-rect.left+"px";
+     ring.current.style.top=e.clientY-rect.top+"px";ring.current.classList.add("using");}
+   update(e);
  }
  function end(e:ReactPointer<HTMLDivElement>){
-   if(active.current!==e.pointerId)return;active.current=null;
-   move.current.x=0;move.current.y=0;
+   if(active.current!==e.pointerId)return;
+   active.current=null;move.current.x=0;move.current.y=0;
    thumb.current?.style.setProperty("--jx","0px");
    thumb.current?.style.setProperty("--jy","0px");
+   ring.current?.classList.remove("using");
  }
- return <div className="j3-joystick" ref={ref} role="group" aria-label="Virtual walking joystick"
-  onPointerDown={down} onPointerMove={e=>{if(active.current===e.pointerId)update(e);}}
-  onPointerUp={end} onPointerCancel={end} onLostPointerCapture={e=>end(e)}>
-   <div className="j3-thumb" ref={thumb}/>
+ return <div className="j3-move-zone" role="group" aria-label="Touch anywhere in this lower-right area to walk"
+   onPointerDown={down} onPointerMove={e=>{if(active.current===e.pointerId)update(e);}}
+   onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}>
+   <div className="j3-joystick" ref={ring} aria-hidden="true"><div className="j3-thumb" ref={thumb}/></div>
+   <span className="j3-move-hint">TOUCH HERE TO WALK</span>
  </div>;
 }
+type ButtonContact={id:number;x:number;y:number;startX:number;startY:number;dragged:boolean};
 const focusAction=(id:FacilityId)=>FACILITIES.find(x=>x.id===id)!;
 export default function Junior3D({onExit}:{onExit:()=>void}){
  const [session,setSession]=useState<Outpost|null>(null);
@@ -66,7 +81,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
  const [saveOk,setSaveOk]=useState(true);
+ const [playerPosition,setPlayerPosition]=useState<Point2>({x:0,z:0});
  const movement=useRef<Movement>({x:0,y:0,run:false});
+ const cameraDelta=useRef<CameraDelta>({yaw:0,pitch:0});
+ const buttonContacts=useRef<{run:ButtonContact|null;interact:ButtonContact|null}>({run:null,interact:null});
+ const lastTouchActivation=useRef(0),skipInteractClick=useRef(false);
  useEffect(()=>{
    if(!session)return;
    try{localStorage.setItem(GAME_KEY+"-"+session.destination,JSON.stringify(session));setSaveOk(true);}
@@ -77,6 +96,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  function start(destination:Destination){
    const saved=readSaved(destination);
    setSession(saved??initialOutpost(destination));setNear(null);setRoom(null);
+   setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
    setLastResult(null);setNotice("");setError("");
    setPanel(saved?(saved.phase!=="active"?"outcome":null):"help");
  }
@@ -84,6 +104,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    if(!session)return;
    if(!window.confirm("Restart this "+session.destination+" mission? Your existing outpost progress will be replaced."))return;
    setSession(initialOutpost(session.destination));setRoom(null);setPanel("help");
+   setPlayerPosition({x:0,z:0});cameraDelta.current={yaw:0,pitch:0};
    setLastResult(null);setNotice("");setNear(null);
  }
  function operate(action:Action){
@@ -107,7 +128,39 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  }
  const enter=useCallback((id:FacilityId|null)=>{setRoom(id);setPanel(null);setNear(null);setNotice(id?"Entered "+focusAction(id).title+". Find the illuminated control panel.":"Exited to the surface.");},[]);
  const openConsole=useCallback((id:FacilityId)=>{setRoom(id);setPanel("console");setNotice("");},[]);
- const nearCallback=useCallback((q:Proximity)=>setNear(prev=>prev?.kind===q?.kind&&prev?.id===q?.id?prev:q),[]);
+ const nearCallback=useCallback((q:Proximity)=>setNear(prev=>
+   prev?.kind===q?.kind&&prev?.id===q?.id&&prev?.title===q?.title?prev:q),[]);
+ const positionCallback=useCallback((p:Point2)=>setPlayerPosition(prev=>distance(prev,p)<.35?prev:p),[]);
+ // RUN and INTERACT capture their own pointer IDs, and drags on either button
+ // contribute to the same live camera even if the walking stick is held.
+ function actionDown(kind:"run"|"interact",e:ReactPointer<HTMLButtonElement>){
+   if(buttonContacts.current[kind])return;
+   if(e.pointerType==="touch")e.preventDefault();
+   e.currentTarget.setPointerCapture(e.pointerId);
+   buttonContacts.current[kind]={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,dragged:false};
+   if(kind==="run")movement.current.run=true;
+   if(kind==="interact")skipInteractClick.current=false;
+ }
+ function actionMove(kind:"run"|"interact",e:ReactPointer<HTMLButtonElement>){
+   const p=buttonContacts.current[kind];
+   if(!p||p.id!==e.pointerId)return;
+   const dx=e.clientX-p.x,dy=e.clientY-p.y;
+   if(Math.hypot(e.clientX-p.startX,e.clientY-p.startY)>12)p.dragged=true;
+   cameraDelta.current.yaw-=dx*.0045;
+   cameraDelta.current.pitch+=dy*.003;
+   p.x=e.clientX;p.y=e.clientY;
+ }
+ function actionEnd(kind:"run"|"interact",e:ReactPointer<HTMLButtonElement>){
+   const p=buttonContacts.current[kind];
+   if(!p||p.id!==e.pointerId)return;
+   buttonContacts.current[kind]=null;
+   if(kind==="run"){movement.current.run=false;return;}
+   if(p.dragged)skipInteractClick.current=true;
+   if(e.type==="pointerup"&&!p.dragged&&e.pointerType==="touch"){
+     lastTouchActivation.current=performance.now();
+     setSeq(n=>n+1);
+   }
+ }
  if(!session)return <div className="j3-root">
    <section className="j3-select">
      <span className="j3-kicker">NASA SPACE APPS CHALLENGE THEME · INDEPENDENT EDUCATIONAL GAME</span>
@@ -136,9 +189,12 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const localEmergency=room!==null&&room===required&&pending;
  const canAdvance=Boolean(selected)&&!pending&&!complete;
  const needs=missionCriteria(session);
+ const goal=missionDestination(session);
+ const nav=destinationGuide(playerPosition,room,goal);
  return <div className="j3-root">
    <div className="j3-world">
-     <World3D room={room} session={session} movement={movement} interactSeq={seq}
+     <World3D room={room} session={session} movement={movement} lookDelta={cameraDelta}
+       target={goal} interactSeq={seq} onPosition={positionCallback}
        onEnter={enter} onConsole={openConsole} onNear={nearCallback} onError={setError}/>
    </div>
    <div className="j3-vignette"/>
@@ -154,6 +210,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          </div>;
        })}</div>
        <div className="j3-quick">
+         <button onClick={()=>setPanel("map")}>MAP</button>
          <button onClick={()=>setPanel("mission")}>MISSION</button>
          <button onClick={()=>setPanel("help")}>?</button>
          <button onClick={()=>{setSession(null);setPanel(null);setRoom(null);}}>EXIT</button>
@@ -164,19 +221,27 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <div className="j3-objective">
          <span className="j3-kicker">TODAY'S OBJECTIVE · DAY {Math.min(10,session.sol)}</span>
          <strong>{brief.title}</strong><p>{brief.description}</p>
+         <div className="j3-direction"><b>★ {nav.title}</b><span>{nav.description}</span>
+           <button onClick={()=>setPanel("map")}>OPEN MAP ↗</button></div>
          <small>{selected?"✓ Action completed: "+ACTIONS.find(x=>x.id===selected)?.title:"Find a facility and perform one task."}
            {pending?" · ⚠ Emergency response required":""}</small>
        </div>
-       <div className="j3-helptext">LEFT STICK: MOVE · DRAG SCREEN: LOOK · INTERACT: DOOR / MACHINE</div>
+       <div className="j3-helptext">BOTTOM-RIGHT: TOUCH TO WALK · DRAG TO LOOK · RUN / INTERACT SUPPORT CAMERA DRAG</div>
      </div>
    </div>
    {!panel&&<div className="j3-controls">
      <Stick move={movement}/>
      <div className="j3-buttons">
-       <button className="j3-run" onPointerDown={()=>movement.current.run=true}
-         onPointerUp={()=>movement.current.run=false} onPointerCancel={()=>movement.current.run=false}
-         onPointerLeave={()=>movement.current.run=false}>RUN</button>
-       <button disabled={!near} onClick={()=>setSeq(n=>n+1)}>INTERACT</button>
+       <button className="j3-run" onPointerDown={e=>actionDown("run",e)}
+         onPointerMove={e=>actionMove("run",e)} onPointerUp={e=>actionEnd("run",e)}
+         onPointerCancel={e=>actionEnd("run",e)} onLostPointerCapture={e=>actionEnd("run",e)}>RUN</button>
+       <button aria-label="Interact or drag to turn the camera" title={near?.title??"Drag to look; approach an airlock or console to interact"} onPointerDown={e=>actionDown("interact",e)}
+         onPointerMove={e=>actionMove("interact",e)} onPointerUp={e=>actionEnd("interact",e)}
+         onPointerCancel={e=>actionEnd("interact",e)} onLostPointerCapture={e=>actionEnd("interact",e)}
+         onClick={()=>{const recent=performance.now()-lastTouchActivation.current<750;
+           const drag=skipInteractClick.current;skipInteractClick.current=false;
+           if(!recent&&!drag)setSeq(n=>n+1);
+         }}>INTERACT</button>
        {canAdvance&&<button onClick={advance}>FINISH DAY {session.sol} →</button>}
      </div>
      {near&&<div className="j3-prompt">{near.title} · PRESS INTERACT</div>}
@@ -184,6 +249,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
    {panel&&<div className="j3-overlay">
+     {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
      {panel==="console"&&currentFacility&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
        <span className="j3-kicker">3D FACILITY CONTROL · {currentFacility.title.toUpperCase()}</span>
        <h2>{currentFacility.title}</h2>
@@ -226,6 +292,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      </section>}
      {panel==="mission"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="Mission Objectives">
        <span className="j3-kicker">MISSION CONTROL / DAY {session.sol}</span><h2>{brief.title}</h2><p>{brief.description}</p>
+       <div className="j3-map-direction"><b>★ {nav.title}</b><span>{nav.description}</span></div>
+       <button onClick={()=>setPanel("map")}>VIEW BASE MAP AND BUILDING GUIDE ↗</button>
        <div className="j3-info">{brief.tip}</div>
        <div className="j3-split"><div className="j3-info">CREW SAFETY<br/><b>{Math.round(session.safety)}%</b></div>
          <div className="j3-info">RADIATION<br/><b>{Math.round(session.radiation)} INDEX</b></div></div>
@@ -240,9 +308,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <span className="j3-kicker">WELCOME TO THE 3D MISSION</span><h2>YOU ARE THE ASTRONAUT.</h2>
        <p>This is a walkable Moon/Mars base. The equipment you operate changes your mission resources and the world you see.</p>
        <div className="j3-tutorial-steps">
-         <div><b>1. WALK</b><br/>Use the left joystick (or WASD). Drag anywhere on the 3D scene to turn the camera. Hold RUN to move faster.</div>
-         <div><b>2. OPEN THE AIRLOCK</b><br/>Walk up to a building's front hatch, press INTERACT, then walk through the physically opening door.</div>
-         <div><b>3. OPERATE EQUIPMENT</b><br/>Inside, walk to the illuminated control console and press INTERACT. Choose one useful operation each day.</div>
+         <div><b>1. WALK</b><br/>Touch anywhere in the bottom-right movement zone to make a joystick appear. Move your finger to walk (or use WASD).</div>
+         <div><b>2. FIND YOUR WAY</b><br/>Open MAP to see yourself, your mission target and what every building does. Follow the highlighted building.</div>
+         <div><b>3. OPEN AND OPERATE</b><br/>Approach the door, press INTERACT, walk inside and operate the glowing console. Drag from RUN or INTERACT to turn the camera.</div>
          <div><b>4. SAVE THE CREW</b><br/>Respond to hazards in the right building, balance resources and finish the day. Learn from the result.</div>
        </div>
        <p className="j3-small">The visual environment and resource calculations are stylized educational simulations, not photorealistic NASA engineering predictions. Your mission is saved on this device.</p>
