@@ -57,7 +57,7 @@ test("3D camera uses actual interior geometry collision and restores pose on sce
  assert.match(world,/onEnter\(null,\{position:/);
  assert.match(world,/onEnter\(state\.open,\{position:/);
  assert.match(junior,/exteriorDoorSpawn\(previous\)/);
- assert.match(junior,/spawn\.current=\{position,yaw:outsideYaw\.current/);
+ assert.match(junior,/spawn\.current=\{position,yaw:previous\?exteriorDoorYaw\(previous\):pose\.yaw/);
  assert.match(junior,/enteredBuilding\.current=id/);
  assert.match(junior,/spawn=\{spawn\}/);
 });
