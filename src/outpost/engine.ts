@@ -19,6 +19,9 @@ export type Outpost = {
   recycling: number; greenhouses: number; priority: Priority;
   selected: Action | null; log: string[]; lastReport: string[];
   cropType: CropType; plannedCrop: CropType; incidentSol: number; incidentChoice: IncidentChoice | null;
+  /** Optional for backward-compatible v2 browser saves. Eating is already
+   * accounted for in advanceSol; these flags record player interaction only. */
+  breakfastSol?: number; dinnerSol?: number;
 };
 export const MISSION_LENGTH = 10;
 export const GAME_KEY = "orbital-junior-outpost-v2";
@@ -155,6 +158,37 @@ export function projectPower(s: Outpost): Projection {
     projectedBattery: clamp(s.battery + generation - demand-(response==="shelter"?7:0)),
     note: generation >= demand ? "Solar generation meets today's demand." : "The outpost must draw energy from its battery." };
 }
+/** Crew meals are playable scenes, not additional resource charges.
+ * Food is deducted exactly once per day by advanceSol. */
+export function crewMealStatus(s:Outpost,kind:"breakfast"|"dinner"):{ok:boolean;message:string}{
+ if(s.phase!=="active")return {ok:false,message:"The mission is complete."};
+ if(kind==="breakfast"){
+   return s.breakfastSol===s.sol
+     ?{ok:false,message:"Breakfast was already eaten today."}
+     :{ok:true,message:"Breakfast ready. Prepare for today's engineering mission."};
+ }
+ if(s.breakfastSol!==s.sol)return {ok:false,message:"Eat breakfast before dinner."};
+ if(!s.selected)return {ok:false,message:"Complete your daily engineering task before dinner."};
+ if(s.dinnerSol===s.sol)return {ok:false,message:"Dinner was already eaten today."};
+ return {ok:true,message:"Dinner ready. Finish eating, then return to your bed."};
+}
+export function eatCrewMeal(s:Outpost,kind:"breakfast"|"dinner"):Outpost{
+ const status=crewMealStatus(s,kind);
+ if(!status.ok)return s;
+ const label=kind==="breakfast"?"breakfast":"dinner";
+ return {...s,[kind==="breakfast"?"breakfastSol":"dinnerSol"]:s.sol,
+   log:[...s.log,"Sol "+s.sol+": Crew ate "+label+" in the habitat dining area."].slice(-35)};
+}
+export function crewSleepStatus(s:Outpost):{ok:boolean;message:string}{
+ if(s.phase!=="active")return {ok:false,message:"The mission has ended."};
+ if(s.breakfastSol!==s.sol)return {ok:false,message:"Eat breakfast in Crew Habitat first."};
+ if(!s.selected)return {ok:false,message:"Complete one engineering task before sleeping."};
+ const incident=currentIncident(s);
+ if(incident&&s.incidentSol!==s.sol)return {ok:false,message:"Resolve today's emergency before sleeping."};
+ if(s.dinnerSol!==s.sol)return {ok:false,message:"Eat dinner in Crew Habitat before going to bed."};
+ return {ok:true,message:"Lights out. Sleep to begin the next sol."};
+}
+
 export function advanceSol(s: Outpost): Outpost {
   if (s.phase !== "active" || !s.selected) return s;
   const incident=currentIncident(s);
