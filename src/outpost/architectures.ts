@@ -253,13 +253,29 @@ export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Gro
 export function furnishDistinctInterior(id:FacilityId,k:StructureKit,group:T.Group){
  const metal=k.mat(0x93a9aa,.55,.37),warm=k.mat(0xe5d4bb,.36,.44,0x48311d,.15);
  if(id==="habitat"){
-  for(const x of [-3.15,3.15])for(const z of [-2.05,.65]){
-   k.box(group,1.45,.44,1.9,x,.60,z,metal);
-   k.box(group,1.37,.18,1.4,x,.91,z,warm);
-   k.box(group,.55,.13,.45,x,1.04,z-.53,k.hull);
-   k.box(group,1.5,.12,1.7,x,1.25,z,k.gold);
+  // Bunks are functional sleep stations, positioned separately from dining.
+  for(const z of [-2.05,.65]){
+   k.box(group,1.45,.44,1.9,-3.15,.60,z,metal);
+   k.box(group,1.37,.18,1.4,-3.15,.91,z,warm);
+   k.box(group,.55,.13,.45,-3.15,1.04,z-.53,k.hull);
+   k.box(group,1.5,.12,1.7,-3.15,1.25,z,k.gold);
   }
-  for(const z of [-1.7,.4,2.4]){radiator(k,group,-4.08,1.68,z,.5);radiator(k,group,4.08,1.68,z,.5);}
+  // Dining table and kitchenette to the right, always reachable on foot.
+  k.box(group,1.25,.16,1.05,2.55,.88,1.35,warm);
+  for(const x of [2.04,3.06])for(const z of [.96,1.75])
+   k.cylinder(group,.07,.73,x,.42,z,k.hull,8);
+  for(const z of [.25,2.42]){
+   k.box(group,.80,.15,.55,2.55,.50,z,k.hull);
+   k.box(group,.80,.58,.12,2.55,.75,z+(z<1?-.2:.2),metal);
+  }
+  k.box(group,.64,1.65,1.15,3.65,1.02,1.35,metal);
+  k.box(group,.16,.65,.65,3.28,1.62,1.35,k.glow).castShadow=false;
+  for(const x of [2.25,2.75])
+   k.cylinder(group,.16,.08,x,1.04,1.2,k.hull,14);
+  for(const z of [-1.7,.4,2.4]){
+   radiator(k,group,-4.08,1.68,z,.5);
+   radiator(k,group,4.08,1.68,z,.5);
+  }
  }else if(id==="solar"){
   for(const x of [-2.8,2.8])for(const z of [-1.55,.45]){
    const desk=k.box(group,1.2,1.3,.7,x,1,z,k.darkSteel);
