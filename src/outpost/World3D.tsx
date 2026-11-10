@@ -1,16 +1,17 @@
 import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
-import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,type Point2} from "./worldLogic";
+import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,confinedInteriorCamera,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
 import type {FacilityId} from "./FacilityScene";
 import {buildDistinctExterior,furnishDistinctInterior,type StructureKit} from "./architectures";
 import "./world3d.css";
 export type Movement={x:number;y:number;run:boolean};
 export type CameraDelta={yaw:number;pitch:number};
+export type WorldPose={position:Point2;yaw:number;pitch:number};
 export type Proximity={title:string;kind:"door"|"console"|"exit";id:FacilityId}|null;
 type Props={
- session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;interactSeq:number;target:FacilityId;
- onEnter:(id:FacilityId|null)=>void;onConsole:(id:FacilityId)=>void;
+ session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
+ onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;
  onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
 function createScene(session:Outpost,room:FacilityId|null){
@@ -188,6 +189,23 @@ function createScene(session:Outpost,room:FacilityId|null){
    // Every room now contains equipment appropriate to that facility.
    furnishDistinctInterior(room,kit,world);
  }
+ // Gather the large opaque static structures once for third-person camera
+ // obstruction tests. Ray/box tests are far cheaper than raycasting every
+ // triangle of each machine on every animation frame.
+ const cameraSolids:T.Box3[]=[];
+ if(room){
+  world.updateMatrixWorld(true);
+  world.traverse(o=>{
+   if(!(o instanceof T.Mesh))return;
+   const mat=o.material;
+   if(mat instanceof T.MeshStandardMaterial&&(mat.transparent||mat.emissiveIntensity>1))return;
+   const bounds=new T.Box3().setFromObject(o);
+   const dims=new T.Vector3();bounds.getSize(dims);
+   if(dims.x<.30||dims.y<.23||dims.z<.12)return;
+   if(bounds.max.y<.45||bounds.min.y>3.7)return;
+   cameraSolids.push(bounds);
+  });
+ }
  const astro=new T.Group();world.add(astro);
  const suit=mat(0xd7e0e2,.22,.64),visor=mat(0x152c40,.7,.10,0x19394d,.35),suitDark=mat(0x344b59,.4,.58);
  const torso=mesh(new T.CapsuleGeometry(.37,.54,5,12),suit,astro);geometries.push(torso.geometry);
@@ -213,9 +231,9 @@ function createScene(session:Outpost,room:FacilityId|null){
    world.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.InstancedMesh){o.geometry.dispose();}});
    materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());
  };
- return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,dispose};
+ return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,dispose};
 }
-export default function World3D({session,room,movement,lookDelta,interactSeq,target,onEnter,onConsole,onNear,onPosition,onError}:Props){
+export default function World3D({session,room,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
  const latest=useRef({session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target});
  latest.current={session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target};
@@ -232,12 +250,13 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
    renderer.toneMappingExposure=1.12;
    container.appendChild(renderer.domElement);
    renderer.domElement.className="jm-world-canvas";
-   const player:Point2=room?{x:0,z:2.9}:{x:0,z:0};
-   const state={position:player,yaw:room?0:0,pitch:.15,open:null as FacilityId|null,openAt:0};
+   const initial=spawn.current;
+   const player:Point2={...initial.position};
+   const state={position:player,yaw:initial.yaw,pitch:initial.pitch,open:null as FacilityId|null,openAt:0};
    const keys=new Set<string>();
    let lookPointer:number|null=null,px=0,py=0;
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
-   let entered=false,lastBattery=-1,lastReported=0;
+   let entered=false,lastBattery=-1,lastReported=0,cameraInitialized=false;
    let interactRequest=false;
    const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();
      if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){
@@ -304,11 +323,35 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      if(speed>.04){const facing=Math.atan2(-Math.sin(state.yaw)*y+Math.cos(state.yaw)*x,-Math.cos(state.yaw)*y-Math.sin(state.yaw)*x);
        scene.astro.rotation.y=facing-Math.PI;}
      scene.limbs.forEach((limb,i)=>{limb.rotation.x=Math.sin(now*.012+(i%2?Math.PI:0))*.42*speed;});
-     // Third person orbit camera, drag right side to rotate camera independently of the left joystick.
+     // Collision-aware 3rd-person camera: every indoor position stays below
+     // the ceiling and inside the room shell, with no wall/console clipping.
      const back=new T.Vector3(Math.sin(state.yaw),0,Math.cos(state.yaw));
-     const desired=new T.Vector3(state.position.x+back.x*(room?4.2:6.2),3.4+state.pitch*4,state.position.z+back.z*(room?4.2:6.2));
-     scene.camera.position.lerp(desired,Math.min(1,dt*8));
-     scene.camera.lookAt(state.position.x,1.43+state.pitch*.2,state.position.z);
+     const focus=new T.Vector3(state.position.x,1.54+state.pitch*.2,state.position.z);
+     const wanted=new T.Vector3(
+       state.position.x+back.x*(room?3.3:6.2),
+       (room?2.92:3.4)+state.pitch*(room?2.0:4),
+       state.position.z+back.z*(room?3.3:6.2));
+     const desired=room?new T.Vector3(...Object.values(confinedInteriorCamera(wanted))):wanted;
+     if(room){
+       const vec=desired.clone().sub(focus);
+       const length=vec.length();
+       if(length>.01){
+         const ray=new T.Ray(focus,vec.normalize());
+         let safe=length;
+         const hit=new T.Vector3();
+         for(const wall of scene.cameraSolids){
+           if(wall.containsPoint(focus))continue;
+           if(ray.intersectBox(wall,hit)){
+             const dist=hit.distanceTo(focus);
+             if(dist>.48&&dist<safe)safe=Math.max(.58,dist-.26);
+           }
+         }
+         if(safe<length)desired.copy(focus).addScaledVector(vec,safe);
+       }
+     }
+     if(!cameraInitialized){scene.camera.position.copy(desired);cameraInitialized=true;}
+     else scene.camera.position.lerp(desired,Math.min(1,dt*(room?11:8)));
+     scene.camera.lookAt(focus);
      if(latest.current.interactSeq!==lastInteraction || interactRequest){
        lastInteraction=latest.current.interactSeq;interactRequest=false;interact();
      }
@@ -321,9 +364,11 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      }
      if(state.open&&now-state.openAt>350&&!entered){
        if(room){
-         if(state.position.z>4.05){entered=true;latest.current.onEnter(null);return;}
+         if(state.position.z>4.05){entered=true;
+             latest.current.onEnter(null,{position:{...state.position},yaw:state.yaw,pitch:state.pitch});return;}
        }else if(doorwayCrossed(state.position,state.open)){
-         entered=true;latest.current.onEnter(state.open);return;
+         entered=true;
+         latest.current.onEnter(state.open,{position:{...state.position},yaw:state.yaw,pitch:state.pitch});return;
        }
      }
      const near:Proximity=room?
@@ -338,7 +383,7 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      const power=data.battery/100;
      if(Math.round(data.battery)!==lastBattery){
        lastBattery=Math.round(data.battery);
-       scene.lamps.forEach(l=>l.intensity=power<.08?.08:power<.22?.4:1.7);
+       scene.lamps.forEach(l=>l.intensity=power<.08?.55:power<.22?1.05:2.1);
        scene.batteryLights.forEach(m=>m.emissiveIntensity=power<.08?.08:power<.22?.25:1.4);
      }
      scene.foliage.forEach((o,i)=>{const growth=Math.max(.2,.35+data.crop/75);
@@ -354,6 +399,6 @@ export default function World3D({session,room,movement,lookDelta,interactSeq,tar
      renderer.domElement.removeEventListener("pointerup",pointerEnd);renderer.domElement.removeEventListener("pointercancel",pointerEnd);
      scene.dispose();renderer.dispose();renderer.domElement.remove();
    };
- },[room,movement,lookDelta]);
+ },[room,movement,lookDelta,spawn]);
  return <div className="jm-world-host" ref={host} role="img" aria-label={"Walkable three-dimensional "+session.destination+" research outpost. Move with left joystick or WASD, drag to look, and press interact at airlocks and control panels."}/>;
 }
