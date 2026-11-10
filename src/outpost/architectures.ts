@@ -227,8 +227,15 @@ export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Gro
  }
  // A consistent front door is the only shared architectural component.
  const z=facility.radius+.06;
- const portal=kit.mat(0x7a9297,.65,.27),entry=kit.mat(0x0c2833,.42,.31);
- kit.box(group,2.5,2.95,.22,0,1.56,z-.14,entry);
+ const portal=kit.mat(0x7a9297,.65,.27);
+ // Open, recessed vestibule with a visible floor and side walls. In
+ // particular, never put a solid opaque slab directly behind a sliding door.
+ for(const side of [-1,1])
+  kit.box(group,.19,2.68,1.20,side*1.13,1.36,z-.44,kit.darkSteel);
+ kit.box(group,2.43,.23,1.17,0,2.74,z-.44,kit.hull);
+ kit.box(group,2.33,.14,1.20,0,.17,z-.44,kit.trim);
+ for(const x of [-.64,0,.64])
+  kit.box(group,.09,.03,.80,x,.27,z-.52,kit.glow).castShadow=false;
  for(const side of [-1,1]){
   kit.box(group,.33,2.82,.50,side*1.1,1.4,z,portal);
   kit.box(group,.07,2.14,.13,side*.90,1.33,z+.26,kit.glow).castShadow=false;
