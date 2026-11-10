@@ -241,8 +241,10 @@ html.outpost-viewport-locked #root{
   position:fixed!important;
   inset:0!important;
   width:100%!important;
-  height:100dvh!important;
-  max-height:100dvh!important;
+  /* VisualViewport is shorter than 100dvh in iPad Chrome when browser
+     toolbars are visible. The active lock keeps this variable current. */
+  height:var(--outpost-visible-height,100dvh)!important;
+  max-height:var(--outpost-visible-height,100dvh)!important;
 }
 html.outpost-viewport-locked .j3-root{
   position:absolute;
@@ -257,4 +259,14 @@ html.outpost-viewport-locked .j3-world,
 html.outpost-viewport-locked .j3-hud,
 html.outpost-viewport-locked .j3-controls{
   overscroll-behavior:none;
+}
+
+/* Keep both action buttons within the bottom edge of the usable content
+   viewport, including iPad safe-area/home-indicator insets. */
+html.outpost-viewport-locked .j3-root .j3-buttons {
+  bottom:max(16px,env(safe-area-inset-bottom,0px));
+  right:max(16px,env(safe-area-inset-right,0px));
+}
+html.outpost-viewport-locked .j3-root .j3-move-zone {
+  bottom:0;
 }
