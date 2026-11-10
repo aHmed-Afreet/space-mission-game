@@ -1,11 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {lockOutpostViewport} from "./outpost/scrollLock";
+import {lockOutpostViewport,outpostVisibleHeight} from "./outpost/scrollLock";
 
 // Simulate WebKit's cancelable touchmove and the homepage's nonzero scroll.
 // This test exercises real listener behavior rather than only searching code.
 class FakeElement {
- style:Record<string,string>={};
+ style=(()=>{
+  const props:Record<string,string>={};
+  return Object.assign(props,{
+   setProperty:(name:string,value:string)=>{props[name]=value;},
+   getPropertyValue:(name:string)=>props[name]??"",
+   removeProperty:(name:string)=>{const old=props[name]??"";delete props[name];return old;}
+  });
+ })();
  classes=new Set<string>();
  classList={
   add:(value:string)=>this.classes.add(value),
@@ -32,8 +39,14 @@ test("iPad outpost stops page swipe and wheel but keeps its map panels scrollabl
   addEventListener:(kind:string,fn:(e:MockEvent)=>void,options:unknown)=>listeners.set("doc:"+kind,{fn,options}),
   removeEventListener:(kind:string)=>listeners.delete("doc:"+kind)
  };
+ const viewportHandlers=new Map<string,()=>void>();
+ const visualViewport={
+  height:840,
+  addEventListener:(name:string,callback:()=>void)=>viewportHandlers.set(name,callback),
+  removeEventListener:(name:string)=>viewportHandlers.delete(name)
+ };
  const fakeWindow={
-  scrollX:0,scrollY:740,
+  scrollX:0,scrollY:740,innerHeight:1100,visualViewport,
   scrollTo(x:number,y:number){this.scrollX=x;this.scrollY=y;},
   addEventListener:(kind:string,fn:(e:MockEvent)=>void,options:unknown)=>listeners.set("win:"+kind,{fn,options}),
   removeEventListener:(kind:string)=>listeners.delete("win:"+kind)
@@ -49,6 +62,11 @@ test("iPad outpost stops page swipe and wheel but keeps its map panels scrollabl
   assert.equal(root.style.position,"fixed");
   assert.equal(root.style.inset,"0");
   assert.equal(root.style.overflow,"hidden");
+  assert.equal(root.style.getPropertyValue("--outpost-visible-height"),"840px",
+   "RUN and INTERACT must fit the actual Chrome visible viewport, not 100dvh");
+  visualViewport.height=725;viewportHandlers.get("resize")?.();
+  assert.equal(root.style.getPropertyValue("--outpost-visible-height"),"725px",
+   "toolbar changes must resize the game and its controls");
   assert.equal(html.style.overflow,"hidden");
   assert.ok(html.classList.contains("outpost-viewport-locked"));
   const listener=listeners.get("doc:touchmove");
@@ -72,6 +90,8 @@ test("iPad outpost stops page swipe and wheel but keeps its map panels scrollabl
   assert.equal(fakeWindow.scrollY,740,"returning to homepage restores prior scroll offset");
   assert.equal(body.style.position,"relative");
   assert.equal(root.style.height,"auto");
+  assert.equal(root.style.getPropertyValue("--outpost-visible-height"),"");
+  assert.equal(viewportHandlers.size,0,"all iPad viewport listeners must be removed");
   assert.equal(html.style.overflow,"auto");
   assert.equal(html.classList.contains("outpost-viewport-locked"),false);
   assert.equal(listeners.size,0,"no event handlers should leak to other modes");
@@ -80,4 +100,12 @@ test("iPad outpost stops page swipe and wheel but keeps its map panels scrollabl
   g.window=original.window;
   g.Element=original.Element;
  }
+});
+
+test("visible viewport height uses the real Chrome content area with a safe fallback",()=>{
+ assert.equal(outpostVisibleHeight(812.9,1100),812);
+ assert.equal(outpostVisibleHeight(640,900),640);
+ assert.equal(outpostVisibleHeight(undefined,900),900);
+ assert.equal(outpostVisibleHeight(0,900),900);
+ assert.equal(outpostVisibleHeight(Number.NaN,900),900);
 });
