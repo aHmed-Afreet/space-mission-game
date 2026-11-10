@@ -63,6 +63,31 @@ function createScene(session:Outpost,room:FacilityId|null){
    const t=new T.CanvasTexture(canvas);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(22,22);t.anisotropy=4;textures.push(t);
    return t;
  }
+ // Subtle deterministic panel wear, seams, and rivets make the structural
+ // material more convincing than a single flat-colored Three.js primitive.
+ function engineeringPanelTexture(){
+  const canvas=document.createElement("canvas");canvas.width=256;canvas.height=256;
+  const ctx=canvas.getContext("2d");if(!ctx)return null;
+  ctx.fillStyle="#d2dbde";ctx.fillRect(0,0,256,256);
+  for(let i=0;i<1100;i++){
+   const x=(i*71)%256,y=(i*137+(i*i*3)%251)%256;
+   const v=155+(i*37)%83;
+   ctx.fillStyle="rgba("+v+","+v+","+v+",0.15)";
+   ctx.fillRect(x,y,1+(i%3),1);
+  }
+  ctx.strokeStyle="#84979a";ctx.lineWidth=2;
+  ctx.strokeRect(5,5,246,246);
+  ctx.beginPath();ctx.moveTo(128,5);ctx.lineTo(128,251);ctx.moveTo(5,128);ctx.lineTo(251,128);ctx.stroke();
+  for(const a of [12,118,138,244])for(const b of [12,118,138,244]){
+   ctx.fillStyle="#64797f";ctx.beginPath();ctx.arc(a,b,2.5,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle="#f0fbfb";ctx.fillRect(a-1,b-1,1,1);
+  }
+  const tex=new T.CanvasTexture(canvas);tex.wrapS=tex.wrapT=T.RepeatWrapping;
+  tex.repeat.set(2,2);tex.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;textures.push(tex);
+  return tex;
+ }
+ const metalDetail=engineeringPanelTexture();
+ if(metalDetail){hull.map=metalDetail;hull.needsUpdate=true;}
  const sun=new T.DirectionalLight(dark?0x6475a8:dust?0xe8ae8a:0xffedd3,dark?.34:2.45);
  sun.position.set(-27,42,-20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
  sun.shadow.camera.left=-36;sun.shadow.camera.right=36;sun.shadow.camera.top=36;sun.shadow.camera.bottom=-36;
