@@ -2,15 +2,15 @@ import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
 import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
-import {dayBrief} from "./missionFlow";
 import type {FacilityId} from "./FacilityScene";
 import "./world3d.css";
 export type Movement={x:number;y:number;run:boolean};
+export type CameraDelta={yaw:number;pitch:number};
 export type Proximity={title:string;kind:"door"|"console"|"exit";id:FacilityId}|null;
 type Props={
- session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;interactSeq:number;
+ session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;interactSeq:number;target:FacilityId;
  onEnter:(id:FacilityId|null)=>void;onConsole:(id:FacilityId)=>void;
- onNear:(near:Proximity)=>void;onError:(message:string)=>void;
+ onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
 function buildingColor(id:FacilityId){return id==="greenhouse"?0x376a60:id==="solar"?0x2f5578:id==="shield"?0x747b86:id==="recycle"?0x2c777f:id==="battery"?0x3c5d76:0x758792;}
 function createScene(session:Outpost,room:FacilityId|null){
@@ -324,10 +324,10 @@ function createScene(session:Outpost,room:FacilityId|null){
  };
  return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,dispose};
 }
-export default function World3D({session,room,movement,interactSeq,onEnter,onConsole,onNear,onError}:Props){
+export default function World3D({session,room,movement,lookDelta,interactSeq,target,onEnter,onConsole,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
- const latest=useRef({session,onEnter,onConsole,onNear,onError,interactSeq});
- latest.current={session,onEnter,onConsole,onNear,onError,interactSeq};
+ const latest=useRef({session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target});
+ latest.current={session,onEnter,onConsole,onNear,onPosition,onError,interactSeq,target};
  useEffect(()=>{
    const container=host.current;if(!container)return;
    let renderer:T.WebGLRenderer;
@@ -346,7 +346,7 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
    const keys=new Set<string>();
    let lookPointer:number|null=null,px=0,py=0;
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
-   let entered=false,lastBattery=-1;
+   let entered=false,lastBattery=-1,lastReported=0;
    let interactRequest=false;
    const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();
      if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){
@@ -389,6 +389,12 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
      if(!alive)return;
      const dt=Math.min(.05,Math.max(.001,(now-previous)/1000));previous=now;
      const data=latest.current.session;
+     // Buttons may own a separate touch contact while the movement joystick is
+     // held. Their drag deltas are consumed by the SAME 3D camera.
+     const pendingLook=lookDelta.current;
+     state.yaw+=pendingLook.yaw;
+     state.pitch=Math.max(-.15,Math.min(.52,state.pitch+pendingLook.pitch));
+     pendingLook.yaw=0;pendingLook.pitch=0;
      const motion=movement.current||{x:0,y:0,run:false};
      const right=Number(keys.has("d")||keys.has("arrowright"))-Number(keys.has("a")||keys.has("arrowleft"));
      const front=Number(keys.has("w")||keys.has("arrowup"))-Number(keys.has("s")||keys.has("arrowdown"));
@@ -396,6 +402,10 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
      const running=motion.run||keys.has("shift");
      const next=walkStep(state.position,state.yaw,x,y,dt*(running?1.43:1),Boolean(room),state.open);
      state.position.x=next.x;state.position.z=next.z;
+     if(now-lastReported>250){
+       lastReported=now;
+       if(!room)latest.current.onPosition({x:state.position.x,z:state.position.z});
+     }
      const speed=Math.hypot(x,y);
      const bob=Math.sin(now*.011*(running?1.25:1))*Math.min(.052,speed*.052);
      scene.astro.position.set(state.position.x,bob,state.position.z);
@@ -432,8 +442,7 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
      const label=near?near.title:"";
      if(label!==lastPrompt){lastPrompt=label;latest.current.onNear(near);}
      // Light the current mission target on the actual 3D terrain.
-     const target=dayBrief(data).focus;
-     scene.markers.forEach((o,id)=>{o.visible=id===target;o.rotation.y+=dt*.18;});
+     scene.markers.forEach((o,id)=>{o.visible=id===latest.current.target;o.rotation.y+=dt*.18;});
      // Make the environment react immediately to the actual game resources.
      const power=data.battery/100;
      if(Math.round(data.battery)!==lastBattery){
@@ -454,6 +463,6 @@ export default function World3D({session,room,movement,interactSeq,onEnter,onCon
      renderer.domElement.removeEventListener("pointerup",pointerEnd);renderer.domElement.removeEventListener("pointercancel",pointerEnd);
      scene.dispose();renderer.dispose();renderer.domElement.remove();
    };
- },[room,movement]);
+ },[room,movement,lookDelta]);
  return <div className="jm-world-host" ref={host} role="img" aria-label={"Walkable three-dimensional "+session.destination+" research outpost. Move with left joystick or WASD, drag to look, and press interact at airlocks and control panels."}/>;
 }
