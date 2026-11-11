@@ -213,6 +213,38 @@ function battery(k:StructureKit,g:T.Object3D){
  k.batteryLights.push(k.glow);
  k.light(g,0,2.4,2.35,0xa3e4ff,1.2,8);
 }
+/** Modular exterior detailing kept clear of all playable airlock paths. */
+function exteriorDetails(k:StructureKit,g:T.Group,id:FacilityId,r:number){
+ const silver=k.mat(0xc6cbd0,.63,.34),seal=k.mat(0x49535e,.46,.62);
+ const caution=k.mat(0xe8bd6d,.38,.52),thermal=k.mat(0xaab3ae,.18,.79);
+ for(const side of [-1,1]){
+   const x=side*(r-.42);
+   for(const z of [-1.85,1.15]){
+     k.box(g,.56,.19,.72,x,.14,z,seal);
+     k.cylinder(g,.10,.68,x,.52,z,silver,10);
+     k.box(g,.48,.11,.54,x,.9,z,thermal);
+   }
+   pipe(k,g,v3(side*(r-.66),1.04,-1.9),v3(side*(r-.66),1.04,.65),.07,seal);
+   for(let j=0;j<4;j++){
+     const stripe=k.box(g,.32,.065,.08,side*.91,.63+j*.39,r+.46,j%2?caution:seal);
+     stripe.rotation.z=side*.21;stripe.castShadow=false;
+   }
+ }
+ if(id==="habitat"){
+   for(const x of [-1.6,1.6]){
+     pipe(k,g,v3(x,2.75,-1.6),v3(x,3.85,-1.6),.035,silver);
+     k.cylinder(g,.12,.06,x,3.90,-1.6,caution,12);
+   }
+ }else if(id==="solar"||id==="battery"){
+   for(let i=0;i<3;i++)k.box(g,.50,.15,.25,-.85+i*.85,2.92,1.12,silver);
+ }else if(id==="recycle"){
+   for(const x of [-1.10,1.10])pipe(k,g,v3(x,3.4,-1.5),v3(x,3.4,1.0),.12,caution);
+ }else if(id==="shield"){
+   for(let i=0;i<6;i++)k.box(g,.56,.17,.22,-2.1+i*.83,3.75,-.8,thermal);
+ }else if(id==="greenhouse"){
+   for(const x of [-2.65,2.65])pipe(k,g,v3(x,.5,-2),v3(x,.5,1.7),.08,silver);
+ }
+}
 export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Group,facility:Place){
  // Decorative foundations vary by function; no shared dome shell.
  const pad=kit.cylinder(group,facility.radius+.5,.23,0,.04,0,kit.darkSteel,28);
@@ -226,6 +258,7 @@ export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Gro
   case "battery":battery(kit,group);break;
  }
  // A consistent front door is the only shared architectural component.
+ exteriorDetails(kit,group,id,facility.radius);
  const z=facility.radius+.06;
  const portal=kit.mat(0x7a9297,.65,.27);
  // Open, recessed vestibule with a visible floor and side walls. In
@@ -252,6 +285,19 @@ export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Gro
 /** Unique machinery inside every building, with a clear central aisle. */
 export function furnishDistinctInterior(id:FacilityId,k:StructureKit,group:T.Group){
  const metal=k.mat(0x93a9aa,.55,.37),warm=k.mat(0xe5d4bb,.36,.44,0x48311d,.15);
+ // Cable trays and equipment readouts are installed along the walls,
+ // preserving the centre aisle and the real console interaction radius.
+ for(const x of [-4.05,4.05]){
+   k.box(group,.13,.14,7.1,x,.16,0,k.darkSteel);
+   k.box(group,.12,.15,7.1,x,3.66,0,k.hull);
+   for(const z of [-2.55,0,2.55]){
+     const p=k.box(group,.32,.72,.88,x*.982,2.14,z,k.darkSteel);
+     p.castShadow=false;
+     k.box(group,.055,.48,.55,x*.968,2.23,z,k.glass).castShadow=false;
+     for(let j=0;j<3;j++)k.box(group,.09,.035,.10,x*.957,1.98,z-.24+j*.24,j===1?k.gold:k.glow).castShadow=false;
+   }
+ }
+
  if(id==="habitat"){
   // Bunks are functional sleep stations, positioned separately from dining.
   for(const z of [-2.05,.65]){

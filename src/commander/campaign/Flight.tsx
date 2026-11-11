@@ -9,7 +9,8 @@ import { campaignLevel, campaignForMission } from "./campaignTypes";
 import { recoveryMission } from "./recovery";
 import { doors, shipAlerts, type WorldAction } from "./ship";
 import LaunchView from "./LaunchView";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { lockMissionViewport } from "../../missionViewport";
 import Cabin, { type AimTarget } from "../Cabin";
 import Icon from "../Icons";
 import { nearby, deck, type Position } from "../layout";
@@ -124,6 +125,8 @@ export default function Flight({
   onResetTutorials: () => void;
   saveError: string;
 }) {
+  // Prevent iPad browser-page panning without blocking scrollable flight menus.
+  useLayoutEffect(()=>lockMissionViewport(),[]);
   const [tablet, setTablet] = useState(false),
     [tab, setTab] = useState<CampaignTab>("MISSION"),
     [actions, setActions] = useState(false),
