@@ -55,3 +55,27 @@ test("saved-flight summary retains current procedure totals for every existing m
   }
   assert.equal(missions.find(m => m.id === "mission-7")!.objectives.length, 59);
 });
+
+
+test("Commander home previews mission names, objectives and clearance", () => {
+  const progress = emptyProgress();
+  const noop = () => {};
+  const props = {
+    progress, session: null, legacy: false, warning: "", readOnly: false,
+    selectedRoute: null as "earth-orbit" | null, setSelectedRoute: noop,
+    onSelect: noop, onResume: noop, onLegacy: noop, onExit: noop,
+  };
+  const home = renderToStaticMarkup(createElement(CampaignHome, props));
+  const firstMission = missionById("mission-1");
+  assert.ok(home.includes(firstMission.title), "Show the mission name on the campaign picker");
+  assert.ok(home.includes(firstMission.majorObjective), "Explain the upcoming objective");
+  assert.ok(home.includes("CLEARANCE: LEVEL 1 READY"), "Show actual unlock readiness");
+
+  const route = renderToStaticMarkup(createElement(CampaignHome, {
+    ...props, selectedRoute: "earth-orbit",
+  }));
+  assert.ok(route.includes("YOUR NEXT MISSION"), "Highlight the next eligible mission");
+  assert.ok(route.includes("YOUR OBJECTIVE"), "Explain each mission's task");
+  assert.ok(route.includes("CLEARANCE GRANTED"), "Label the startable level");
+  assert.ok(route.includes("CLEARANCE REQUIRED"), "Label levels that are locked");
+});
