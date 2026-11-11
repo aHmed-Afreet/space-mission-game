@@ -2119,3 +2119,13 @@
 .campaign-route-levels .campaign-missions article.locked{opacity:.79}
 @media(max-width:900px){.campaign-home .campaign-type-hub .campaign-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.campaign-home .campaign-type-hub .campaign-picker-grid,.campaign-route-levels .campaign-missions{grid-template-columns:1fr}.campaign-route-hero .campaign-route-planet{right:6%;top:13%;font-size:80px;opacity:.35}.campaign-route-hero{padding:28px 18px}.campaign-home .campaign-route-card{min-height:215px}}
+
+
+/* Use the actual visible iPad browser viewport during a Commander flight. */
+html.mission-viewport-locked .campaign-flight.cmd-session{
+  position:fixed!important;inset:0 0 auto 0!important;
+  width:100%!important;height:var(--mission-visible-height,100dvh)!important;
+  min-height:0!important;max-height:var(--mission-visible-height,100dvh)!important;
+  overflow:hidden!important;overscroll-behavior:none;
+}
+html.mission-viewport-locked .campaign-flight .cmd-world{touch-action:none;}
