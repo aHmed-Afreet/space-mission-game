@@ -15,7 +15,7 @@ export type CameraDelta={yaw:number;pitch:number};
 export type WorldPose={position:Point2;yaw:number;pitch:number};
 export type Proximity={title:string;kind:"door"|"console"|"exit"|"meal"|"sleep";id:FacilityId}|null;
 type Props={
- session:Outpost;room:FacilityId|null;graphics:PlayerPreferences["graphics"];movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
+ session:Outpost;room:FacilityId|null;graphics:PlayerPreferences["graphics"];blocked:boolean;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
  onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;onRoutine:(kind:"meal"|"sleep")=>void;
  onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
@@ -330,10 +330,10 @@ function createScene(session:Outpost,room:FacilityId|null){
  };
  return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
 }
-export default function World3D({session,room,graphics,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
+export default function World3D({session,room,graphics,blocked,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
- const latest=useRef({session,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
- latest.current={session,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
+ const latest=useRef({session,blocked,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
+ latest.current={session,blocked,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
  useEffect(()=>{
    const container=host.current;if(!container)return;
    let renderer:T.WebGLRenderer;
@@ -366,7 +366,7 @@ export default function World3D({session,room,graphics,movement,lookDelta,spawn,
    let entered=false,lastBattery=-1,lastReported=0,cameraInitialized=false;
    let gait=0,smoothedSpeed=0,sampleStart=performance.now(),sampleFrames=0,measuredFps:number|null=null;
    let interactRequest=false;
-   const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();
+   const down=(e:KeyboardEvent)=>{if(latest.current.blocked)return;const k=e.key.toLowerCase();
      if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){
        if(e.target===document.body)e.preventDefault();
        if(k==="e"&&!e.repeat)interactRequest=true;
@@ -417,11 +417,12 @@ export default function World3D({session,room,graphics,movement,lookDelta,spawn,
      state.yaw+=pendingLook.yaw;
      state.pitch=Math.max(-.15,Math.min(.52,state.pitch+pendingLook.pitch));
      pendingLook.yaw=0;pendingLook.pitch=0;
-     const motion=movement.current||{x:0,y:0,run:false};
-     const right=Number(keys.has("d")||keys.has("arrowright"))-Number(keys.has("a")||keys.has("arrowleft"));
-     const front=Number(keys.has("w")||keys.has("arrowup"))-Number(keys.has("s")||keys.has("arrowdown"));
+     const isBlocked=latest.current.blocked;
+     const motion=isBlocked?{x:0,y:0,run:false}:movement.current||{x:0,y:0,run:false};
+     const right=isBlocked?0:Number(keys.has("d")||keys.has("arrowright"))-Number(keys.has("a")||keys.has("arrowleft"));
+     const front=isBlocked?0:Number(keys.has("w")||keys.has("arrowup"))-Number(keys.has("s")||keys.has("arrowdown"));
      const x=Math.max(-1,Math.min(1,motion.x+right)),y=Math.max(-1,Math.min(1,motion.y+front));
-     const running=motion.run||keys.has("shift");
+     const running=!isBlocked&&(motion.run||keys.has("shift"));
      const next=walkStep(state.position,state.yaw,x,y,dt*(running?1.43:1),Boolean(room),state.open);
      if(!room){const dx=next.x-8,dz=next.z,r=Math.hypot(dx,dz);
        if(r<2.15){next.x=8+(r>.001?dx/r:1)*2.15;next.z=(r>.001?dz/r:0)*2.15;}}
@@ -477,7 +478,12 @@ export default function World3D({session,room,graphics,movement,lookDelta,spawn,
      if(!cameraInitialized){scene.camera.position.copy(desired);cameraInitialized=true;}
      else scene.camera.position.lerp(desired,Math.min(1,dt*(room?11:8)));
      scene.camera.lookAt(focus);
-     if(latest.current.interactSeq!==lastInteraction || interactRequest){
+     if(isBlocked){
+       // An overlay owns input; do not execute a queued second INTERACT
+       // or complete an old airlock crossing behind its controls.
+       lastInteraction=latest.current.interactSeq;
+       interactRequest=false;
+     }else if(latest.current.interactSeq!==lastInteraction || interactRequest){
        lastInteraction=latest.current.interactSeq;interactRequest=false;interact();
      }
      // Render physical airlock slide and require walking across the doorway.
@@ -487,7 +493,7 @@ export default function World3D({session,room,graphics,movement,lookDelta,spawn,
        gate.open+=(goal-gate.open)*(1-Math.exp(-dt*6));
        gate.mesh.position.x=gate.open*1.9;
      }
-     if(state.open&&now-state.openAt>350&&!entered){
+     if(!isBlocked&&state.open&&now-state.openAt>350&&!entered){
        if(room){
          if(state.position.z>4.05){entered=true;
              latest.current.onEnter(null,{position:{...state.position},yaw:state.yaw,pitch:state.pitch});return;}

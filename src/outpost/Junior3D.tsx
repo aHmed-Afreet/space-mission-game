@@ -81,6 +81,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [near,setNear]=useState<Proximity>(null);
  const [seq,setSeq]=useState(0);
  const [panel,setPanel]=useState<Panel>(null);
+ // iOS may dispatch a compatibility click after INTERACT opens the console;
+ // avoid interpreting it as a separate press of the newly mounted Close.
+ const consoleOpenedAt=useRef(-Infinity);
  const [lastResult,setLastResult]=useState<Result|null>(null);
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
@@ -172,7 +175,10 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    setRoom(id);setPanel(null);setNear(null);
    setNotice(id?"Entered "+focusAction(id).title+". Find the illuminated control panel.":"Exited through the same airlock.");
  },[]);
- const openConsole=useCallback((id:FacilityId)=>{setRoom(id);setPanel("console");setNotice("");},[]);
+ const openConsole=useCallback((id:FacilityId)=>{
+   consoleOpenedAt.current=performance.now();
+   setRoom(id);setPanel("console");setNotice("");
+ },[]);
  const nearCallback=useCallback((q:Proximity)=>setNear(prev=>
    prev?.kind===q?.kind&&prev?.id===q?.id&&prev?.title===q?.title?prev:q),[]);
  const positionCallback=useCallback((p:Point2)=>setPlayerPosition(prev=>distance(prev,p)<.35?prev:p),[]);
@@ -251,7 +257,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    guidance;
  return <div className="j3-root">
    <div className="j3-world">
-     <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} graphics={graphics} movement={movement} lookDelta={cameraDelta} spawn={spawn}
+     <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} graphics={graphics} blocked={Boolean(panel)} movement={movement} lookDelta={cameraDelta} spawn={spawn}
        target={goal} interactSeq={seq} onPosition={positionCallback}
        onEnter={enter} onConsole={openConsole} onRoutine={routineInteraction} onNear={nearCallback} onError={setError}/>
    </div>
@@ -345,7 +351,12 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          onClick={()=>operate("monitor")}><b>Check equipment without upgrading</b><small>{availableAction(session,"monitor").ok?"Free operation. Advance today without a construction purchase.":availableAction(session,"monitor").reason}</small></button></div>
        {notice&&<div className="j3-info" role="status">{notice}</div>}
        </div>
-       <div className="j3-panel-footer"><button className="j3-primary" onClick={()=>{setPanel(null);setNotice("");}}>RETURN TO 3D ROOM</button></div>
+       <div className="j3-panel-footer"><button className="j3-primary" onClick={event=>{
+         // A trailing synthetic click from INTERACT can hit this button before
+         // the finger initiates a new press. Keep the console open.
+         if(event.detail>0&&performance.now()-consoleOpenedAt.current<450){event.preventDefault();return;}
+         setPanel(null);setNotice("");
+       }}>RETURN TO 3D ROOM</button></div>
      </section>}
      {panel==="event"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="Emergency briefing">
        <span className="j3-kicker">⚠ MISSION CONTROL</span><h2>{incident?.title||"Mission Status"}</h2>

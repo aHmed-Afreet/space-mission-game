@@ -13,7 +13,7 @@ test("console options scroll separately from a permanently visible return button
  const contentStart=ui.indexOf('<div className="j3-panel-content"');
  const footerStart=ui.indexOf('<div className="j3-panel-footer"');
  assert.ok(contentStart>=0&&footerStart>contentStart);
- assert.match(ui.slice(footerStart,footerStart+235),/RETURN TO 3D ROOM/);
+ assert.match(ui.slice(footerStart,footerStart+800),/RETURN TO 3D ROOM/);
  assert.match(css,/\.j3-panel-console\.j3-panel-content[^{]*\{|\.j3-panel-console \.j3-panel-content\{/);
  assert.match(css,/overflow-y:auto/);
  assert.match(css,/\.j3-panel-console \.j3-panel-footer\{/);
@@ -43,5 +43,7 @@ test("one-operation-per-day gameplay remains enforced with an explicit explanati
  assert.match(ui,/availableAction\(session,id\)/);
  assert.match(ui,/disabled=\{!avail\.ok\}/);
  assert.match(ui,/onClick=\{\(\)=>operate\(id\)\}/);
- assert.match(ui,/onClick=\{\(\)=>\{setPanel\(null\);setNotice\(""\);\}\}>RETURN TO 3D ROOM/);
+ assert.match(ui,/consoleOpenedAt\.current<450/);
+ assert.match(ui,/setPanel\(null\);setNotice\(""\);/);
+ assert.match(ui,/RETURN TO 3D ROOM/);
 });

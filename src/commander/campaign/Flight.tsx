@@ -159,6 +159,10 @@ export default function Flight({
     guide = objectiveGuide(s),
     recovery = recoveryMission(s),
     area = nearby(s.position.x, s.position.z);
+  // INTERACT synchronizes the actual camera position before session position
+  // reaches React. Do not close a newly opened menu when that delayed area
+  // update arrives in the following render.
+  const pendingInteractionArea = useRef<{area:ReturnType<typeof nearby>} | null>(null);
   const objectiveTool = o?.action ? fieldToolUse(s, o.action) : null;
   const audioPosition = useRef(s.position),
     audioDoors = useRef(""),
@@ -208,11 +212,25 @@ export default function Flight({
   const closeTablet = useCallback(() => setTablet(false), []);
   const move = useCallback((p: Position) => onMove(p), [onMove]);
   useEffect(() => {
+    // The first position update after INTERACT may catch up from the camera
+    // position sent by Cabin. That is NOT the player leaving the station.
+    if (pendingInteractionArea.current !== null && area === pendingInteractionArea.current.area) {
+      pendingInteractionArea.current = null;
+      return;
+    }
+    pendingInteractionArea.current = null;
+    setActions(false);
+    setShowOther(false);
+    setHelpOpen(false); // Free the movement area when actually leaving a station.
+  }, [area]);
+  useEffect(() => {
+    // An advancing mission objective intentionally closes stale station actions.
+    pendingInteractionArea.current = null;
     setActions(false);
     setShowOther(false);
     setGuideFeedback("");
-    setHelpOpen(false); // Free the movement area while the player changes stations.
-  }, [area, s.objective]);
+    setHelpOpen(false);
+  }, [s.objective]);
   const lastRecovery = useRef<string | null>(null);
   useEffect(() => {
     if (recovery && lastRecovery.current !== recovery.id) {
@@ -413,6 +431,7 @@ export default function Flight({
       return;
     }
     if (target?.kind === "locker") {
+      pendingInteractionArea.current = {area:livePosition ? nearby(livePosition.x,livePosition.z) : area};
       onWorld({ kind: "locker", id: target.id as keyof Session["world"]["lockers"] });
       setActions(true);
       return;
@@ -422,7 +441,10 @@ export default function Flight({
     const areaAtPress = livePosition ? nearby(livePosition.x,livePosition.z) : area;
     if (outside(s) || (areaAtPress && (!target || target.kind === "station"))) {
       setHatchNotice("");
-      setActions(v => !v);
+      pendingInteractionArea.current = {area:areaAtPress};
+      // Open idempotently. A second iOS touch/click event must not toggle it
+      // closed a frame later. Use the explicit Close button to dismiss.
+      setActions(true);
     }
   };
   const openTab = (value: CampaignTab) => {
@@ -724,6 +746,8 @@ export default function Flight({
               role="region"
               aria-label="Station operations"
             >
+              <TouchActionButton type="button" aria-label="Close station controls" className="cmd-station-close"
+                onActivate={()=>setActions(false)}>× Close station controls</TouchActionButton>
               <StationControls s={s} onWorld={onWorld} onCommand={run} />
               {area === "science" && <ScientificReadings readings={s.measurements} compact />}
               {actionable &&
