@@ -29,3 +29,34 @@ export function createTouchActivation() {
     },
   };
 }
+
+
+/**
+ * Commit touch actions after the browser has finished dispatching the
+ * pointerup -> compatibility click sequence. On iPad the first (primary)
+ * finger may synthesize a click aimed at a newly mounted menu if that menu
+ * appears synchronously in pointerup. A held joystick makes INTERACT a
+ * secondary finger and hides the bug, so both paths must use this queue.
+ *
+ * The scheduler is injected to make event ordering testable without a DOM.
+ */
+export function createPostClickActivationQueue(
+  schedule:(action:()=>void)=>number,
+  cancelScheduled:(handle:number)=>void,
+) {
+  let handle:number|null=null;
+  return {
+    commit(action:()=>void) {
+      if(handle!==null) cancelScheduled(handle);
+      handle=schedule(()=>{
+        handle=null;
+        action();
+      });
+    },
+    cancel(){
+      if(handle!==null)cancelScheduled(handle);
+      handle=null;
+    },
+    get pending(){return handle!==null;},
+  };
+}
