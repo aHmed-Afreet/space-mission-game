@@ -2119,3 +2119,53 @@
 .campaign-route-levels .campaign-missions article.locked{opacity:.79}
 @media(max-width:900px){.campaign-home .campaign-type-hub .campaign-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.campaign-home .campaign-type-hub .campaign-picker-grid,.campaign-route-levels .campaign-missions{grid-template-columns:1fr}.campaign-route-hero .campaign-route-planet{right:6%;top:13%;font-size:80px;opacity:.35}.campaign-route-hero{padding:28px 18px}.campaign-home .campaign-route-card{min-height:215px}}
+
+
+/* Commander mission selection: put names, objectives and actual unlock clearance first. */
+.campaign-home .campaign-route-card .campaign-next-mission{
+  display:flex;flex-direction:column;gap:5px;flex:1;margin-top:5px;
+  padding:11px 12px;border:1px solid #aac9d845;border-radius:9px;
+  background:rgba(1,13,27,.49)
+}
+.campaign-home .campaign-route-card .campaign-next-mission small{
+  font-size:9px;font-weight:800;letter-spacing:.13em;color:#a7e9f0
+}
+.campaign-home .campaign-route-card .campaign-next-mission strong{
+  color:#fff;font-size:16px;line-height:1.35;letter-spacing:0
+}
+.campaign-home .campaign-route-card .campaign-next-mission span{
+  font-size:12px;line-height:1.45;color:#d7eaf3
+}
+.campaign-home .campaign-route-card b{
+  font-size:11px;line-height:1.5;letter-spacing:.03em
+}
+.campaign-route-next{
+  max-width:640px;margin-top:18px;padding:16px 18px;
+  border-radius:10px;background:rgba(3,15,29,.76);
+  border:1px solid #9cccd978;
+  display:flex;flex-direction:column;gap:7px
+}
+.campaign-route-next small{font-size:10px;font-weight:800;letter-spacing:.07em;color:#aaf6ee}
+.campaign-route-next strong{font-size:20px;color:#fff}
+.campaign-route-next span{font-size:14px;line-height:1.5;color:#e9f5fc}
+.campaign-mission-clearance{
+  border:1px solid #abc6d15e;background:#1630478c;border-radius:7px;
+  padding:9px 11px;color:#e8f7ff;font-size:11px;font-weight:800;
+  line-height:1.4;letter-spacing:.02em
+}
+.campaign-mission-clearance.granted,.campaign-mission-clearance.cleared{
+  border-color:#a6e7d77f;color:#c2ffed;background:#0f44395c
+}
+.campaign-mission-clearance.required{color:#e7e9ef}
+.campaign-home .campaign-missions article .campaign-mission-objective{
+  margin:12px 0;line-height:1.6
+}
+.campaign-mission-objective strong{
+  display:block;color:#9be5ec;font-size:10px;letter-spacing:.12em;
+  margin-bottom:5px
+}
+@media(max-width:700px){
+  .campaign-home .campaign-route-card{min-height:0}
+  .campaign-home .campaign-route-card .campaign-next-mission{padding:11px}
+  .campaign-route-next strong{font-size:18px}
+}

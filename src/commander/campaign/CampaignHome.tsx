@@ -62,22 +62,30 @@ export default function CampaignHome({
       {!selectedRoute && <section className="campaign-destination-picker campaign-type-hub" aria-labelledby="campaign-pick-title">
         <div className="campaign-picker-intro">
           <small>COMMANDER / INDEPENDENT CAMPAIGNS</small>
-          <h1 id="campaign-pick-title">Choose your <em>mission type.</em></h1>
-          <p>Each type opens its own page, starts at Level 1 and unlocks levels independently.</p>
+          <h1 id="campaign-pick-title">Choose your <em>mission.</em></h1>
+          <p>See the mission name, what you will do and whether you have clearance to start. Each campaign unlocks levels separately.</p>
         </div>
         <div className="campaign-picker-grid">
           {campaigns.map(c=>{
             const groupMissions=missions.filter(m=>(c.missionIds as readonly string[]).includes(m.id));
             const complete=groupMissions.filter(m=>progress.completed[m.id]).length;
+            const upcoming=groupMissions.find(m=>!progress.completed[m.id] && canStart(m,progress));
+            const preview=upcoming || groupMissions[0];
+            const allComplete=complete===groupMissions.length;
             return <button key={c.id} type="button"
               className={"campaign-pick-card pick-"+c.destination+" campaign-route-card"}
               onClick={()=>setSelectedRoute(c.id)}
-              aria-label={"Open "+c.name+" campaign levels"}>
+              aria-label={"Open "+c.name+" campaign levels. "+(allComplete?"All levels complete.":upcoming?"Level "+campaignLevel(upcoming.id)+" ready.":"Clearance required.")}>
               <span className="campaign-pick-card-top">{c.eyebrow}</span>
               <span className="campaign-card-planet" aria-hidden="true">{c.icon}</span>
               <strong>{c.name}</strong>
               <span>{c.description}</span>
-              <b>{complete} / {groupMissions.length} COMPLETED · OPEN CAMPAIGN ↗</b>
+              {preview && <span className="campaign-next-mission">
+                <small>{allComplete?"COMPLETED MISSION":"NEXT MISSION"}</small>
+                <strong>{preview.title}</strong>
+                <span>{preview.majorObjective}</span>
+              </span>}
+              <b>{allComplete?"✓ ALL LEVELS CLEARED":upcoming?`✓ CLEARANCE: LEVEL ${campaignLevel(upcoming.id)} READY`:"🔒 CLEARANCE REQUIRED"} · {complete}/{groupMissions.length} COMPLETE</b>
             </button>;
           })}
         </div>
@@ -87,6 +95,11 @@ export default function CampaignHome({
         <span className="campaign-route-planet" aria-hidden="true">{selectedCampaign.icon}</span>
         <h1 id="campaign-route-title">{selectedCampaign.name}</h1>
         <p>{selectedCampaign.description}</p>
+        {routeNext && <div className="campaign-route-next">
+          <small>YOUR NEXT MISSION · LEVEL {campaignLevel(routeNext.id)} · CLEARANCE GRANTED</small>
+          <strong>{routeNext.title}</strong>
+          <span>{routeNext.majorObjective}</span>
+        </div>}
         <div className="campaign-route-stats">
           <span><strong>{routeCompleted}</strong> / {visible.length} completed</span>
           <span><strong>{routeNext ? "LEVEL "+campaignLevel(routeNext.id) : "COMPLETE"}</strong> next</span>
@@ -293,9 +306,12 @@ export default function CampaignHome({
                 <span>{completed?"✓ COMPLETE":ready?"AVAILABLE":"🔒 LOCKED"}</span>
               </div>
               <h3>{m.title}</h3>
+              <div className={"campaign-mission-clearance "+(completed?"cleared":ready?"granted":"required")}>
+                {completed?"✓ COMPLETED · REPLAY AVAILABLE":ready?"✓ CLEARANCE GRANTED · READY TO START":`🔒 CLEARANCE REQUIRED · FINISH LEVEL ${level-1} FIRST`}
+              </div>
               {m.historical && <div className="campaign-story-tag">INSPIRED BY · {m.historical.inspiration} ({m.historical.year})</div>}
               <span className="campaign-destination"><Icon name="target" size={13}/>{environments[m.destination].name}</span>
-              <p>{m.majorObjective}</p>
+              <p className="campaign-mission-objective"><strong>YOUR OBJECTIVE</strong>{m.majorObjective}</p>
               <small>{m.phases.length} phases · {m.expectedMinutes} · +{money(m.funding||0)} mission allocation</small>
               <footer>
                 <span>{completed?`BEST ${completed.score} / 100 · RANK ${completed.rank}`:

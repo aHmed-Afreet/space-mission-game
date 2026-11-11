@@ -12,7 +12,7 @@ type GameMode = "outpost" | "strategy" | "commander" | "history" | "history_all"
 
 const experiences: { id: GameMode; number: string; label: string; title: string; detail: string; meta: string }[] = [
   { id: "outpost", number: "01", label: "NASA SPACE APPS CHALLENGE THEME", title: "Junior Astronaut — Space Outpost", detail: "Manage a Moon or Mars base. Balance life support, radiation shielding, power and greenhouse food production.", meta: "2 WORLDS · 10-SOL SURVIVAL MISSIONS" },
-  { id: "commander", number: "02", label: "PLAY IN FIRST PERSON", title: "Commander — Be the Astronaut", detail: "Move through a spacecraft, operate controls, repair equipment and explore the Moon.", meta: "18 MISSIONS · 6 CAMPAIGNS" },
+  { id: "commander", number: "02", label: "MISSION NAMES · OBJECTIVES · CLEARANCE", title: "Commander — Be the Astronaut", detail: "Explore six campaigns with 18 missions. See each mission\u2019s name, objective and whether it is unlocked before you launch.", meta: "18 MISSIONS · 6 CAMPAIGNS" },
   { id: "strategy", number: "03", label: "DESIGN AND MAKE DECISIONS", title: "Mission Planner — Build & Launch", detail: "Choose spacecraft systems, balance resources and make engineering decisions. You do not fly in this mode.", meta: "20 PLANNING CHALLENGES" },
   { id: "history", number: "04", label: "START WITH THE HIGHLIGHTS", title: "Featured Space Stories", detail: "Discover 10 real missions. Watch footage or an animation inside the game, then experience the mission.", meta: "10 FEATURED STORIES" },
   { id: "history_all", number: "05", label: "BROWSE EVERY STORY", title: "Full Story Archive", detail: "Search all 55 historical missions. Read their history or try a playable reconstruction.", meta: "55 STORIES · SEARCH & FILTERS" },
