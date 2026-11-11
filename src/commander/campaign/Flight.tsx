@@ -162,7 +162,7 @@ export default function Flight({
   // INTERACT synchronizes the actual camera position before session position
   // reaches React. Do not close a newly opened menu when that delayed area
   // update arrives in the following render.
-  const pendingInteractionArea = useRef<ReturnType<typeof nearby> | null>(null);
+  const pendingInteractionArea = useRef<{area:ReturnType<typeof nearby>} | null>(null);
   const objectiveTool = o?.action ? fieldToolUse(s, o.action) : null;
   const audioPosition = useRef(s.position),
     audioDoors = useRef(""),
@@ -214,7 +214,7 @@ export default function Flight({
   useEffect(() => {
     // The first position update after INTERACT may catch up from the camera
     // position sent by Cabin. That is NOT the player leaving the station.
-    if (pendingInteractionArea.current !== null && area === pendingInteractionArea.current) {
+    if (pendingInteractionArea.current !== null && area === pendingInteractionArea.current.area) {
       pendingInteractionArea.current = null;
       return;
     }
@@ -431,7 +431,7 @@ export default function Flight({
       return;
     }
     if (target?.kind === "locker") {
-      pendingInteractionArea.current = livePosition ? nearby(livePosition.x,livePosition.z) ?? null : area ?? null;
+      pendingInteractionArea.current = {area:livePosition ? nearby(livePosition.x,livePosition.z) : area};
       onWorld({ kind: "locker", id: target.id as keyof Session["world"]["lockers"] });
       setActions(true);
       return;
@@ -441,7 +441,7 @@ export default function Flight({
     const areaAtPress = livePosition ? nearby(livePosition.x,livePosition.z) : area;
     if (outside(s) || (areaAtPress && (!target || target.kind === "station"))) {
       setHatchNotice("");
-      pendingInteractionArea.current = areaAtPress ?? null;
+      pendingInteractionArea.current = {area:areaAtPress};
       // Open idempotently. A second iOS touch/click event must not toggle it
       // closed a frame later. Use the explicit Close button to dismiss.
       setActions(true);
