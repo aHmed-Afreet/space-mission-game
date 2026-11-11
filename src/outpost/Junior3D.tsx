@@ -10,6 +10,7 @@ import OutpostMap from "./OutpostMap";
 import {destinationGuide,missionDestination} from "./navigation";
 import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} from "./worldLogic";
 import {lockOutpostViewport} from "./scrollLock";
+import {createPostClickActivationQueue} from "../touchActivation";
 import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
 
@@ -95,6 +96,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const enteredBuilding=useRef<FacilityId|null>(null);
  const buttonContacts=useRef<{run:ButtonContact|null;interact:ButtonContact|null}>({run:null,interact:null});
  const lastTouchActivation=useRef(0),skipInteractClick=useRef(false);
+ const postClickInteract=useRef(createPostClickActivationQueue(
+   callback=>window.setTimeout(callback,70),
+   handle=>window.clearTimeout(handle),
+ ));
+ useEffect(()=>()=>postClickInteract.current.cancel(),[]);
  useEffect(()=>{
    if(!session)return;
    try{localStorage.setItem(GAME_KEY+"-"+session.destination,JSON.stringify(session));setSaveOk(true);}
@@ -209,7 +215,10 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    if(p.dragged)skipInteractClick.current=true;
    if(e.type==="pointerup"&&!p.dragged&&e.pointerType==="touch"){
      lastTouchActivation.current=performance.now();
-     setSeq(n=>n+1);
+     // Primary one-finger touches can generate a browser click after pointerup,
+     // unlike secondary touches while walking. Open only after that click has
+     // passed so it cannot immediately select or dismiss the new console.
+     postClickInteract.current.commit(()=>setSeq(n=>n+1));
    }
  }
  if(!session)return <div className="j3-root">
