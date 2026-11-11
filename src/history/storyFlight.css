@@ -150,3 +150,19 @@
 .story-fps-science-table th{font-weight:500}
 .story-fps-science-table td{font-variant-numeric:tabular-nums}
 @media(max-width:700px){.story-fps-top-actions>button:last-child{display:none}}
+
+
+/* iPad Chrome / Safari: measured fullscreen play area, not scrollable document. */
+html.mission-viewport-locked .story-fps-root{
+  position:fixed!important;inset:0 0 auto 0!important;
+  width:100%!important;height:var(--mission-visible-height,100dvh)!important;
+  min-height:0!important;max-height:var(--mission-visible-height,100dvh)!important;
+  overflow:hidden!important;overscroll-behavior:none;touch-action:none;
+}
+/* Only content cards scroll; dragging on the 3D scene never pans the webpage. */
+html.mission-viewport-locked .story-fps-dialog,
+html.mission-viewport-locked .story-fps-panels>.story-fps-objective,
+html.mission-viewport-locked .story-fps-panels>.story-fps-suit-hud,
+html.mission-viewport-locked .story-fps-panels>.story-fps-historical-action{
+  overscroll-behavior:contain;
+}
