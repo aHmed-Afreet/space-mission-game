@@ -52,16 +52,22 @@ function createScene(session:Outpost,room:FacilityId|null){
    const o=new T.PointLight(c,intensity,range,2);o.position.set(x,y,z);parent.add(o);return o;
  }
  function textureSurface(){
-   const canvas=document.createElement("canvas");canvas.width=256;canvas.height=256;
+   // Offline procedural regolith texture: mineral bands, granular variation
+   // and small crater rims rather than repeated low-resolution sine stripes.
+   const size=512,canvas=document.createElement("canvas");canvas.width=canvas.height=size;
    const ctx=canvas.getContext("2d");if(!ctx)return null;
-   const pixels=ctx.createImageData(256,256);
-   for(let y=0;y<256;y++)for(let x=0;x<256;x++){
-     const a=Math.sin(x*.44+y*.12)*.24+Math.cos(y*.3+x*.17)*.23+Math.sin(x*2.9+y*3.1)*.12;
-     const n=Math.round(145+a*68),i=(y*256+x)*4;
+   const pixels=ctx.createImageData(size,size);
+   const hash=(x:number,y:number)=>{const n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n);};
+   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+     const bands=Math.sin(x*.026+y*.018)*10+Math.cos(x*.074-y*.053)*8;
+     const grain=(hash(x,y)-.5)*38+(hash(x>>2,y>>2)-.5)*22;
+     const crater=-13*Math.pow(Math.max(0,1-Math.abs(Math.hypot(x%127-64,y%113-54)-20)/5),2);
+     const n=Math.max(100,Math.min(238,191+bands+grain+crater)),i=(y*size+x)*4;
      pixels.data[i]=n;pixels.data[i+1]=n;pixels.data[i+2]=n;pixels.data[i+3]=255;
-   }ctx.putImageData(pixels,0,0);
-   const t=new T.CanvasTexture(canvas);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(22,22);t.anisotropy=4;textures.push(t);
-   return t;
+   }
+   ctx.putImageData(pixels,0,0);
+   const t=new T.CanvasTexture(canvas);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(18,18);
+   t.anisotropy=4;t.colorSpace=T.SRGBColorSpace;textures.push(t);return t;
  }
  // Subtle deterministic panel wear, seams, and rivets make the structural
  // material more convincing than a single flat-colored Three.js primitive.
@@ -116,26 +122,48 @@ function createScene(session:Outpost,room:FacilityId|null){
  }
  if(!room){
    const surface=mat(session.destination==="mars"?0x8e6252:0x686973,.03,.96);
-   const tx=textureSurface();if(tx){surface.map=tx;surface.needsUpdate=true;}
-   const planeGeo=new T.PlaneGeometry(230,230,1,1);geometries.push(planeGeo);
+   const tx=textureSurface();
+   if(tx){surface.map=tx;surface.bumpMap=tx;surface.bumpScale=.08;surface.needsUpdate=true;}
+   // Terrain is level in the playable base; farther away it becomes
+   // continuous, shadowed ridges and shallow impact basins.
+   const planeGeo=new T.PlaneGeometry(230,230,88,88);
+   const verts=planeGeo.attributes.position;
+   for(let i=0;i<verts.count;i++){
+     const x=verts.getX(i),z=-verts.getY(i),r=Math.hypot(x,z);
+     const blend=Math.max(0,Math.min(1,(r-29)/22));
+     const hills=Math.sin(x*.094+z*.021)*2.7+Math.cos(z*.121-x*.04)*1.6+Math.sin(x*.23+z*.15)*.7;
+     const crater=-2.8*Math.exp(-Math.pow((Math.hypot(x+35,z-49)-15)/7,2));
+     verts.setZ(i,(hills+crater)*blend);
+   }
+   planeGeo.computeVertexNormals();geometries.push(planeGeo);
    const ground=mesh(planeGeo,surface);ground.rotation.x=-Math.PI/2;ground.position.y=-.1;ground.receiveShadow=true;ground.castShadow=false;
    // Repeated rocks use instanced geometry to keep the mobile draw call count low.
    const rockGeo=new T.DodecahedronGeometry(1,0);geometries.push(rockGeo);
-   const rocks=new T.InstancedMesh(rockGeo,mat(session.destination==="mars"?0x9c7164:0x81848b,.05,.9),175);
+   const rockCount=320;
+   const rocks=new T.InstancedMesh(rockGeo,mat(session.destination==="mars"?0xa58070:0x8d9095,.05,.96),rockCount);
    const dummy=new T.Object3D();
-   for(let i=0;i<175;i++){
-     const a=i*2.39996,r=7+Math.sqrt(i)*2.9,x=Math.cos(a)*r,z=Math.sin(a)*r;
-     // Never skip a matrix in InstancedMesh: uninitialized instances at the
-     // origin would appear as a pile of rocks blocking the player's spawn.
-     const hidden=Math.abs(x)<21&&Math.abs(z)<23;
-     dummy.position.set(hidden?200+i:hidden?200:x,.15,hidden?200+i:z);dummy.rotation.y=a;dummy.scale.set(.24+(i%7)*.12,.12+(i%4)*.12,.3+(i%5)*.1);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
-   }rocks.instanceMatrix.needsUpdate=true;rocks.castShadow=true;rocks.receiveShadow=true;world.add(rocks);
-   // Elevated horizon ridges and distant planet give large-scene depth.
-   for(let i=0;i<18;i++){
-     const angle=i/18*Math.PI*2,rad=56+(i%4)*3;
-     const h=4+(i*7%11);const g=new T.ConeGeometry(7+(i%4)*3,h,5);geometries.push(g);
-     const o=mesh(g,mat(session.destination==="mars"?0x593e42:0x3c4558,.06,.95));o.position.set(Math.sin(angle)*rad,h*.35-1,Math.cos(angle)*rad);
-     o.rotation.y=angle;
+   for(let i=0;i<rockCount;i++){
+     const a=i*2.39996,r=6+Math.sqrt(i)*3.25,x=Math.cos(a)*r,z=Math.sin(a)*r;
+     // All matrices are initialized; keep rocks clear of the base paths.
+     const hidden=Math.abs(x)<23&&Math.abs(z)<25;
+     dummy.position.set(hidden?200+i:x,.06+(i%3)*.025,hidden?200+i:z);
+     dummy.rotation.set((i%7)*.15,a,(i%5)*.09);
+     const width=.22+(i%11)*.11;dummy.scale.set(width,.12+(i%6)*.15,width*(.8+(i%3)*.29));
+     dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
+     const shade=.77+(i%8)*.047;rocks.setColorAt(i,new T.Color().setRGB(shade,shade*.97,shade*.94));
+   }
+   rocks.instanceMatrix.needsUpdate=true;
+   if(rocks.instanceColor)rocks.instanceColor.needsUpdate=true;
+   rocks.castShadow=false;rocks.receiveShadow=true;world.add(rocks);
+   // Broad, irregular distant formations, not toy-like five-sided cones.
+   const ridgeMat=mat(session.destination==="mars"?0x684745:0x555964,.04,.98);
+   const ridgeGeo=new T.IcosahedronGeometry(1,1);geometries.push(ridgeGeo);
+   for(let i=0;i<30;i++){
+     const a=i/30*Math.PI*2,rad=76+(i%5)*2.3,h=3+(i*13%8);
+     const ridge=mesh(ridgeGeo,ridgeMat);
+     ridge.position.set(Math.sin(a)*rad,h*.48-1.9,Math.cos(a)*rad);
+     ridge.scale.set(9+(i%5)*2.3,h,8+(i%4)*2.1);
+     ridge.rotation.y=a;ridge.castShadow=false;
    }
    // Scene constellations and distant Earth/Phobos.
    const starPositions=new Float32Array(900*3);
@@ -240,11 +268,30 @@ function createScene(session:Outpost,room:FacilityId|null){
   });
  }
  const astro=new T.Group();world.add(astro);
- const suit=mat(0xd7e0e2,.22,.64),visor=mat(0x152c40,.7,.10,0x19394d,.35),suitDark=mat(0x344b59,.4,.58);
+ // Layered expedition suit, visible from the third-person camera.
+ const suit=mat(0xe8e9dd,.12,.83),visor=mat(0x19374b,.62,.13,0x28485b,.35),
+   suitDark=mat(0x344b59,.4,.58),fabric=mat(0xc1c9c6,.09,.92),
+   harness=mat(0x67757a,.36,.59),suitBlue=mat(0x28648a,.4,.46);
+ const visorGlass=new T.MeshPhysicalMaterial({color:0x244455,metalness:.55,roughness:.09,clearcoat:1,clearcoatRoughness:.08});
+ materials.push(visorGlass);
  const torso=mesh(new T.CapsuleGeometry(.37,.54,5,12),suit,astro);geometries.push(torso.geometry);
  torso.position.y=1.24;
  const helmet=mesh(sphereGeom,suit,astro);helmet.position.y=2.05;helmet.scale.set(.37,.38,.37);
- const shield=mesh(sphereGeom,visor,astro);shield.position.set(0,2.08,-.17);shield.scale.set(.29,.25,.22);
+ const shield=mesh(sphereGeom,visorGlass,astro);shield.position.set(0,2.08,-.17);shield.scale.set(.30,.26,.23);
+ const rimGeo=new T.TorusGeometry(.29,.029,8,30);geometries.push(rimGeo);
+ const rim=mesh(rimGeo,gold,astro);rim.position.set(0,2.07,-.34);rim.scale.y=.91;
+ const collarGeo=new T.TorusGeometry(.39,.072,8,20);geometries.push(collarGeo);
+ const collar=mesh(collarGeo,harness,astro);collar.rotation.x=Math.PI/2;collar.position.set(0,1.78,0);
+ // Pressure pack, oxygen tanks, suit harness and status instrumentation.
+ box(astro,.70,1.03,.40,0,1.38,.53,trim);
+ box(astro,.56,.69,.06,0,1.43,.75,fabric);
+ for(const side of [-1,1]){
+   cylinder(astro,.13,.72,side*.26,1.40,.82,hull,12);
+   box(astro,.11,.93,.13,side*.36,1.43,.29,harness);
+   box(astro,.18,.25,.25,side*.43,1.69,0,suitBlue);
+ }
+ box(astro,.47,.17,.12,0,1.49,-.38,suitBlue);
+ for(let i=0;i<3;i++)box(astro,.075,.065,.025,-.12+i*.12,1.49,-.45,i===2?red:glow);
  box(astro,.60,.78,.30,0,1.28,.43,trim);
  const limbs:T.Object3D[]=[];
  for(let side of [-1,1]){
@@ -255,6 +302,8 @@ function createScene(session:Outpost,room:FacilityId|null){
    const leg=new T.Group();leg.position.set(side*.22,.84,0);astro.add(leg);
    box(leg,.26,.68,.27,0,-.29,0,suit);
    box(leg,.32,.18,.45,0,-.69,-.13,suitDark);
+   box(leg,.34,.095,.47,0,-.76,-.18,rubber);
+   box(leg,.30,.12,.28,0,-.43,-.08,harness);
    limbs.push(leg);
  }
  // Equipment accent on the astronaut chest.
