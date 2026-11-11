@@ -10,6 +10,7 @@ import OutpostMap from "./OutpostMap";
 import {destinationGuide,missionDestination} from "./navigation";
 import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} from "./worldLogic";
 import {lockOutpostViewport} from "./scrollLock";
+import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
 
 type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map";
@@ -73,6 +74,8 @@ function Stick({move}:{move:React.RefObject<Movement>}){
 type ButtonContact={id:number;x:number;y:number;startX:number;startY:number;dragged:boolean};
 const focusAction=(id:FacilityId)=>FACILITIES.find(x=>x.id===id)!;
 export default function Junior3D({onExit}:{onExit:()=>void}){
+ const [settings]=useState(()=>{try{return initializePreferences(localStorage);}catch{return initializePreferences();}});
+ const [graphics,setGraphics]=useState<PlayerPreferences["graphics"]>(settings.value.graphics);
  const [session,setSession]=useState<Outpost|null>(null);
  const [room,setRoom]=useState<FacilityId|null>(null);
  const [near,setNear]=useState<Proximity>(null);
@@ -218,6 +221,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        </button>;
      })}</div>
      <div className="j3-row"><button onClick={onExit} className="j3-info">← ALL GAME MODES</button></div>
+     <label className="j3-graphics">GRAPHICS <select aria-label="Outpost graphics quality" value={graphics} onChange={e=>{const value=e.target.value as PlayerPreferences["graphics"];setGraphics(value);settings.save({...settings.value,graphics:value});}}><option value="battery">Battery · lower GPU load</option><option value="balanced">Balanced · recommended for iPad</option><option value="quality">Quality · detailed shadows</option></select></label>
      <p className="j3-settings">3D scene rendered locally on your device · Touch joystick + drag to look · Keyboard WASD/E · Fictional resource values, not real mission engineering predictions</p>
    </section>
  </div>;
@@ -247,7 +251,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    guidance;
  return <div className="j3-root">
    <div className="j3-world">
-     <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} movement={movement} lookDelta={cameraDelta} spawn={spawn}
+     <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} graphics={graphics} movement={movement} lookDelta={cameraDelta} spawn={spawn}
        target={goal} interactSeq={seq} onPosition={positionCallback}
        onEnter={enter} onConsole={openConsole} onRoutine={routineInteraction} onNear={nearCallback} onError={setError}/>
    </div>

@@ -1,4 +1,5 @@
 import * as T from "three";
+import { attachRealismModel } from "../../presentation/realismAssets";
 import {makePlanet,disposePlanet} from "../celestial";
 import { fieldSites, type Session } from "./engine";
 import { type Destination } from "./environments";
@@ -248,6 +249,12 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
        });
      }).catch(()=>{/* No network dependency for mission progress. */});
    }
+  // A recognisable lunar-module reference gives the training field a proper
+  // aerospace scale. It is scenery beside the course, never a replacement for
+  // the expedition cabin or its functional airlock and camp equipment.
+  const landerReference = typeof window!=="undefined" && presentation.playerContext==="surface"
+    ? attachRealismModel(group,"lander",{extent:7.5,position:[-10,terrainRelief(-10,20),20],rotation:[0,.55,0],shadows:false,onLoad:sceneChanged})
+    : null;
   const camp = new T.Group();
   camp.name="Unpressurized instrument camp";
   camp.visible=presentation.playerContext==="surface";
@@ -450,6 +457,7 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
       disposed=true;
       group.userData.disposed=true;
       referenceLoad?.dispose();
+      landerReference?.dispose();
       if(referenceModel){
         referenceModel.removeFromParent();
         disposeObjectResources(referenceModel);

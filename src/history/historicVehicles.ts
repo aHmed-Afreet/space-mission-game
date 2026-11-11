@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type {StoryScenario} from "./storyScenarios";
+import type { RealismModelKey } from "../presentation/realismAssets";
 
 /** Low-poly, vehicle-specific silhouettes based on recorded mission hardware.
  * These are educational replicas, not dimensionally accurate spacecraft models. */
@@ -254,4 +255,16 @@ export function createHistoricVehicle(scenario:StoryScenario):THREE.Group {
  });
  g.userData.interpretation="Procedural educational exterior; not a dimensionally exact historic cabin";
  return g;
+}
+
+/** Match an asset to its real hardware, never substitute a modern station or
+ * Gemini capsule for a different historic vehicle just to fill an asset slot. */
+export function historicReferenceKey(scenario:Pick<StoryScenario,"family"|"title">):RealismModelKey|null {
+ if(scenario.family==="lunar"&&scenario.title!=="Apollo 13")return "lander";
+ if(/Apollo[–-]Soyuz/.test(scenario.title))return "apolloSoyuz";
+ if(scenario.family==="gemini")return "capsule";
+ if(scenario.family==="shuttle")return "shuttle";
+ if(scenario.family==="station"&&/ISS/.test(scenario.title))return "station";
+ if(/^Voyager [12]$/.test(scenario.title))return "probe";
+ return null;
 }

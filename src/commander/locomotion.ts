@@ -35,5 +35,13 @@ export function stepLocomotion(state: LocomotionState, input: LocomotionInput,
     jump.height = 0;
     jump.velocity = 0;
   }
-  position.y = 1.63 + jump.height + (reducedMotion ? 0 : Math.sin(elapsed * 8) * .009 * Math.min(1, Math.hypot(movement.forward, movement.sideways)));
+  // A suit's gait is slower under low gravity; head motion stops while
+  // floating or jumping. Reduced-motion preference always keeps a level camera.
+  const outside = position.z > 10.4 && environment;
+  const gravity = outside ? environment.gravity : 9.81;
+  const gait = Math.sqrt(Math.max(0, gravity) / 9.81) * (input.sprint ? 10 : 8);
+  const moving = Math.min(1, Math.hypot(movement.forward, movement.sideways));
+  const bob = reducedMotion || gravity === 0 || jump.height > 0 ? 0 :
+    Math.sin(elapsed * gait) * (input.sprint ? .014 : .009) * moving;
+  position.y = 1.63 + jump.height + bob;
 }

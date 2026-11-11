@@ -117,3 +117,22 @@
 .history-inline-play span{display:grid;place-items:center;background:#da3b3b;color:white;border-radius:50%;height:65px;width:65px;font-size:27px}
 .history-inline-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
 .history-inline-actions button{flex:1 1 240px;margin:0;min-height:52px}
+
+/* Archive presentation uses warmer historical tones, distinct from training. */
+.history-hub .history-hero,.history-hub .history-card,.history-hub .history-story-lead,.history-hub .history-story-panels article,.history-hub .history-live,.history-hub .history-callout,.history-film-card{background:#171f26;border-color:#a5a28c4f;border-radius:5px;backdrop-filter:none;box-shadow:none}
+.history-hub .history-hero{background:linear-gradient(110deg,#252b2e,#141e27)}
+.history-hub .history-hero h1,.history-hub .history-story-lead h1,.history-film-card h1{font-weight:450;letter-spacing:-.04em}
+.history-hub .history-hero em,.history-hub .history-brand span,.history-hub .history-card-date,.history-hub .history-hero>small,.history-hub .history-story-lead>small{color:#c6beaa}
+.history-hub .history-card-date span{font-size:27px;font-weight:450;font-variant-numeric:tabular-nums}
+.history-hub .history-card h2{font-weight:550;letter-spacing:-.02em}
+.history-hub .history-card p,.history-hub .history-hero p,.history-hub .history-story-panels p,.history-hub .history-live p,.history-hub .history-live blockquote,.history-hub .history-callout p,.history-hub .history-story-lead p{color:#c2ccd2}
+.history-hub .history-card .history-card-destination{color:#c5baa2}
+.history-hub .history-tabs button,.history-hub .history-back,.history-hub .history-filters input,.history-hub .history-filters select,.history-hub .history-library-switch button{background:#1c2b35;border-color:#8b9ca154;border-radius:4px;color:#d5dfe5}
+.history-hub .history-library-switch button[aria-pressed="true"],.history-hub .history-tabs button[aria-pressed=true]{background:#465355;border-color:#b7b8a4;color:#f2f1e9}
+.history-hub .history-card-footer button,.history-hub .history-more button,.history-hub .history-story-cta button{background:#bfbeac;color:#17232b;border-color:#bfbeac;border-radius:4px;font-weight:600}
+.history-hub .history-done{color:#c2d4c7}
+.history-hub .history-result-count,.history-hub .history-training-note,.history-hub .history-footer,.history-hub .history-card-date small,.history-hub .history-filters label,.history-hub .history-completions{color:#a8b7bf!important}
+.history-hub .history-callout{border-left:2px solid #c6bea5}
+.history-hub .history-progress span.active{background:#c1baa6}
+.history-film-card>small,.history-film-card h1 em,.history-film-card h3{color:#c9c4b4}
+.history-film-continue{background:#58675f;border-color:#adbdb3;border-radius:5px}

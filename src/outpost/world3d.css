@@ -441,3 +441,16 @@ html.outpost-viewport-locked .j3-root .j3-objective{
   -webkit-overflow-scrolling:touch;
   touch-action:pan-y;
 }
+
+/* Instrument-style finishing preserves all viewport and touch-zone rules. */
+.j3-root .j3-brand,.j3-root .j3-meter,.j3-root .j3-objective{border-radius:5px;background:#10191fe8;border-color:#66757c73;box-shadow:0 4px 18px #0004;backdrop-filter:blur(7px)}
+.j3-root .j3-brand b,.j3-root .j3-kicker{color:#c7d4d5}
+.j3-root .j3-track i{background:#9bb8b7}
+.j3-root .j3-panel{background:linear-gradient(140deg,#26323a,#111c23);border-color:#687b85;border-radius:8px}
+.j3-root .j3-buttons button{border-radius:7px;background:#d3dcca;color:#172923;box-shadow:0 4px 16px #0007}
+.j3-root .j3-buttons button.j3-run{background:#1b2930e8;color:#e2e8e5;border-color:#8a9c9d}
+.j3-root .j3-joystick{border-color:#c0ccca8a;background:#233139a6;box-shadow:none;backdrop-filter:none}
+.j3-root .j3-thumb{background:#7d9798d9;border-color:#c8d4d1;box-shadow:0 3px 12px #0005}
+.j3-root .j3-quick button{background:#1a272ee8;border-color:#849398;border-radius:5px}
+.j3-root .j3-graphics{display:flex;gap:12px;align-items:center;font-size:11px;letter-spacing:1px;color:#c5d0d0}
+.j3-root .j3-graphics select{min-height:44px;max-width:65vw;background:#1d2a32;color:#edf0ed;border:1px solid #85969a;border-radius:5px;padding:8px 12px;font:inherit;letter-spacing:0}

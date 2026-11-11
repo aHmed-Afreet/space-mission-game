@@ -54,3 +54,29 @@
 .app .engineer-radio{background:rgba(7,44,58,.82);border-left:3px solid #85dcd1;color:#f1ffff!important;padding:14px 16px;border-radius:8px;font-size:14px;line-height:1.75;margin:12px 0}
 .app .briefing li{color:#eff7fd;line-height:1.65;margin:6px 0}
 .strategy-mission-board .strategy-board-hero p{color:#f0faff}
+
+/* Shared simulation UI: matte instruments, quiet accents and legible data. */
+:root{--orbital-surface:#111b25;--orbital-line:#64778555;--orbital-text:#e4eaf0;--orbital-muted:#b4c4cf;--orbital-accent:#bacfd9;background:#080d13}
+body{background:#080d13;color:var(--orbital-text)}
+#root::before{background:linear-gradient(180deg,#080d13da,#080d13ed),url("/assets/backgrounds/iss049e004248-1920-357943e89d20.jpg") center/cover no-repeat}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #cedfe8;outline-offset:3px}
+button:not(:disabled):hover{transform:none}
+input,select,progress{font-variant-numeric:tabular-nums}
+.app .panel,.app .resource,.app .selection,.app .event-choice,.strategy-mission-board .strategy-level{border-color:#71849451;background:#121d28;border-radius:5px;box-shadow:none}
+.app .panel h2,.app .panel h3,.strategy-mission-board .strategy-level h2{font-weight:550;letter-spacing:-.02em}
+.app .panel p,.app .resource label,.app .resource small,.app .selection-spec,.app .intro,.strategy-mission-board .strategy-level p,.strategy-mission-board .strategy-board-hero p{color:#b9c8d3}
+.app .primary,.history-primary{background:#c1d2db;color:#13212b;box-shadow:none;border-color:#c1d2db}
+.app .secondary{background:#182733;border-color:#728b9d5e}
+.app .eyebrow,.app h1 em,.app .days,.app .component-icon,.app .quantity button,.app .step.active,.app .select-label{color:#bed2de}
+.app .status i,.app .meter i,.app .progress i{background:#acccd2;box-shadow:none}
+.app .score{border-color:#bed0d7;box-shadow:none}.app .score strong{color:#d6e0e4}
+.app .selection.selected{border-color:#d3dfe7;box-shadow:inset 3px 0 #b8cdd8}
+.strategy-mission-board .strategy-board-hero{background:linear-gradient(120deg,#15212de8,#0d1822ef);border-color:#70889766;border-radius:5px}
+.strategy-mission-board .strategy-board-hero h1{font-weight:450}
+.strategy-mission-board .strategy-board-hero em,.strategy-mission-board .strategy-level>strong,.strategy-mission-board .strategy-level>div,.strategy-mission-board .strategy-board-hero>small{color:#b9d0db}
+.strategy-mission-board .strategy-level.locked{border-color:#54616c65;opacity:.7}
+.strategy-mission-board .strategy-level>div{font-variant-numeric:tabular-nums}
+.help-page .help-grid article{background:#14212b;border-color:#60758177;border-radius:5px}
+.help-page .help-back,.help-page nav button{background:#15232f;border-color:#69849266;border-radius:4px}
+.help-page nav button[aria-pressed=true]{background:#314d5c;border-color:#b7ccd6}
+@media(hover:none){button:active{filter:brightness(1.12)}button:not(:disabled):hover{transform:none}}

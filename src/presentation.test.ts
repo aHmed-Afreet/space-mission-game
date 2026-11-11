@@ -103,7 +103,7 @@ test("worksite construction keeps bounded meshes and geometry in every tier",()=
   }
 });
 
-test("Battery cabin keeps full stations and hatch assemblies with a cheaper geometry path",()=>withCanvas(()=>{
+test("Battery cabin keeps full stations and hatch assemblies with a cheaper geometry path",()=>withCanvas((labels)=>{
   const triangles:number[]=[],drawables:number[]=[];
   for(const tier of ["battery","balanced","quality"] as const){
     const cabin=createInterior({eva:true,destination:"mars",graphics:tier});
@@ -113,6 +113,13 @@ test("Battery cabin keeps full stations and hatch assemblies with a cheaper geom
     // All tiers must construct the same interaction presentation/camera and
     // retain the expensive scene's shared disposals; no WebGL is involved.
     assert.equal(cabin.camera instanceof T.PerspectiveCamera,true);
+    for(const station of ["SCIENCE LAB","COMMUNICATIONS","ECLSS / POWER DISTRIBUTION","GALLEY / FOOD & WATER","CREW BERTH / 06","EQUIPMENT STORAGE"])assert.ok(labels.includes(station),station);
+    const forward=cabin.scene.getObjectByName("Formed cockpit pressure glazing and console")!;
+    assert.ok(forward);
+    const frame=forward.children[0] as T.Mesh<T.ExtrudeGeometry>;
+    assert.equal((frame.geometry.parameters.shapes as T.Shape).holes.length,2,"real shaped twin viewport apertures");
+    const leaves=cabin.scene.children.filter(o=>o instanceof T.Mesh&&o.position.z===-4.35&&o.scale.y===2.5);
+    assert.equal(leaves.length,2,"retain independently animated flight hatch leaves");
     let disposedTextures=0;
     const textures=new Set<T.Texture>();
     cabin.scene.traverse(object=>{if(object instanceof T.Mesh)for(const material of Array.isArray(object.material)?object.material:[object.material])for(const value of Object.values(material))if(value instanceof T.Texture)textures.add(value);});
@@ -120,8 +127,9 @@ test("Battery cabin keeps full stations and hatch assemblies with a cheaper geom
     cabin.dispose();assert.equal(disposedTextures,textures.size);
   }
   assert.ok(triangles[0]<50000);assert.ok(triangles[1]<340000);assert.ok(triangles[2]<350000);
-  assert.ok(triangles[0]<triangles[1]*.2);
-  assert.ok(drawables.every(count=>count>=250&&count<300));
+  assert.ok(triangles[0]<triangles[1]);assert.ok(triangles[1]<150000,"balanced keeps tiny fittings inexpensive");
+  assert.ok(triangles[1]<triangles[2]);
+  assert.ok(drawables.every(count=>count>80&&count<210),"batch static details while retaining all live stations");
 }));
 
 test("crater bowls deform terrain while hatch and sample approaches stay clear",()=>{

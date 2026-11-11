@@ -34,3 +34,22 @@ test("deep-space destinations never silently resolve to Earth",()=>{
     disposePlanet(body);assert.equal(body.userData.disposed,true);
   }
 });
+
+test("reference model matching preserves historic hardware families",async()=>{
+  const {historicReferenceKey}=await import("./historicVehicles");
+  const {storyArchitecture}=await import("./storyArchitecture");
+  const scenario=(title:string)=>createStoryScenario(historyMissions.find(m=>m.title===title)!);
+  assert.equal(historicReferenceKey(scenario("Apollo 11")),"lander");
+  assert.equal(historicReferenceKey(scenario("Apollo 13")),null,"keep the combined LM and CSM interpretation");
+  assert.equal(historicReferenceKey(scenario("Apollo 8")),null,"Gemini asset must never replace Apollo CSM");
+  assert.equal(historicReferenceKey(scenario("Vostok 1")),null,"spherical capsule keeps its own model");
+  assert.equal(historicReferenceKey(scenario("Voyager 1")),"probe");
+  assert.equal(historicReferenceKey(scenario("Juno Jupiter arrival")),null,"Voyager must never replace Juno");
+  assert.equal(storyArchitecture(scenario("Apollo 11")),"apollo");
+  assert.equal(storyArchitecture(scenario("Vostok 1")),"early-capsule");
+  for(const mission of historyMissions){
+    const entry=createStoryScenario(mission);
+    if(entry.role==="mission operator")assert.equal(storyArchitecture(entry),"ground-control",mission.title);
+  }
+  assert.equal(storyArchitecture(scenario("Artemis I")),"ground-control","an uncrewed capsule never grants a cockpit");
+});

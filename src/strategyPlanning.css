@@ -131,3 +131,39 @@
   }
   #root .app footer { display: flex !important; flex-wrap: wrap; gap: 3mm; }
 }
+
+/* A single demand-rendered hardware view shares the engineering screen with
+   its real numerical controls. Visual references never drive the simulation. */
+.planner-visualization{position:relative;margin:0 0 22px;background:#080e16;border:1px solid #3a4654;border-radius:10px;overflow:hidden;text-align:left}
+.visual .planner-visualization{height:100%;margin:0;border:0;border-radius:0}
+.planner-model-header{position:absolute;top:0;left:0;right:0;z-index:1;display:flex;justify-content:space-between;gap:10px;padding:17px 19px;background:linear-gradient(#080e16eb,transparent);font:9px ui-monospace,monospace;letter-spacing:1.4px;color:#c3ced8;pointer-events:none}
+.planner-model-header b{color:#c5a677;font-weight:400}
+.planner-model-canvas{height:370px;width:100%;touch-action:none}
+.planner-model-canvas canvas{display:block;width:100%;height:100%;touch-action:none}
+.planner-model-loading{position:absolute;top:145px;left:20px;right:20px;padding:20px;text-align:center;font-size:12px;color:#d6dee5;background:#101923d9;border:1px solid #344353;border-radius:6px;pointer-events:none}
+.planner-model-toolbar{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:10px 14px;border-top:1px solid #2b3744;background:#0d1620}
+.planner-model-toolbar>span{margin-right:auto;font-size:10px;color:#afbdc9}
+.planner-model-toolbar button{font-size:10px;border:1px solid #4b5967;background:#1d2b38;color:#dbe4ec;border-radius:5px;padding:8px 11px;min-height:44px}
+.planner-model-toolbar button[aria-pressed=true]{background:#465465;border-color:#d3b47c;color:#fff}
+.planner-visualization figcaption,.planner-transfer figcaption{font-size:10px!important;line-height:1.6!important;color:#a7b5c3!important;padding:10px 16px;margin:0!important}
+.planner-payload-manifest{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:#0e1823;border-top:1px solid #2c3946}
+.planner-payload-manifest>strong{flex-basis:100%;font:9px ui-monospace,monospace;letter-spacing:1.4px;color:#c7aa7a}
+.planner-payload-manifest>span{font-size:10px;color:#cad6e0;border:1px solid #354250;border-radius:4px;padding:7px 9px}
+.planner-payload-manifest b{font-weight:500;color:#c7aa7a;margin-left:10px}
+.planner-model-placeholder{height:370px;display:grid;place-items:center;background:#0d1620;color:#c6d2dd;font-size:12px;border:1px solid #3b4b5a}
+.planner-remote-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:15px 18px;border-top:1px solid #334150;background:#111b25}
+.planner-remote-strip span{display:block;color:#a2afbb;font:9px ui-monospace,monospace;letter-spacing:1px}
+.planner-remote-strip b{display:block;font:12px ui-monospace,monospace;color:#e1e6ea;margin-top:7px;letter-spacing:0}
+.planner-launcher-drawing{display:block;width:100%;height:210px;margin:10px 0;background:radial-gradient(ellipse at center,#2b3743,#111b26 70%);border:1px solid #344251;border-radius:5px}
+.selection.selected .planner-launcher-drawing{border-color:#9b8b6b}
+.planner-transfer{margin:0 0 25px;background:#0d1620;border:1px solid #3a4654;border-radius:8px;overflow:hidden}
+.planner-transfer svg{display:block;width:100%;max-height:270px}
+.app .component-icon{font:20px ui-monospace,monospace;color:#c4ad84}
+.app .resource{border-radius:6px;background:#111a25;border-color:#34404d}
+.app .resource .meter i,.app .progress i{background:#bacad7}
+.app .selection.selected{box-shadow:none;border-color:#c1ab83}
+.app .event-choice{background:#15212d;border-color:#4c5a68;border-radius:6px}
+@media(max-width:800px){.planner-model-canvas{height:320px}.planner-model-header{font-size:8px;padding:12px}.planner-model-toolbar{justify-content:flex-start}.planner-model-toolbar>span{flex-basis:100%}.planner-launcher-drawing{grid-column:2;grid-row:1/5;min-width:100px;height:190px;margin:0}.planner-remote-strip{gap:8px;padding:12px}.planner-remote-strip b{font-size:10px}}
+@media print{.planner-visualization,.planner-transfer{display:none!important}}
+.app .planner-instrument-drawing{width:120px;max-width:70%;height:78px;background:#101b27;border:1px solid #3b4a59;border-radius:5px}
+.planner-model-canvas canvas:focus-visible{outline:3px solid #d3b47c;outline-offset:-4px}

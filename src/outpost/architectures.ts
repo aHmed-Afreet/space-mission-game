@@ -249,16 +249,22 @@ export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Gro
  // Decorative foundations vary by function; no shared dome shell.
  const pad=kit.cylinder(group,facility.radius+.5,.23,0,.04,0,kit.darkSteel,28);
  pad.receiveShadow=true;
+ const body=new T.Group();body.name="facility-pressure-body";group.add(body);
  switch(id){
-  case "habitat":crewHabitat(kit,group);break;
-  case "solar":solarField(kit,group);break;
-  case "shield":stormShelter(kit,group);break;
-  case "recycle":lifeSupport(kit,group);break;
-  case "greenhouse":greenhouse(kit,group);break;
-  case "battery":battery(kit,group);break;
+  case "habitat":crewHabitat(kit,body);break;
+  case "solar":solarField(kit,body);break;
+  case "shield":stormShelter(kit,body);break;
+  case "recycle":lifeSupport(kit,body);break;
+  case "greenhouse":greenhouse(kit,body);break;
+  case "battery":battery(kit,body);break;
  }
  // A consistent front door is the only shared architectural component.
  exteriorDetails(kit,group,id,facility.radius);
+ if(id==="habitat"){
+  // The imported pressure module joins a clear, walkable vestibule.
+  for(const side of [-1,1])kit.box(group,.18,2.55,2.5,side*1.06,1.4,2.1,kit.hull);
+  kit.box(group,2.3,.17,2.5,0,2.73,2.1,kit.hull);
+ }
  const z=facility.radius+.06;
  const portal=kit.mat(0x7a9297,.65,.27);
  // Open, recessed vestibule with a visible floor and side walls. In
@@ -276,7 +282,18 @@ export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Gro
  kit.box(group,2.54,.33,.48,0,2.79,z,portal);
  kit.box(group,2.35,.17,.40,0,.16,z,kit.gold);
  kit.box(group,.72,.13,.15,0,2.7,z+.32,kit.glow).castShadow=false;
- const leaf=kit.box(group,1.75,2.24,.15,0,1.35,z+.33,kit.glass);
+ const leaf=kit.box(group,1.75,2.24,.15,0,1.35,z+.33,kit.hull);
+ // A pressure hatch has a recessed observation port, locking rim and wheel.
+ // Details are children of the moving leaf, so the entire assembly slides.
+ const port=kit.mesh(new T.TorusGeometry(.21,.026,7,20),kit.darkSteel,leaf);
+ port.position.set(0,.19,.61);port.scale.set(1,.78,1);
+ const window=kit.mesh(new T.CircleGeometry(.185,20),kit.glass,leaf);
+ window.position.set(0,.19,.65);window.scale.y=.78;
+ const wheel=kit.mesh(new T.TorusGeometry(.115,.016,6,16),kit.darkSteel,leaf);
+ wheel.position.set(.26,-.22,.65);wheel.scale.y=.78;
+ for(const a of [0,Math.PI/2]){const spoke=kit.box(leaf,.21,.012,.05,.26,-.22,.65,kit.darkSteel);spoke.rotation.z=a;}
+ kit.box(leaf,.13,.07,.06,-.28,-.23,.65,kit.gold);
+ leaf.userData.pressureBody=body;
  // Opaque rear panel gives the impression of an airlock vestibule while the
  // actual game transitions into a separately modelled 3D interior.
  return leaf;
@@ -284,7 +301,15 @@ export function buildDistinctExterior(id:FacilityId,kit:StructureKit,group:T.Gro
 
 /** Unique machinery inside every building, with a clear central aisle. */
 export function furnishDistinctInterior(id:FacilityId,k:StructureKit,group:T.Group){
- const metal=k.mat(0x93a9aa,.55,.37),warm=k.mat(0xe5d4bb,.36,.44,0x48311d,.15);
+ const metal=k.mat(0xaab2b0,.4,.54),warm=k.mat(0xe5d4bb,.36,.44,0x48311d,.15);
+ // Flattened pressure-vessel ribs tie the interior shell together. These
+ // stop above head height and leave every existing interaction aisle clear.
+ const rib=k.mat(0xb6bab3,.38,.54);
+ if(id==="habitat"||id==="greenhouse"||id==="recycle")for(const z of [-3.5,-1.75,0,1.75,3.5]){
+   const arch=k.mesh(new T.TorusGeometry(4.12,.078,6,28,Math.PI),rib,group);
+   arch.position.set(0,2.67,z);arch.scale.y=.25;
+   for(const x of [-4.12,4.12])k.box(group,.14,2.65,.14,x,1.34,z,rib);
+ }
  // Cable trays and equipment readouts are installed along the walls,
  // preserving the centre aisle and the real console interaction radius.
  for(const x of [-4.05,4.05]){

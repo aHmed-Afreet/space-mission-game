@@ -1,0 +1,266 @@
+{
+  "sourceRevision": "11ebb4ee043715aefbba6aeec8a61746fad67fa7",
+  "models": [
+    {
+      "key": "lander",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Apollo%20Lunar%20Module/Apollo%20Lunar%20Module.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 716840,
+      "sourceSha256": "379101dfcee399267addf771709107c35e826b0b9e5233272f123e4c8a585c4e",
+      "runtimeBytes": 154228,
+      "runtimeSha256": "1d373bb2798c67e880372eeadf6a3c9dc23acef7a3466aa9c3c536448252c0ef",
+      "runtimePrimitives": 7,
+      "runtimeTriangles": 34331,
+      "runtimeTextures": 4,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "astronaut",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Astronaut/Astronaut.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 762988,
+      "sourceSha256": "d18c141410542b935113d1c25a9271d90c40d44015a64295b7b68a30f0ce2820",
+      "runtimeBytes": 44280,
+      "runtimeSha256": "6656bafe86d47519ccf64fec28644c76cfd7081b5343b82499b6c12786927063",
+      "runtimePrimitives": 2,
+      "runtimeTriangles": 2858,
+      "runtimeTextures": 2,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "capsule",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Gemini/Gemini.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 1387812,
+      "sourceSha256": "e580e90ac2eb13d029e262e9d638c32980d7f8a48a6830d272ce080576110758",
+      "runtimeBytes": 100084,
+      "runtimeSha256": "63f2b3865372c023dd3885fe2a62ee8f7b2c21cd1cab4e8fc4c5e2815af69bcd",
+      "runtimePrimitives": 7,
+      "runtimeTriangles": 13800,
+      "runtimeTextures": 5,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "shuttle",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Space%20Shuttle%20%28A%29/Space%20Shuttle%20%28A%29.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 1194068,
+      "sourceSha256": "f5b079bce9c4e9012b8d3aaa4a1e30b1450dab2d17c134131d308693d3242253",
+      "runtimeBytes": 215740,
+      "runtimeSha256": "66533181ccd07060430911bf482c464bda6d0e7c26603e5e242e027799913980",
+      "runtimePrimitives": 2,
+      "runtimeTriangles": 74532,
+      "runtimeTextures": 0,
+      "runtimeExtensions": [
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "station",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/International%20Space%20Station%20%28ISS%29%20%28B%29/International%20Space%20Station%20%28ISS%29%20%28B%29.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 476992,
+      "sourceSha256": "2ba4427413b0dd89a33d2acaf962dea8a96a3b1d8dceda05cc7aad547ffd3d16",
+      "runtimeBytes": 203236,
+      "runtimeSha256": "bf089a6c2ef0914d9a1583097aceef381e5325480a0a7ce5b16155021c76411f",
+      "runtimePrimitives": 2,
+      "runtimeTriangles": 61311,
+      "runtimeTextures": 0,
+      "runtimeExtensions": [
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "probe",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Voyager%20Probe%20%28A%29/Voyager%20Probe%20%28A%29.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 285936,
+      "sourceSha256": "7cf8eefb5a0fca9e4e1b0d1e51c37433124169183e5dbfd2d8034af902311821",
+      "runtimeBytes": 96716,
+      "runtimeSha256": "8534c069b1b992fb2af5b1770a954968686dee4b58f3a7e473006bb2db019d4a",
+      "runtimePrimitives": 1,
+      "runtimeTriangles": 28159,
+      "runtimeTextures": 2,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "rover",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Mars%20Exploration%20Rover%20-%20Opportunity%20%28MER-B%29/Mars%20Exploration%20Rover%20-%20Opportunity%20%28MER-B%29.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 36668,
+      "sourceSha256": "95c852efb385b55bea3104a0fca2730cd2ef25353af4d38273d3f0bda5c68c31",
+      "runtimeBytes": 13968,
+      "runtimeSha256": "442dbe61143020a7dae7aea4a469961561640aad22f44bc79147257778c671a2",
+      "runtimePrimitives": 2,
+      "runtimeTriangles": 2509,
+      "runtimeTextures": 1,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "rocket",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Saturn%20V/Saturn%20V.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 927212,
+      "sourceSha256": "6c44497bce54ee0b09d0edb8e33a6f484762a320dab1c54b383e434f5bba06b5",
+      "runtimeBytes": 75532,
+      "runtimeSha256": "0399e86c5c9c0cf21ea1ed61ec5034cb354da4cc60379b8ec6d12bbad5ebc301",
+      "runtimePrimitives": 7,
+      "runtimeTriangles": 13146,
+      "runtimeTextures": 5,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "habitat",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Habitat%20Demonstration%20Unit/Habitat%20Demonstration%20Unit%20%28part%201%29.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 516748,
+      "sourceSha256": "3106557bea24c9ba012556ddbecf3740c39276dc369cf359b77225de97458cfe",
+      "runtimeBytes": 37164,
+      "runtimeSha256": "ea7b87e48ec26c812fbbcfae8e1073872d996ab7919216cac270495d98e210d1",
+      "runtimePrimitives": 1,
+      "runtimeTriangles": 1842,
+      "runtimeTextures": 1,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "habitatInterior",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Habitat%20Demonstration%20Unit/Habitat%20Demonstration%20Unit%20%28part%202%29.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 710988,
+      "sourceSha256": "616226ee31094ae1d71d1a4f974d6c7421c0227bca28b118de4dd97ce0495649",
+      "runtimeBytes": 70148,
+      "runtimeSha256": "8ed8ca0b41ce5cf63c333492af5d7cf72910c01f7fbe17ab6f347c5369fdaac5",
+      "runtimePrimitives": 1,
+      "runtimeTriangles": 2668,
+      "runtimeTextures": 1,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "equipment",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Orbital%20Replacement%20Unit/Orbital%20Replacement%20Unit.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 585684,
+      "sourceSha256": "f2d3ceb43a13dd0752e72d00435d14d499812a1a755fd20e983a3d0e8ab91ebc",
+      "runtimeBytes": 73500,
+      "runtimeSha256": "f0aca3419247189c07671a03940c91885aac1c366d61c1c87aa86affb5568e7f",
+      "runtimePrimitives": 4,
+      "runtimeTriangles": 2696,
+      "runtimeTextures": 4,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "controlRoom",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/JSC%20Mission%20Control%20Room/JSC%20Mission%20Control%20Room.glb",
+      "asset": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceBytes": 185220,
+      "sourceSha256": "296d6d12bef495bc1679c55a289e989847661f294f0cbb70354794063f84eaaa",
+      "runtimeBytes": 28960,
+      "runtimeSha256": "25c9e1c9c040fa90b67e46bc880fd1b8faed4bb43a3c1c8c5f8979c3958b18a9",
+      "runtimePrimitives": 2,
+      "runtimeTriangles": 5001,
+      "runtimeTextures": 0,
+      "runtimeExtensions": [
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "apolloSoyuz",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Apollo%20Soyuz/Apollo%20Soyuz.glb",
+      "sourceBytes": 952608,
+      "sourceSha256": "4d7d37c8ee02c6649b578900fa3533d92b89e125380a2efaa75f5a66e81d43db",
+      "runtimeBytes": 72356,
+      "runtimeSha256": "7d0905bf16b32577f2594582b97de9bc653a576c9ebe269c842f3cbb5676fc98",
+      "runtimePrimitives": 8,
+      "runtimeTriangles": 11892,
+      "runtimeTextures": 6,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    }
+  ],
+  "terrain": {
+    "source": "https://polyhaven.com/a/rocky_terrain_02",
+    "license": "CC0-1.0",
+    "files": [
+      {
+        "file": "terrain-normal.jpg",
+        "bytes": 993692,
+        "sha256": "f4f9d9671c660f4e509e96d5da3091887dfd557e1353e313fa2d1dc789499ffd"
+      },
+      {
+        "file": "terrain-roughness.jpg",
+        "bytes": 437094,
+        "sha256": "8652ee05de206888eb77f84df7c8080f6ffef27afadb7917127726570b66c45d"
+      },
+      {
+        "file": "terrain-base.jpg",
+        "bytes": 843188,
+        "sha256": "d570c10b1d5302f4fde9e0e94f4cbab0d5e112fc3fe2b3b91c38a98bd3ddaf4b"
+      }
+    ]
+  }
+}

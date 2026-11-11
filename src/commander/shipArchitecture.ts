@@ -159,30 +159,12 @@ export function installShipArchitecture(
    part(x,.147,z+.18,.17,.015,.05,warning);
  }
 
- // Forward panoramic canopy and cockpit framing. View outside remains clear.
- // A realistic view is obtained through dark recesses with bevelled pylons,
- // not a giant glass-textured flat wall.
- const z=-7.55;
- for(const side of [-1,1]){
-  part(side*2.96,1.88,z+.19,.35,1.58,.27,spine,[0,0,side*.19]);
-  part(side*2.19,2.65,z+.21,1.63,.21,.23,alloy,[0,0,side*.28]);
-  part(side*2.12,1.2,z+.21,1.5,.11,.32,spine,[0,0,-side*.12]);
-  part(side*2.39,1.55,z+.21,.24,.89,.2,titanium,[0,0,side*.24]);
-  for(let j=0;j<3;j++)
-   part(side*(1.24+j*.39),.76,z+1.15,.22,.035,.59,graphite);
- }
- part(0,2.73,z+.21,3.12,.23,.21,spine);
- part(0,1.05,z+.3,3.45,.22,.28,graphite);
- part(0,1.10,z+1.38,3.32,.16,.81,spine,[-.18,0,0]);
- // Flight instrumentation: continuous angled display arc.
- for(const [x,w,r] of [[-1.31,.77,1],[0,1.12,0],[1.31,.77,2]] as [number,number,number][]){
-  part(x,1.18,-6.24,w+.14,.77,.16,graphite,[-.22,0,0]);
-  screen(x,1.26,-6.09,w,.45,r);
-  part(x,1.58,-6.13,w+.18,.045,.17,titanium);
-  part(x,1.0,-5.86,w+.19,.055,.3,alloy);
-  for(let k=0;k<4;k++){
-   part(x-w*.34+(k*w*.23),.96,-5.67,.084,.025,.093,k===0?warning:status);
-  }
+ // One compact bank of live instruments on the formed forward console.
+ // No second oversized display bank between the pilot and the windscreen.
+ for(const [x,w,r] of [[-1.05,.74,3],[0,.91,0],[1.05,.74,2]] as [number,number,number][]){
+  screen(x,1.19,-6.35,w,.39,r);
+  part(x,1.44,-6.34,w+.07,.032,.1,alloy);
+  for(let k=0;k<4;k++)part(x-w*.34+k*w*.23,.94,-6.35,.043,.021,.048,k===0?warning:trim);
  }
  // Overhead emergency annunciator and switch grids.
  part(0,2.63,-6.44,2.06,.08,.88,graphite,[-.33,0,0]);
@@ -208,7 +190,7 @@ export function installShipArchitecture(
    part(side*.82+k*.21,.49,-5.15,.2,.055,.13,ceramic);
   }
  }
- label("FLIGHT CONTROL · NAV / SYSTEMS",0,2.55,-6.45,1.5,.13);
+ label("ORBITAL / FLIGHT DECK",0,2.68,-7.2,1.25,.09);
 
  // Module equipment carriers. Put all additional detail against walls,
  // never at the player's reachable station console collision coordinates.

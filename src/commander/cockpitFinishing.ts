@@ -1,4 +1,5 @@
 import * as T from "three";
+import {batchStaticVisuals} from "../presentation/staticBatch";
 import {RoundedBoxGeometry} from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 type Graphics="quality"|"balanced"|"battery";
@@ -19,7 +20,7 @@ export function installCockpitFinishing(scene:T.Scene,graphics:Graphics):()=>voi
   const light=addMaterial(new T.MeshStandardMaterial({color:"#9bdde9",emissive:"#35c1dc",emissiveIntensity:.7,metalness:.12,roughness:.34}));
   const phosphor=addMaterial(new T.MeshStandardMaterial({color:"#a7b8c5",emissive:"#1b6f8a",emissiveIntensity:.55,metalness:.33,roughness:.38}));
   const gold=addMaterial(new T.MeshStandardMaterial({color:"#d2a876",metalness:.55,roughness:.38}));
-  const rounded=graphics==="battery"?new T.BoxGeometry(1,1,1):new RoundedBoxGeometry(1,1,1,3,.12);
+  const rounded=graphics==="battery"?new T.BoxGeometry(1,1,1):new RoundedBoxGeometry(1,1,1,graphics==="quality"?2:1,.12);
   const cylinder=new T.CylinderGeometry(1,1,1,graphics==="battery"?12:20);
   const torus=new T.TorusGeometry(1,.13,graphics==="battery"?5:8,graphics==="battery"?16:32);
   geometries.push(rounded,cylinder,torus);
@@ -64,7 +65,7 @@ export function installCockpitFinishing(scene:T.Scene,graphics:Graphics):()=>voi
   // A shared instanced mesh avoids one draw call per gauge tick.
   const ticks:T.Matrix4[]=[];
   const dummy=new T.Object3D();
-  const gaugePlaces=[[-1.49,1.06,-5.78],[1.49,1.06,-5.78]] as const;
+  const gaugePlaces=[[-1.84,.84,-5.57],[1.84,.84,-5.57]] as const;
   for(const [x,y,z] of gaugePlaces){
     object(cylinder,rubber,x,y,z,.21,.027,.21,Math.PI/2);
     object(torus,metal,x,y,z+.027,.18,.18,.18);
@@ -122,7 +123,10 @@ export function installCockpitFinishing(scene:T.Scene,graphics:Graphics):()=>voi
       object(geometry,mat,x,1.91,z,1,1,1,0,x<0?Math.PI/2:-Math.PI/2);
     }
   }
+  const releaseBatches=batchStaticVisuals(root);
   return ()=>{
+    releaseBatches();
+    root.traverse(object=>{if(object instanceof T.InstancedMesh)object.dispose();});
     scene.remove(root);
     geometries.forEach(g=>g.dispose());
     materials.forEach(m=>m.dispose());

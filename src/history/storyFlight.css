@@ -166,3 +166,15 @@ html.mission-viewport-locked .story-fps-panels>.story-fps-suit-hud,
 html.mission-viewport-locked .story-fps-panels>.story-fps-historical-action{
   overscroll-behavior:contain;
 }
+
+/* Restrained museum-flight instruments; control bounds and scroll stay intact. */
+.story-fps-root .story-fps-top button,.story-fps-root .story-fps-objective,.story-fps-root .story-fps-suit-hud,.story-fps-root .story-fps-historical-action,.story-fps-root .story-fps-dialog{background:#121d27ef;border-color:#9ea9986e;border-radius:5px;box-shadow:0 4px 20px #0004;backdrop-filter:none}
+.story-fps-root .story-fps-objective>small,.story-fps-root .story-fps-objective>span,.story-fps-root .story-fps-top small,.story-fps-root .story-fps-dialog>small{color:#c5c4b2}
+.story-fps-root .story-fps-objective h2{font-weight:550;letter-spacing:-.02em}
+.story-fps-root .story-fps-actions button{border-width:1px;border-radius:8px;box-shadow:0 3px 12px #0005;color:#edf2f3}
+.story-fps-root .story-fps-sprint{background:#243b4de8;border-color:#9cb3c585}
+.story-fps-root .story-fps-interact{background:#48645ce8;border-color:#c6d4ba91}
+.story-fps-root .story-fps-joystick,.story-fps-root .story-fps-joystick div{box-shadow:none;border-width:1px;background:#8faba533}
+.story-fps-root .story-fps-progress i.done{background:#a7c2b0}
+.story-fps-root .story-fps-dialog button{background:#4a655d;border-color:#bacabc;border-radius:5px}
+.story-fps-root .story-fps-historical-action button{background:#4a655d;border-color:#bacabc}

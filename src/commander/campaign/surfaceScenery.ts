@@ -1,4 +1,5 @@
 import * as T from "three";
+import { createRegolithMaterial } from "../../presentation/realismAssets";
 import { makePlanet, disposePlanet } from "../celestial";
 import type { Destination } from "./environments";
 import { presentationBudgets } from "../../presentation/missionPresentation";
@@ -88,7 +89,7 @@ function createSky(
   const stars=quality==="battery"?350:quality==="quality"?1600:950;
   for(let i=0;i<stars;i++){
     const x=hash(i*4+1)*w,y=hash(i*4+2)*h;
-    const magnitude=.25+hash(i*4+3)*.65;
+    const magnitude=destination==="mars"?.05:.08+hash(i*4+3)*.15;
     const radius=i%43===0?1.4:.36+hash(i*4+4)*.55;
     ctx.fillStyle=`rgba(224,235,255,${magnitude})`;
     ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
@@ -121,7 +122,7 @@ export function installSurfaceScenery(
   const rocksGeom=new T.IcosahedronGeometry(1,quality==="quality"?1:0);
   geometries.push(rocksGeom);
   const dustyMap=createDustMap(destination,quality,textures);
-  const regolith=new T.MeshStandardMaterial({
+  const regolith=typeof window!=="undefined"?createRegolithMaterial(destination==="mars"?"mars":"moon",14,onSceneChange):new T.MeshStandardMaterial({
     color:"#ffffff",map:dustyMap||undefined,roughness:.99,metalness:0,
     bumpMap:quality==="battery"?null:dustyMap,bumpScale:.012,
     side:T.FrontSide,
@@ -171,27 +172,32 @@ export function installSurfaceScenery(
   pieces.instanceMatrix.needsUpdate=true;flecks.instanceMatrix.needsUpdate=true;
   group.add(pieces,flecks);
 
-  // Silhouette terrain behind the walkable field, not a new player obstacle.
+  // A continuous three-dimensional ridge field catches the same sunlight as
+  // the foreground. This replaces the old stacked flat silhouette billboards.
+  // The ring begins beyond the mission footprint and cannot obstruct a site.
   if(destination!=="earth"){
-    for(const [i,backZ] of [52,57,62].entries()){
-      const points:number[]=[];const faces:number[]=[];
-      const steps=62;
-      for(let k=0;k<=steps;k++){
-        const x=-64+k*128/steps;
-        const height=2.1+Math.abs(Math.sin(k*.37+i))*(2.0+i*1.2)+
-          Math.abs(Math.cos(k*.11-i))*(1.4+i*.65);
-        points.push(x,-.25,backZ,x,height-(i*.4),backZ);
-        if(k<steps){const j=k*2;faces.push(j,j+2,j+1,j+1,j+2,j+3);}
+    const sectors=quality==="battery"?48:96, rings=quality==="battery"?8:16;
+    const positions:number[]=[], indices:number[]=[], uvs:number[]=[];
+    for(let band=0;band<=rings;band++)for(let step=0;step<=sectors;step++){
+      const angle=step/sectors*Math.PI*2;
+      const radius=39+band/rings*60;
+      const x=Math.cos(angle)*radius,z=14+Math.sin(angle)*radius;
+      const ridge=Math.pow(Math.abs(Math.sin(angle*3.1+.8)*Math.cos(angle*6.7-.3)),1.5);
+      const slope=Math.min(1,band/rings*3);
+      const erosion=Math.sin(angle*19+radius*.12)*.45+Math.cos(angle*31-radius*.07)*.22;
+      const y=-.24+slope*(1.1+ridge*5.8+erosion);
+      positions.push(x,y,z);uvs.push(x/68,z/76);
+      if(band<rings&&step<sectors){
+        const a=band*(sectors+1)+step,b=a+sectors+1;
+        indices.push(a,a+1,b,a+1,b+1,b);
       }
-      const geo=new T.BufferGeometry();
-      geo.setAttribute("position",new T.Float32BufferAttribute(points,3));
-      geo.setIndex(faces);geo.computeVertexNormals();geometries.push(geo);
-      const mat=new T.MeshBasicMaterial({
-        color:destination==="mars"?["#634537","#815040","#9b6249"][i]:["#343b48","#252d39","#1a2130"][i],
-        side:T.DoubleSide,
-      });materials.push(mat);
-      group.add(new T.Mesh(geo,mat));
     }
+    const ridge=new T.BufferGeometry();
+    ridge.setAttribute("position",new T.Float32BufferAttribute(positions,3));
+    ridge.setAttribute("uv",new T.Float32BufferAttribute(uvs,2));
+    ridge.setIndex(indices);ridge.computeVertexNormals();geometries.push(ridge);
+    const landscape=new T.Mesh(ridge,regolith);
+    landscape.name="Sunlit continuous distant crater highlands";group.add(landscape);
   }
   createSky(group,destination,quality,geometries,materials,textures);
 

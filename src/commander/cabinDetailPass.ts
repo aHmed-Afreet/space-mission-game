@@ -1,4 +1,5 @@
 import * as T from "three";
+import {batchStaticVisuals} from "../presentation/staticBatch";
 import {RoundedBoxGeometry} from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 // Restrained procedural panel and cloth finishes, locally generated, no network.
@@ -9,6 +10,7 @@ export function installCabinDetail(
  metal:T.MeshStandardMaterial;fabric:T.MeshStandardMaterial},
  graphics:"quality"|"balanced"|"battery",
 ){
+ const root=new T.Group();root.name="Cabin static equipment details";scene.add(root);
  const ownedGeometry:T.BufferGeometry[]=[];
  const ownedTextures:T.Texture[]=[];
  const ownedMaterials:T.Material[]=[];
@@ -54,10 +56,10 @@ export function installCabinDetail(
   sx=1,sy=1,sz=1,rx=0,ry=0,rz=0){
   ownedGeometry.push(geo);
   const mesh=new T.Mesh(geo,mat);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);
-  mesh.rotation.set(rx,ry,rz);scene.add(mesh);return mesh;
+  mesh.rotation.set(rx,ry,rz);root.add(mesh);return mesh;
  }
  function bar(x:number,y:number,z:number,w:number,h:number,d:number,mat:T.Material,rot=0){
-  return add(graphics==="battery"?new T.BoxGeometry(1,1,1):new RoundedBoxGeometry(1,1,1,2,.13),mat,x,y,z,w,h,d,0,0,rot);
+  return add(graphics==="battery"?new T.BoxGeometry(1,1,1):new RoundedBoxGeometry(1,1,1,graphics==="quality"?2:1,.13),mat,x,y,z,w,h,d,0,0,rot);
  }
  function hose(points:[number,number,number][],radius:number,mat:T.Material,segments=20){
   const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));
@@ -65,10 +67,10 @@ export function installCabinDetail(
  }
  // Foredeck: tactile rotary dials and industrial bevel-rimmed instrument pods.
  for(const x of [-1.35,-.93,-.51,0,.51,.93,1.35]){
-  const y=1.09,z=-6.02;
-  add(new T.CylinderGeometry(.115,.115,.075,24),rubber,x,y,z,1,1,1,Math.PI/2);
-  add(new T.TorusGeometry(.115,.02,8,24),brushed,x,y,z+.045,1,1,1);
-  add(new T.CylinderGeometry(.035,.035,.09,12),fastener,x,y+.01,z+.07,1,1,1,Math.PI/2);
+  const y=.84,z=-6.35;
+  add(new T.CylinderGeometry(.07,.07,.045,16),rubber,x,y,z,1,1,1,Math.PI/2);
+  add(new T.TorusGeometry(.07,.012,6,16),brushed,x,y,z+.045,1,1,1);
+  add(new T.CylinderGeometry(.023,.023,.06,10),fastener,x,y+.01,z+.07,1,1,1,Math.PI/2);
  }
  for(const side of [-1,1]){
   // Curved pilot-seat bolsters, textile seams and four-point harness webbing.
@@ -101,7 +103,7 @@ export function installCabinDetail(
  // machined retaining hardware rather than flat billboard rectangles.
  const screws:{x:number;y:number;z:number}[]=[];
  for(const [x,y,z,w,h] of [
-  [-.93,1.48,-6.78,.8,.45],[0,1.48,-6.78,.82,.45],[.93,1.48,-6.78,.8,.45],
+  [-1.05,1.19,-6.35,.74,.39],[0,1.19,-6.35,.91,.39],[1.05,1.19,-6.35,.74,.39],
   [2.2,1.82,-3.35,1.1,.5],[-2.2,1.85,-3.35,1.16,.55],
  ]){
   for(const a of [-1,1])for(const b of [-1,1])
@@ -117,7 +119,7 @@ export function installCabinDetail(
   obj.position.set(pos.x,pos.y,pos.z);obj.rotation.set(Math.PI/2,0,0);
   obj.updateMatrix();mesh.setMatrixAt(i,obj.matrix);
  });
- mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);
+ mesh.instanceMatrix.needsUpdate=true;root.add(mesh);
  // Emergency handle hardware uses circular cross-sections with worn grips.
  for(const z of [-4.35,-1.35,2.35]){
   for(const side of [-1,1]){
@@ -126,10 +128,11 @@ export function installCabinDetail(
    bar(side*1.22,1.5,z+.215,.12,.07,.08,status);
   }
  }
+ const releaseBatches=batchStaticVisuals(root);
  return ()=>{
-  for(const obj of [...scene.children]){
-   if(obj instanceof T.InstancedMesh && obj.geometry===screwGeo)scene.remove(obj);
-  }
+  releaseBatches();
+  root.traverse(object=>{if(object instanceof T.InstancedMesh)object.dispose();});
+  root.removeFromParent();
   ownedGeometry.forEach(g=>g.dispose());
   ownedMaterials.forEach(m=>m.dispose());
   ownedTextures.forEach(t=>t.dispose());

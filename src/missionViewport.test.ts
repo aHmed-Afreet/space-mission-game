@@ -40,8 +40,12 @@ test("realism enhancement preserves performant instancing and six playable build
  const buildings=readFileSync("src/outpost/architectures.ts","utf8");
  assert.match(scene,/PlaneGeometry\(230,230,88,88\)/);
  assert.match(scene,/planeGeo\.computeVertexNormals\(\)/);
- assert.match(scene,/textureSurface\(\)/);
- assert.match(scene,/bumpMap=tx/);
+ assert.match(scene,/createRegolithMaterial\(session.destination,55\)/);
+ const assets=readFileSync("src/presentation/realismAssets.ts","utf8");
+ assert.match(assets,/normalMap: load\("normal"\)/);
+ assert.match(assets,/roughnessMap: load\("roughness"\)/);
+ assert.match(scene,/batchOutpostStructure/);
+ assert.match(assets,/map: load\("base", true\)/);
  assert.match(scene,/new T\.InstancedMesh\(/);
  assert.match(scene,/MeshPhysicalMaterial/);
  assert.match(scene,/Back-mounted|Pressure pack/);

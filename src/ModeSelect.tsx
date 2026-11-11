@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import LoadingScreen from "./LoadingScreen";
+import GlobalGraphics from "./GlobalGraphics";
 import "./home.css";
 
 const JuniorOutpost = lazy(() => import("./outpost/JuniorOutpost"));
@@ -11,57 +12,74 @@ const HowToPlay = lazy(() => import("./HowToPlay"));
 type GameMode = "outpost" | "strategy" | "commander" | "history" | "history_all" | "guide";
 
 const experiences: { id: GameMode; number: string; label: string; title: string; detail: string; meta: string }[] = [
-  { id: "outpost", number: "01", label: "NASA SPACE APPS CHALLENGE THEME", title: "Junior Astronaut — Space Outpost", detail: "Manage a Moon or Mars base. Balance life support, radiation shielding, power and greenhouse food production.", meta: "2 WORLDS · 10-SOL SURVIVAL MISSIONS" },
+  { id: "outpost", number: "01", label: "SURFACE OPERATIONS", title: "Junior Astronaut — Space Outpost", detail: "Manage a Moon or Mars base. Balance life support, radiation shielding, power and greenhouse food production.", meta: "2 WORLDS · 10-SOL SURVIVAL MISSIONS" },
   { id: "commander", number: "02", label: "PLAY IN FIRST PERSON", title: "Commander — Be the Astronaut", detail: "Move through a spacecraft, operate controls, repair equipment and explore the Moon.", meta: "18 MISSIONS · 6 CAMPAIGNS" },
-  { id: "strategy", number: "03", label: "DESIGN AND MAKE DECISIONS", title: "Mission Planner — Build & Launch", detail: "Choose spacecraft systems, balance resources and make engineering decisions. You do not fly in this mode.", meta: "20 PLANNING CHALLENGES" },
-  { id: "history", number: "04", label: "START WITH THE HIGHLIGHTS", title: "Featured Space Stories", detail: "Discover 10 real missions. Watch footage or an animation inside the game, then experience the mission.", meta: "10 FEATURED STORIES" },
-  { id: "history_all", number: "05", label: "BROWSE EVERY STORY", title: "Full Story Archive", detail: "Search all 55 historical missions. Read their history or try a playable reconstruction.", meta: "55 STORIES · SEARCH & FILTERS" },
+  { id: "strategy", number: "03", label: "DESIGN AND MAKE DECISIONS", title: "Mission Planner — Build & Launch", detail: "Configure spacecraft systems, balance resources and solve engineering challenges from mission control.", meta: "20 PLANNING CHALLENGES" },
+  { id: "history", number: "04", label: "START WITH THE HIGHLIGHTS", title: "Featured Space Stories", detail: "Explore ten pivotal missions through historical records, original footage and playable reconstructions.", meta: "10 FEATURED STORIES" },
+  { id: "history_all", number: "05", label: "BROWSE EVERY STORY", title: "Full Story Archive", detail: "Trace the history of exploration through 55 missions, from early capsules to robotic probes.", meta: "55 STORIES · SEARCH & FILTERS" },
   { id: "guide", number: "06", label: "LEARN THE CONTROLS", title: "How to Play", detail: "Learn how to move, INTERACT, follow mission objectives and save your progress.", meta: "IPAD · IPHONE · LAPTOP" },
 ];
+
+function MissionArrow() {
+  return <svg className="orbital-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10"/></svg>;
+}
+
+function MissionGlyph({ mode }: { mode: GameMode }) {
+  return <svg viewBox="0 0 120 100" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+    {mode === "outpost" ? <><path d="M10 80h100M20 80V53l10-14h36l12 14v27M28 80V54h42v26M38 80V61h22v19M78 61h23v19M87 61V45m-8 0h16M14 87h73"/><circle cx="93" cy="20" r="11"/><path d="M33 39V28h8v11m9 0V28h8v11M31 54h36"/></> :
+      mode === "commander" ? <><path d="m60 8 29 34 9 39H22l9-39L60 8ZM31 42h58M33 81l-9 9m63-9 9 9M45 42V27m30 15V27M60 43v27m-15-2h30M38 74h44"/><path d="m45 27 15-8 15 8-6 10H51l-6-10Z"/><circle cx="38" cy="55" r="3"/><circle cx="81" cy="55" r="3"/></> :
+      mode === "strategy" ? <><path d="M60 7c-9 10-12 23-12 38v33h24V45c0-15-3-28-12-38ZM48 56 35 72v15l13-9m24-22 13 16v15L72 78M48 47h24M53 27h14M55 83v10m10-10v10M12 46h20m56 0h20M24 41v10m72-10v10"/><circle cx="60" cy="36" r="4"/><path d="M18 17h17m-17 0v17m84 49H85m17 0V66"/></> :
+      mode === "history" ? <><circle cx="60" cy="50" r="28"/><ellipse cx="60" cy="50" rx="50" ry="13" transform="rotate(-28 60 50)"/><path d="m51 33 17 3 7 17-10 15-20-7-2-17 8-11Z"/><circle cx="95" cy="32" r="4"/><path d="M13 83h35m-35 5h23M94 78v13m-6-6h12"/></> :
+      mode === "history_all" ? <><path d="M25 20h64v67H25V20Zm8-9h64v68M40 36h34M40 44h23M40 71h34"/><circle cx="48" cy="58" r="5"/><path d="m53 58 17-4m-17 4 13 5M13 29v42"/></> :
+      <><circle cx="60" cy="50" r="36"/><path d="M60 28v30m-7 0h14M56 69h8M18 50h9m66 0h9M60 8v9m0 66v9"/><circle cx="60" cy="50" r="46" strokeDasharray="1 7"/></>}
+  </svg>;
+}
 
 export default function ModeSelect() {
   const [mode, setMode] = useState<GameMode | null>(null);
   if (!mode) {
     return <div className="orbital-landing">
       <header className="orbital-landing-nav">
-        <span className="orbital-mark">✦ <b>ORBITAL</b><small>MISSION LAB</small></span>
-        <button type="button" onClick={() => document.getElementById("orbital-experiences")?.scrollIntoView({behavior:"smooth"})}>EXPLORE MODES <span aria-hidden="true">↗</span></button>
+        <span className="orbital-mark"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="18" r="11"/><ellipse cx="18" cy="18" rx="17" ry="6" transform="rotate(-38 18 18)"/></svg><b>ORBITAL</b><small>MISSION LAB</small></span>
+        <div className="orbital-nav-actions"><GlobalGraphics/><button type="button" onClick={() => document.getElementById("orbital-experiences")?.scrollIntoView({behavior:"smooth"})}>EXPLORE MODES <MissionArrow/></button></div>
       </header>
       <section className="orbital-landing-hero" aria-labelledby="orbital-welcome-title">
         <div className="orbital-hero-picture" aria-hidden="true" />
         <div className="orbital-hero-content">
-          <span className="orbital-hero-overline"><i /> INTERACTIVE SPACE EXPLORATION</span>
-          <h1 id="orbital-welcome-title">SPACE<br/><em>MISSIONS.</em></h1>
-          <p>Build a sustainable Moon or Mars outpost, run spacecraft missions, or explore real space history. Balance oxygen, water, radiation protection, electricity and food to succeed. Progress is saved on this device.</p>
+          <span className="orbital-hero-overline"><i /> EXPLORE / ENGINEER / DISCOVER</span>
+          <h1 id="orbital-welcome-title">Your next mission<br/><em>starts here.</em></h1>
+          <p>Step inside a spacecraft. Build a base on another world. Engineer a journey beyond Earth. Six experiences, one mission lab.</p>
           <div className="orbital-hero-actions">
-            <button type="button" className="orbital-hero-primary" onClick={() => setMode("outpost")}>RUN SPACE OUTPOST <span aria-hidden="true">↗</span></button>
-            <button type="button" className="orbital-hero-secondary" onClick={() => setMode("commander")}>PLAY COMMANDER ↗</button>
-            <button type="button" className="orbital-hero-secondary" onClick={() => document.getElementById("orbital-experiences")?.scrollIntoView({behavior:"smooth"})}>CHOOSE AN EXPERIENCE ↓</button>
+            <button type="button" className="orbital-hero-primary" onClick={() => setMode("outpost")}>START SPACE OUTPOST <MissionArrow/></button>
+            <button type="button" className="orbital-hero-secondary" onClick={() => setMode("commander")}>PLAY COMMANDER <MissionArrow/></button>
+            <button type="button" className="orbital-hero-secondary" onClick={() => document.getElementById("orbital-experiences")?.scrollIntoView({behavior:"smooth"})}>ALL EXPERIENCES ↓</button>
           </div>
         </div>
-        <div className="orbital-hero-bottom"><span>01 / THE NEXT FRONTIER</span><span>SCROLL TO EXPLORE ↓</span></div>
+        <div className="orbital-hero-note"><span>EARTH ORBIT / EXPEDITION 49</span><p>A view from the International Space Station.<br/>Photography: NASA/JSC · Kate Rubins</p></div>
+        <div className="orbital-hero-bottom"><span>INDEPENDENT EDUCATIONAL SIMULATION</span><span>PROGRESS SAVED ON THIS DEVICE</span></div>
       </section>
       <section className="orbital-experiences" id="orbital-experiences" aria-labelledby="orbital-mode-heading">
         <div className="orbital-section-head">
-          <span className="orbital-small-label">MISSION SELECTION / 6 EXPERIENCES</span>
-          <h2 id="orbital-mode-heading">Choose your <em>experience.</em></h2>
-          <p>Each experience has different controls and objectives. Choose one to begin.</p>
+          <span className="orbital-small-label">OPERATIONS DIRECTORY / 6 EXPERIENCES</span>
+          <h2 id="orbital-mode-heading">Where will you <em>go next?</em></h2>
+          <p>First-person exploration, surface survival, engineering and the real history of spaceflight. Choose your mission.</p>
         </div>
         <div className="orbital-mode-grid">
           {experiences.map(item => <button type="button" className={"orbital-mode-tile orbital-mode-"+item.id} key={item.id} onClick={() => setMode(item.id)}>
             <span className="orbital-mode-top"><span>{item.label}</span><span>{item.number} / 06</span></span>
-            <span className="orbital-mode-art" aria-hidden="true"><i/><b/></span>
+            <span className="orbital-mode-art" aria-hidden="true"><MissionGlyph mode={item.id}/></span>
             <strong>{item.title}</strong>
             <span className="orbital-mode-detail">{item.detail}</span>
-            <span className="orbital-mode-bottom"><span>{item.meta}</span><b>EXPLORE ↗</b></span>
+            <span className="orbital-mode-bottom"><span>{item.meta}</span><b>EXPLORE <MissionArrow/></b></span>
           </button>)}
         </div>
       </section>
       <footer className="orbital-site-footer">
-        <span>✦ ORBITAL MISSION LAB</span>
+        <span>ORBITAL / MISSION LAB</span>
         <span>Independent educational simulation · Not affiliated with NASA</span>
-        <a href="./assets/backgrounds/ATTRIBUTION.txt" target="_blank" rel="noopener noreferrer">Background photo credit ↗</a>
-        <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy & local saves ↗</a>
+        <a href="./assets/realism/ATTRIBUTION.md" target="_blank" rel="noopener noreferrer">3D asset credits</a>
+        <a href="./assets/backgrounds/ATTRIBUTION.txt" target="_blank" rel="noopener noreferrer">Background photo credit</a>
+        <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy & local saves</a>
       </footer>
     </div>;
   }

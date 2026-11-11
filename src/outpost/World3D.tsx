@@ -4,31 +4,40 @@ import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearest
 import {CROPS,forecast,type Outpost} from "./engine";
 import type {FacilityId} from "./FacilityScene";
 import {buildDistinctExterior,furnishDistinctInterior,type StructureKit} from "./architectures";
+import {attachRealismModel,createRegolithMaterial,createTechnicalMaterial,rigAstronautModel} from "../presentation/realismAssets";
+import {RoomEnvironment} from "three/examples/jsm/environments/RoomEnvironment.js";
+import {readPreferences,type PlayerPreferences} from "../commander/campaign/preferences";
+import {graphicsRatioBounds,adaptiveGraphicsRatio,publishGraphicsTrace} from "../commander/graphicsPolicy";
+import {facilityDisplay,batchOutpostStructure,outpostTerrainHeight} from "./visualFinish";
 import "./world3d.css";
 export type Movement={x:number;y:number;run:boolean};
 export type CameraDelta={yaw:number;pitch:number};
 export type WorldPose={position:Point2;yaw:number;pitch:number};
 export type Proximity={title:string;kind:"door"|"console"|"exit"|"meal"|"sleep";id:FacilityId}|null;
 type Props={
- session:Outpost;room:FacilityId|null;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
+ session:Outpost;room:FacilityId|null;graphics:PlayerPreferences["graphics"];movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
  onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;onRoutine:(kind:"meal"|"sleep")=>void;
  onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
 function createScene(session:Outpost,room:FacilityId|null){
  const scene=new T.Scene(),dark=session.destination==="moon"&&[5,6].includes(session.sol);
  const dust=session.destination==="mars"&&[4,5,8].includes(session.sol);
- scene.background=new T.Color(dust?0x9a5f49:dark?0x050a14:session.destination==="mars"?0x5c3942:0x060d1a);
- scene.fog=new T.FogExp2(scene.background as T.Color,room?0.022:dust?0.025:0.010);
+ scene.background=new T.Color(room?0x11171c:dust?0x98715a:dark?0x010204:session.destination==="mars"?0xb58d70:0x010204);
+ // The Moon has no atmospheric haze; Mars has dust, with reduced visibility
+ // during the existing storm sols. Cabin surfaces remain crisp at close range.
+ if(!room&&session.destination==="mars")scene.fog=new T.FogExp2(scene.background as T.Color,dust?.024:.0055);
  const materials:T.Material[]=[],geometries:T.BufferGeometry[]=[],textures:T.Texture[]=[];
+ const referenceAssets:{dispose:()=>void}[]=[];
+ const externalProps:T.Box3[]=[];
  const mat=(color:number,metalness=.22,roughness=.55,emissive=0x000000,emissiveIntensity=0)=> {
    const v=new T.MeshStandardMaterial({color,metalness,roughness,emissive,emissiveIntensity});
    materials.push(v);return v;
  };
- const hull=mat(0xb4bec0,.58,.33),trim=mat(0x273e51,.65,.34),darkSteel=mat(0x1b303f,.65,.34),
+ const hull=mat(0xd4d3cb,.32,.56),trim=mat(0x485057,.58,.41),darkSteel=mat(0x283038,.52,.47),
   glass=mat(0x316675,.42,.16,0x193e4c,.13),gold=mat(0xd8a55c,.75,.27),
-  glow=mat(0x90ebd4,.2,.2,0x4aaf9e,1.5),red=mat(0xcc7151,.24,.4,0x9e4230,.25),
-  solarMat=mat(0x17344c,.65,.2,0x0a2332,.24),rubber=mat(0x1b232c,.08,.9),
-  green=mat(0x3ca868,.1,.75,0x255e36,.18),soil=mat(0x342d2a,.1,.9);
+  glow=mat(0xc6d9d6,.15,.4,0x91bab8,.75),red=mat(0xcc7151,.24,.4,0x9e4230,.25),
+  solarMat=mat(0x152333,.58,.31),rubber=mat(0x1b232c,.08,.9),
+  green=mat(0x528043,.03,.88),soil=mat(0x342d2a,.1,.9);
  const world=new T.Group();scene.add(world);
  const boxGeom=new T.BoxGeometry(1,1,1),sphereGeom=new T.SphereGeometry(1,18,12),cylGeom=new T.CylinderGeometry(1,1,1,16);
  geometries.push(boxGeom,sphereGeom,cylGeom);
@@ -50,24 +59,6 @@ function createScene(session:Outpost,room:FacilityId|null){
  }
  function light(parent:T.Object3D,x:number,y:number,z:number,c:number,intensity:number,range:number){
    const o=new T.PointLight(c,intensity,range,2);o.position.set(x,y,z);parent.add(o);return o;
- }
- function textureSurface(){
-   // Offline procedural regolith texture: mineral bands, granular variation
-   // and small crater rims rather than repeated low-resolution sine stripes.
-   const size=512,canvas=document.createElement("canvas");canvas.width=canvas.height=size;
-   const ctx=canvas.getContext("2d");if(!ctx)return null;
-   const pixels=ctx.createImageData(size,size);
-   const hash=(x:number,y:number)=>{const n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n);};
-   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-     const bands=Math.sin(x*.026+y*.018)*10+Math.cos(x*.074-y*.053)*8;
-     const grain=(hash(x,y)-.5)*38+(hash(x>>2,y>>2)-.5)*22;
-     const crater=-13*Math.pow(Math.max(0,1-Math.abs(Math.hypot(x%127-64,y%113-54)-20)/5),2);
-     const n=Math.max(100,Math.min(238,191+bands+grain+crater)),i=(y*size+x)*4;
-     pixels.data[i]=n;pixels.data[i+1]=n;pixels.data[i+2]=n;pixels.data[i+3]=255;
-   }
-   ctx.putImageData(pixels,0,0);
-   const t=new T.CanvasTexture(canvas);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(18,18);
-   t.anisotropy=4;t.colorSpace=T.SRGBColorSpace;textures.push(t);return t;
  }
  // Subtle deterministic panel wear, seams, and rivets make the structural
  // material more convincing than a single flat-colored Three.js primitive.
@@ -94,11 +85,11 @@ function createScene(session:Outpost,room:FacilityId|null){
  }
  const metalDetail=engineeringPanelTexture();
  if(metalDetail){hull.map=metalDetail;hull.needsUpdate=true;}
- const sun=new T.DirectionalLight(dark?0x6475a8:dust?0xe8ae8a:0xffedd3,dark?.34:2.45);
- sun.position.set(-27,42,-20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+ const sun=new T.DirectionalLight(dark?0x9ba9bc:dust?0xffd4ad:0xfff1dc,room?.28:dark?.12:dust?1.15:3.1);
+ sun.position.set(-31,23,-24);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
  sun.shadow.camera.left=-36;sun.shadow.camera.right=36;sun.shadow.camera.top=36;sun.shadow.camera.bottom=-36;
  sun.shadow.normalBias=.035;scene.add(sun);
- scene.add(new T.HemisphereLight(room?0xe3effa:dark?0x2b395b:dust?0x996d64:0xb0cce2,room?0x526675:0x171b27,room?1.75:dark?.34:1.15));
+ scene.add(new T.HemisphereLight(room?0xf1eee6:dark?0x737f96:dust?0xc5a98a:session.destination==="mars"?0xe0c8a9:0xb5bdcb,room?0x45505a:0x34302b,room?1.45:dark?.18:session.destination==="mars"?.83:.42));
  const foliage: T.Object3D[]=[];
  const batteryLights:T.MeshStandardMaterial[]=[];
  const lamps:T.PointLight[]=[];
@@ -110,43 +101,38 @@ function createScene(session:Outpost,room:FacilityId|null){
  function nameplate(text:string,parent:T.Object3D,y:number){
    const label=document.createElement("canvas");label.width=512;label.height=128;
    const ctx=label.getContext("2d");if(!ctx)return;
-   ctx.fillStyle="#092535d9";ctx.fillRect(0,11,512,96);
-   ctx.strokeStyle="#89e4ce";ctx.lineWidth=5;ctx.strokeRect(6,15,500,88);
+   ctx.fillStyle="#111a1de6";ctx.fillRect(0,11,512,96);
+   ctx.strokeStyle="#9caaa7";ctx.lineWidth=2;ctx.strokeRect(6,15,500,88);
    ctx.font="bold 35px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
-   ctx.fillStyle="#e8fff5";ctx.fillText(text.toUpperCase(),256,61,470);
+   ctx.fillStyle="#e1e7e4";ctx.fillText(text.toUpperCase(),256,61,470);
    const tex=new T.CanvasTexture(label);textures.push(tex);
-   const sm=new T.SpriteMaterial({map:tex,depthTest:false,transparent:true});
+   const sm=new T.SpriteMaterial({map:tex,depthTest:true,transparent:true});
    materials.push(sm);const sprite=new T.Sprite(sm);
-   sprite.position.set(0,y,0);sprite.scale.set(4.8,1.2,1);parent.add(sprite);
+   sprite.position.set(0,y,0);sprite.scale.set(3.6,.9,1);parent.add(sprite);
    return sprite;
  }
  if(!room){
-   const surface=mat(session.destination==="mars"?0x8e6252:0x686973,.03,.96);
-   const tx=textureSurface();
-   if(tx){surface.map=tx;surface.bumpMap=tx;surface.bumpScale=.08;surface.needsUpdate=true;}
+   const surface=createRegolithMaterial(session.destination,55);materials.push(surface);
    // Terrain is level in the playable base; farther away it becomes
    // continuous, shadowed ridges and shallow impact basins.
    const planeGeo=new T.PlaneGeometry(230,230,88,88);
    const verts=planeGeo.attributes.position;
    for(let i=0;i<verts.count;i++){
-     const x=verts.getX(i),z=-verts.getY(i),r=Math.hypot(x,z);
-     const blend=Math.max(0,Math.min(1,(r-29)/22));
-     const hills=Math.sin(x*.094+z*.021)*2.7+Math.cos(z*.121-x*.04)*1.6+Math.sin(x*.23+z*.15)*.7;
-     const crater=-2.8*Math.exp(-Math.pow((Math.hypot(x+35,z-49)-15)/7,2));
-     verts.setZ(i,(hills+crater)*blend);
+     const x=verts.getX(i),z=-verts.getY(i);
+     verts.setZ(i,outpostTerrainHeight(x,z));
    }
    planeGeo.computeVertexNormals();geometries.push(planeGeo);
-   const ground=mesh(planeGeo,surface);ground.rotation.x=-Math.PI/2;ground.position.y=-.1;ground.receiveShadow=true;ground.castShadow=false;
+   const ground=mesh(planeGeo,surface);ground.rotation.x=-Math.PI/2;ground.position.y=0;ground.receiveShadow=true;ground.castShadow=false;
    // Repeated rocks use instanced geometry to keep the mobile draw call count low.
-   const rockGeo=new T.DodecahedronGeometry(1,0);geometries.push(rockGeo);
+   const rockGeo=new T.IcosahedronGeometry(1,1);geometries.push(rockGeo);
    const rockCount=320;
-   const rocks=new T.InstancedMesh(rockGeo,mat(session.destination==="mars"?0xa58070:0x8d9095,.05,.96),rockCount);
+   const rocks=new T.InstancedMesh(rockGeo,mat(session.destination==="mars"?0x92715a:0x8b8881,.02,.97),rockCount);
    const dummy=new T.Object3D();
    for(let i=0;i<rockCount;i++){
      const a=i*2.39996,r=6+Math.sqrt(i)*3.25,x=Math.cos(a)*r,z=Math.sin(a)*r;
      // All matrices are initialized; keep rocks clear of the base paths.
      const hidden=Math.abs(x)<23&&Math.abs(z)<25;
-     dummy.position.set(hidden?200+i:x,.06+(i%3)*.025,hidden?200+i:z);
+     dummy.position.set(hidden?200+i:x,outpostTerrainHeight(x,z)+.06,hidden?200+i:z);
      dummy.rotation.set((i%7)*.15,a,(i%5)*.09);
      const width=.22+(i%11)*.11;dummy.scale.set(width,.12+(i%6)*.15,width*(.8+(i%3)*.29));
      dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
@@ -155,16 +141,9 @@ function createScene(session:Outpost,room:FacilityId|null){
    rocks.instanceMatrix.needsUpdate=true;
    if(rocks.instanceColor)rocks.instanceColor.needsUpdate=true;
    rocks.castShadow=false;rocks.receiveShadow=true;world.add(rocks);
-   // Broad, irregular distant formations, not toy-like five-sided cones.
-   const ridgeMat=mat(session.destination==="mars"?0x684745:0x555964,.04,.98);
-   const ridgeGeo=new T.IcosahedronGeometry(1,1);geometries.push(ridgeGeo);
-   for(let i=0;i<30;i++){
-     const a=i/30*Math.PI*2,rad=76+(i%5)*2.3,h=3+(i*13%8);
-     const ridge=mesh(ridgeGeo,ridgeMat);
-     ridge.position.set(Math.sin(a)*rad,h*.48-1.9,Math.cos(a)*rad);
-     ridge.scale.set(9+(i%5)*2.3,h,8+(i%4)*2.1);
-     ridge.rotation.y=a;ridge.castShadow=false;
-   }
+   // The same continuous, scanned-material heightfield forms the horizon.
+   // Separate enlarged boulders would read as a ring of toy mountains and
+   // introduce mismatched ground seams; distant relief is already in its vertices.
    // Scene constellations and distant Earth/Phobos.
    const starPositions=new Float32Array(900*3);
    for(let i=0;i<900;i++){const a=i*2.42,b=.08+(i%91)/100*Math.PI*.43,r=95;
@@ -172,7 +151,7 @@ function createScene(session:Outpost,room:FacilityId|null){
    }
    const starGeo=new T.BufferGeometry();geometries.push(starGeo);
    starGeo.setAttribute("position",new T.BufferAttribute(starPositions,3));
-   const starMat=new T.PointsMaterial({color:0xc9e7ef,size:.19,sizeAttenuation:true,transparent:true,opacity:dark?1:.55});materials.push(starMat);
+   const starMat=new T.PointsMaterial({color:0xc9e7ef,size:.19,sizeAttenuation:true,transparent:true,opacity:session.destination==="mars"?0:dark?.8:.28});materials.push(starMat);
    const stars=new T.Points(starGeo,starMat);scene.add(stars);
    // NASA Blue Marble Earth texture already preserved in this repository.
    // From the Moon, Earth is a real mapped globe instead of a flat blue orb.
@@ -183,7 +162,7 @@ function createScene(session:Outpost,room:FacilityId|null){
      planetMaterial.map=earth;planetMaterial.needsUpdate=true;
    }
    const planet=mesh(sphereGeom,planetMaterial);
-   planet.scale.setScalar(session.destination==="moon"?4.7:2.2);planet.position.set(48,35,-85);planet.castShadow=false;
+   planet.scale.setScalar(session.destination==="moon"?2.3:.32);planet.position.set(48,35,-85);planet.castShadow=false;
    for(const f of BASE_FACILITIES){
      const group=new T.Group();group.position.set(f.x,0,f.z);
      const facing=Math.atan2(-f.x,-f.z);group.rotation.y=facing;world.add(group);
@@ -193,11 +172,29 @@ function createScene(session:Outpost,room:FacilityId|null){
      geometries.push(circleGeo);
      const ring=mesh(circleGeo,glow,goal);ring.rotation.x=-Math.PI/2;ring.castShadow=false;
      markers.set(f.id,goal);
+     externalProps.push(new T.Box3(new T.Vector3(f.x-f.radius*.72,.3,f.z-f.radius*.72),new T.Vector3(f.x+f.radius*.72,4.1,f.z+f.radius*.72)));
      // Each structure gets a genuine purpose-specific silhouette and details.
      // Only the airlock interface is consistent across the six designs.
      const leaf=buildDistinctExterior(f.id,kit,group,f);
      doors.set(f.id,{mesh:leaf,open:0});
+     if(f.id==="habitat")referenceAssets.push(attachRealismModel(group,"habitat",{extent:6.8,position:[0,.1,-1.1],rotation:[0,Math.PI,0],onLoad:model=>{
+       // Reuse the engineered pressure-vessel geometry, with original neutral
+       // thermal finishes. NASA identifiers on source maps are not displayed
+       // on the fictional Alpha/Nova base.
+       model.traverse(object=>{if(!(object instanceof T.Mesh))return;
+         const mats=Array.isArray(object.material)?object.material:[object.material];
+         for(const material of mats)if(material instanceof T.MeshStandardMaterial){
+           if(material.map){textures.push(material.map);material.map=null;}
+           material.color.set(0xc7c7bc);material.roughness=.72;material.metalness=.12;material.needsUpdate=true;
+         }
+       });
+       (leaf.userData.pressureBody as T.Group).visible=false;
+     }}));
    }
+   // A genuine self-hosted science rover is parked off the marked routes.
+   referenceAssets.push(attachRealismModel(world,"rover",{extent:3.6,position:[8,0,0],rotation:[0,-.7,0],onLoad:model=>{
+     world.updateMatrixWorld(true);externalProps.push(new T.Box3().setFromObject(model));
+   }}));
    // Walkway lights indicate routes to every building.
    for(const f of BASE_FACILITIES){const door=doorPosition(f);
      for(let t=.17;t<1;t+=.19){const x=door.x*t,z=door.z*t;
@@ -210,9 +207,13 @@ function createScene(session:Outpost,room:FacilityId|null){
    }
  }else{
    // In-room geometry is actual 3D, navigated by the same avatar and camera.
-   const floor=box(world,9,.4,9,0,-.21,0,trim);
-   const roof=box(world,9,.35,9,0,4.0,0,hull);
-   const wall=mat(0x6d838a,.6,.35);
+   const floor=box(world,9,.4,9,0,-.21,0,mat(0x636965,.06,.86));
+   const greenhouseRoof=mat(0xb7c6b4,.15,.24);
+   if(room==="greenhouse"){greenhouseRoof.transparent=true;greenhouseRoof.opacity=.22;greenhouseRoof.depthWrite=false;}
+   const roof=box(world,9,.35,9,0,4.0,0,room==="greenhouse"?greenhouseRoof:hull);
+   roof.castShadow=room!=="greenhouse";
+   const wall=mat(room==="shield"?0x777972:0xc1c3b9,.15,.78);
+   if(metalDetail){wall.map=metalDetail;wall.needsUpdate=true;}
    box(world,9,4,.3,0,1.95,-4.5,wall);
    box(world,.3,4,9,-4.5,1.95,0,wall);
    box(world,.3,4,9,4.5,1.95,0,wall);
@@ -223,24 +224,27 @@ function createScene(session:Outpost,room:FacilityId|null){
    const leaf=box(world,1.96,2.75,.22,0,1.44,4.53,glass);
    doors.set(room,{mesh:leaf,open:0});
    for(let i=0;i<6;i++){
-     box(world,.12,.035,8,-4+i*1.55,.016,0,gold);
-     box(world,8,.035,.1,0,.015,-4+i*1.55,glow);
+     box(world,.025,.015,8,-4+i*1.55,.016,0,rubber);
+     box(world,8,.015,.025,0,.015,-4+i*1.55,rubber);
    }
    const control=box(world,3.1,1.2,.9,0,.85,-2.85,darkSteel);
    box(world,2.75,.10,.7,0,1.55,-2.85,gold);
    const panel=box(world,2.48,1.2,.08,0,2.25,-3.16,glass);
    // Glowing console status indicators.
-   const screen=box(world,2.0,.72,.12,0,2.27,-3.1,glow);
-   batteryLights.push(screen.material as T.MeshStandardMaterial);
+   const readout=facilityDisplay(room,session.oxygen,session.water,session.battery);
+   const screenMaterial=mat(0xffffff,.02,.62,0xffffff,.42);
+   if(readout){textures.push(readout);screenMaterial.map=readout;screenMaterial.emissiveMap=readout;}
+   const screen=box(world,2.5,1.25,.065,0,2.27,-3.06,screenMaterial);
+   screen.rotation.x=-.07;
    for(let i=0;i<8;i++)box(world,.13,.07,.12,(i%4-1.5)*.5,1.61,-2.36,i%3?glow:red);
    for(let i=0;i<4;i++)box(world,.8,2.4,.85,(i%2?1:-1)*3.3,1.45,-2.4+i*1.4,darkSteel);
-   for(let i=0;i<6;i++){const x=(i-2.5)*1.15;
-     box(world,.08,.12,8,x,3.74,0,glow);
+   for(const x of [-2.65,2.65]){
+     box(world,.24,.08,6.6,x,3.72,0,mat(0xf0ece2,.05,.6,0xf0e4cc,1.2));
    }
-   for(let i=0;i<4;i++){const p=light(world,(i%2?2.5:-2.5),3.45,i<2?-2.6:2.7,0xd5f2ff,2.6,9);lamps.push(p);}
-   lamps.push(light(world,0,3.45,0,0xe4f8ff,1.9,10));
+   for(const z of [-2.2,2.2])lamps.push(light(world,0,3.35,z,room==="greenhouse"?0xe6f1dc:0xffefdb,2.6,8));
    // Every room now contains equipment appropriate to that facility.
    furnishDistinctInterior(room,kit,world);
+   if(room==="recycle"||room==="solar"||room==="battery")referenceAssets.push(attachRealismModel(world,"equipment",{extent:1.6,position:[-3.15,.05,2.55],rotation:[0,Math.PI/2,0],onLoad:model=>{world.updateMatrixWorld(true);externalProps.push(new T.Box3().setFromObject(model));}}));
    if(room==="habitat"){
      for(const [x,z,color] of [[CREW_BED.x,CREW_BED.z,0x9dd4fc],[CREW_DINING.x,CREW_DINING.z,0xe6d7a0]]){
        const markerMat=mat(color,.18,.35,color,.45);
@@ -253,7 +257,7 @@ function createScene(session:Outpost,room:FacilityId|null){
  // Gather the large opaque static structures once for third-person camera
  // obstruction tests. Ray/box tests are far cheaper than raycasting every
  // triangle of each machine on every animation frame.
- const cameraSolids:T.Box3[]=[];
+ const cameraSolids:T.Box3[]=externalProps;
  if(room){
   world.updateMatrixWorld(true);
   world.traverse(o=>{
@@ -269,11 +273,11 @@ function createScene(session:Outpost,room:FacilityId|null){
  }
  const astro=new T.Group();world.add(astro);
  // Layered expedition suit, visible from the third-person camera.
- const suit=mat(0xe8e9dd,.12,.83),visor=mat(0x19374b,.62,.13,0x28485b,.35),
+ const suit=createTechnicalMaterial("fabric",0xe8e9dd),visor=mat(0x19374b,.62,.13,0x28485b,.35),
    suitDark=mat(0x344b59,.4,.58),fabric=mat(0xc1c9c6,.09,.92),
    harness=mat(0x67757a,.36,.59),suitBlue=mat(0x28648a,.4,.46);
  const visorGlass=new T.MeshPhysicalMaterial({color:0x244455,metalness:.55,roughness:.09,clearcoat:1,clearcoatRoughness:.08});
- materials.push(visorGlass);
+ materials.push(suit,visorGlass);
  const torso=mesh(new T.CapsuleGeometry(.37,.54,5,12),suit,astro);geometries.push(torso.geometry);
  torso.position.y=1.24;
  const helmet=mesh(sphereGeom,suit,astro);helmet.position.y=2.05;helmet.scale.set(.37,.38,.37);
@@ -306,16 +310,27 @@ function createScene(session:Outpost,room:FacilityId|null){
    box(leg,.30,.12,.28,0,-.43,-.08,harness);
    limbs.push(leg);
  }
- // Equipment accent on the astronaut chest.
+ // Equipment accent remains available as a low-cost loading fallback.
  box(astro,.42,.16,.09,0,1.43,-.36,glow);
- const camera=new T.PerspectiveCamera(64,1,.12,170);
+ const suitFallback=[...astro.children];
+ let referenceSuit:ReturnType<typeof rigAstronautModel>|null=null;
+ referenceAssets.push(attachRealismModel(astro,"astronaut",{extent:2.3,rotation:[0,Math.PI,0],onLoad:model=>{
+   const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
+   const adjust=2.25/Math.max(.1,size.y);model.scale.multiplyScalar(adjust);model.position.multiplyScalar(adjust);
+   referenceSuit=rigAstronautModel(model);referenceSuit.update(0,0);
+   suitFallback.forEach(object=>object.visible=false);
+ }}));
+ const releaseBatches=batchOutpostStructure(world,[astro,...[...doors.values()].map(d=>d.mesh),...[...markers.values()],...solarPanels,...foliage,...(doors.get("habitat")?.mesh.userData.pressureBody?[doors.get("habitat")!.mesh.userData.pressureBody as T.Group]:[])]);
+ const camera=new T.PerspectiveCamera(59,1,.12,250);
  const dispose=()=>{
+   referenceSuit?.dispose();referenceAssets.forEach(asset=>asset.dispose());
+   releaseBatches();
    world.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.InstancedMesh){o.geometry.dispose();}});
    materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());
  };
- return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,dispose};
+ return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
 }
-export default function World3D({session,room,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
+export default function World3D({session,room,graphics,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
  const latest=useRef({session,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
  latest.current={session,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
@@ -324,12 +339,19 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
    let renderer:T.WebGLRenderer;
    try{renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});}
    catch{latest.current.onError("3D graphics could not start. Enable WebGL in your browser.");return;}
+   let preferences;try{preferences=readPreferences(localStorage);}catch{preferences=readPreferences();}
+   preferences={...preferences,graphics};
    const scene=createScene(latest.current.session,room);
-   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
-   renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+   const bounds=graphicsRatioBounds(window.devicePixelRatio||1,preferences.graphics);
+   let pixelRatio=bounds.limit;renderer.setPixelRatio(pixelRatio);
+   renderer.shadowMap.enabled=preferences.graphics!=="battery";renderer.shadowMap.type=T.PCFSoftShadowMap;
    renderer.outputColorSpace=T.SRGBColorSpace;
    renderer.toneMapping=T.ACESFilmicToneMapping;
-   renderer.toneMappingExposure=1.12;
+   renderer.toneMappingExposure=1.0;
+   const pmrem=new T.PMREMGenerator(renderer),lightingRoom=new RoomEnvironment();
+   const lighting=pmrem.fromScene(lightingRoom,.04, .1, 30);
+   scene.scene.environment=lighting.texture;scene.scene.environmentIntensity=room?.42:.28;
+   lightingRoom.dispose();pmrem.dispose();
    container.appendChild(renderer.domElement);
    renderer.domElement.className="jm-world-canvas";
    const initial=spawn.current;
@@ -342,6 +364,7 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
    let lookPointer:number|null=null,px=0,py=0;
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
    let entered=false,lastBattery=-1,lastReported=0,cameraInitialized=false;
+   let gait=0,smoothedSpeed=0,sampleStart=performance.now(),sampleFrames=0,measuredFps:number|null=null;
    let interactRequest=false;
    const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();
      if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){
@@ -400,18 +423,30 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
      const x=Math.max(-1,Math.min(1,motion.x+right)),y=Math.max(-1,Math.min(1,motion.y+front));
      const running=motion.run||keys.has("shift");
      const next=walkStep(state.position,state.yaw,x,y,dt*(running?1.43:1),Boolean(room),state.open);
+     if(!room){const dx=next.x-8,dz=next.z,r=Math.hypot(dx,dz);
+       if(r<2.15){next.x=8+(r>.001?dx/r:1)*2.15;next.z=(r>.001?dz/r:0)*2.15;}}
      state.position.x=next.x;state.position.z=next.z;
      if(now-lastReported>250){
        lastReported=now;
        if(!room)latest.current.onPosition({x:state.position.x,z:state.position.z});
      }
-     const speed=Math.hypot(x,y);
-     const bob=Math.sin(now*.011*(running?1.25:1))*Math.min(.052,speed*.052);
+     const speed=Math.min(1,Math.hypot(x,y));
+     smoothedSpeed+=(speed-smoothedSpeed)*(1-Math.exp(-dt*9));
+     // Exterior gait reflects reduced gravity without altering mission travel
+     // distances. A slow lunar lope and restrained Martian step replace a
+     // fast terrestrial swing; idle motion is only a subtle suit breath.
+     const lunar=!room&&data.destination==="moon";
+     gait+=dt*(room?7.6:lunar?4.8:6.3)*(running?1.25:1)*Math.max(.12,smoothedSpeed);
+     const lift=lunar?.095:room?.023:.045;
+     const bob=Math.pow(Math.sin(gait),2)*lift*smoothedSpeed+Math.sin(now*.0018)*.003;
      scene.astro.position.set(state.position.x,bob,state.position.z);
-     // The astronaut faces the movement vector, with the camera behind it.
-     if(speed>.04){const facing=Math.atan2(-Math.sin(state.yaw)*y+Math.cos(state.yaw)*x,-Math.cos(state.yaw)*y-Math.sin(state.yaw)*x);
-       scene.astro.rotation.y=facing-Math.PI;}
-     scene.limbs.forEach((limb,i)=>{limb.rotation.x=Math.sin(now*.012+(i%2?Math.PI:0))*.42*speed;});
+     if(speed>.04){const facing=Math.atan2(-Math.sin(state.yaw)*y+Math.cos(state.yaw)*x,-Math.cos(state.yaw)*y-Math.sin(state.yaw)*x)-Math.PI;
+       const turn=Math.atan2(Math.sin(facing-scene.astro.rotation.y),Math.cos(facing-scene.astro.rotation.y));
+       scene.astro.rotation.y+=turn*(1-Math.exp(-dt*10));}
+     scene.updateReferenceSuit(gait/6,smoothedSpeed);
+     scene.limbs.forEach((limb,i)=>{const side=i<2?-1:1,isLeg=i%2===1;
+       limb.rotation.x=Math.sin(gait+(isLeg?0:Math.PI))*side*(isLeg?.36:.25)*smoothedSpeed;
+       limb.rotation.z=isLeg?0:side*.065;});
      // Collision-aware 3rd-person camera: every indoor position stays below
      // the ceiling and inside the room shell, with no wall/console clipping.
      const back=new T.Vector3(Math.sin(state.yaw),0,Math.cos(state.yaw));
@@ -422,7 +457,7 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
        state.position.z+back.z*(room?3.3:6.2));
      const capped=room?confinedInteriorCamera(wanted):wanted;
      const desired=new T.Vector3(capped.x,capped.y,capped.z);
-     if(room){
+     if(scene.cameraSolids.length){
        const vec=desired.clone().sub(focus);
        const length=vec.length();
        if(length>.01){
@@ -476,12 +511,19 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
      const power=data.battery/100;
      if(Math.round(data.battery)!==lastBattery){
        lastBattery=Math.round(data.battery);
-       scene.lamps.forEach(l=>l.intensity=power<.08?.55:power<.22?1.05:2.1);
-       scene.batteryLights.forEach(m=>m.emissiveIntensity=power<.08?.08:power<.22?.25:1.4);
+       scene.lamps.forEach(l=>l.intensity=power<.08?.35:power<.22?1.05:2.6);
+       scene.batteryLights.forEach(m=>m.emissiveIntensity=power<.08?.08:power<.22?.25:.75);
      }
      scene.foliage.forEach((o,i)=>{const growth=Math.max(.2,.35+data.crop/75);
        o.scale.setScalar(growth*(.93+(i%3)*.05));});
      scene.solarPanels.forEach((o,i)=>o.rotation.y=Math.sin(now*.00012+i*.28)*.14);
+     sampleFrames++;
+     if(now-sampleStart>2500){
+       measuredFps=sampleFrames*1000/(now-sampleStart);sampleFrames=0;sampleStart=now;
+       const nextRatio=adaptiveGraphicsRatio(pixelRatio,bounds,measuredFps,30);
+       if(nextRatio!==pixelRatio){pixelRatio=nextRatio;renderer.setPixelRatio(pixelRatio);resize();}
+       publishGraphicsTrace(renderer.domElement,{preset:preferences.graphics,deviceRatio:window.devicePixelRatio||1,ratio:pixelRatio,...bounds,measuredFps,targetFps:30});
+     }
      renderer.render(scene.scene,scene.camera);
      frame=requestAnimationFrame(animate);
    };
@@ -490,8 +532,8 @@ export default function World3D({session,room,movement,lookDelta,spawn,interactS
      document.removeEventListener("keydown",down);document.removeEventListener("keyup",up);window.removeEventListener("blur",release);
      renderer.domElement.removeEventListener("pointerdown",pointerDown);renderer.domElement.removeEventListener("pointermove",pointerMove);
      renderer.domElement.removeEventListener("pointerup",pointerEnd);renderer.domElement.removeEventListener("pointercancel",pointerEnd);
-     scene.dispose();renderer.dispose();renderer.domElement.remove();
+     lighting.dispose();scene.dispose();renderer.dispose();renderer.domElement.remove();
    };
- },[room,movement,lookDelta,spawn]);
+ },[room,graphics,movement,lookDelta,spawn]);
  return <div className="jm-world-host" ref={host} role="img" aria-label={"Walkable three-dimensional "+session.destination+" research outpost. Move with left joystick or WASD, drag to look, and press interact at airlocks and control panels."}/>;
 }

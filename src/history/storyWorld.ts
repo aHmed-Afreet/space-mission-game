@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import type { StoryScenario, Station } from "./storyScenarios";
-import {createHistoricVehicle} from "./historicVehicles";
+import {createHistoricVehicle,historicReferenceKey} from "./historicVehicles";
+import { attachRealismModel } from "../presentation/realismAssets";
+import { readPreferences, defaultPreferences } from "../commander/campaign/preferences";
+import { graphicsRatioBounds } from "../commander/graphicsPolicy";
 import {makePlanet,planetKind} from "../commander/celestial";
 import {installStoryBridge} from "./storyBridge";
 import { storyPixelRatio } from "./storyRuntime";
@@ -8,6 +11,10 @@ import { storyPresentation } from "../presentation/missionPresentation";
 import { disposeObjectResources } from "../presentation/resources";
 import { createEvaGloves } from "../presentation/evaGloves";
 import { installSurfaceScenery } from "../commander/campaign/surfaceScenery";
+import { storyArchitecture, storyPalette } from "./storyArchitecture";
+import { storyInstrumentMaterial } from "./storyInstruments";
+import { cabinStep } from "./storyCollision";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 const stationLocations:Record<Station,[number,number]>={
  brief:[-3,2.5],systems:[3,2.5],operations:[-3,-2.5],science:[3,-2.5],
@@ -16,7 +23,7 @@ type Material=THREE.MeshStandardMaterial;
 const aluminum=()=>new THREE.MeshStandardMaterial({color:0x99b0b7,metalness:.75,roughness:.34});
 const accent=()=>new THREE.MeshStandardMaterial({color:0xe3b55b,metalness:.62,roughness:.33});
 const ceramic=()=>new THREE.MeshStandardMaterial({color:0xf0f2eb,metalness:.2,roughness:.58});
-const dark=()=>new THREE.MeshStandardMaterial({color:0x14212f,metalness:.45,roughness:.43});
+const dark=()=>new THREE.MeshStandardMaterial({color:0x343c3e,metalness:.36,roughness:.59});
 function piece(group:THREE.Group,shape:THREE.BufferGeometry,mat:Material,x:number,y:number,z:number,rotX=0,rotY=0,rotZ=0){
  const obj=new THREE.Mesh(shape,mat);obj.position.set(x,y,z);obj.rotation.set(rotX,rotY,rotZ);
  obj.castShadow=false;obj.receiveShadow=true;group.add(obj);return obj;
@@ -38,9 +45,9 @@ function beam(g:THREE.Group,a:THREE.Vector3,b:THREE.Vector3,r:number,m:Material)
 function badge(text:string){
  const c=document.createElement("canvas");c.width=512;c.height=128;
  const ctx=c.getContext("2d");if(!ctx)return null;
- ctx.fillStyle="#152c37";ctx.fillRect(0,0,512,128);
- ctx.strokeStyle="#7ca8a1";ctx.lineWidth=3;ctx.strokeRect(3,3,506,122);
- ctx.fillStyle="#e0fff7";ctx.font="bold 25px Arial";ctx.textAlign="center";
+ ctx.fillStyle="#242b2c";ctx.fillRect(0,0,512,128);
+ ctx.strokeStyle="#77827e";ctx.lineWidth=3;ctx.strokeRect(3,3,506,122);
+ ctx.fillStyle="#e2e3da";ctx.font="bold 25px Arial";ctx.textAlign="center";
  ctx.fillText(text,256,79,486);
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
  const mat=new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide});
@@ -56,43 +63,24 @@ export function createStoryScene(scenario:StoryScenario){
  scene.fog=scenario.setting==="mars"?new THREE.FogExp2(sky,.006):null;
  scene.add(new THREE.HemisphereLight(0xd8ded9,inField?0x181717:0x43556a,inField?.52:1.75));
  const sun=new THREE.DirectionalLight(0xfff4d4,2.7);sun.position.set(-8,13,-6);scene.add(sun);
- const floorColor=inField?(scenario.setting==="mars"?0x805039:0x747b79):0x182b3d;
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:floorColor,metalness:scenario.setting==="orbit"?.35:.02,roughness:.94}));
+ const architecture=storyArchitecture(scenario),palette=storyPalette[architecture];
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:palette.floor,metalness:.16,roughness:.86}));
  floor.rotation.x=-Math.PI/2;floor.position.y=-.08;scene.add(floor);
  const deck=new THREE.Group();scene.add(deck);
- for(let x=-6;x<=6;x+=2){box(deck,.028,.02,14,aluminum(),x,0,0);}
- for(let z=-6;z<=7;z+=2){box(deck,12,.02,.028,aluminum(),0,0,z);}
-
-  // Outdoor lunar and Martian operations feature mission-specific hardware and terrain.
+ installStoryBridge(deck,scenario);
+ const reconstruction=badge(palette.label);
+ if(reconstruction){reconstruction.position.set(0,3.5,-6.43);reconstruction.scale.set(2,.6,1);deck.add(reconstruction);}
+ if(scenario.role==="astronaut"){
   if(inField){
-    const terrain=new THREE.MeshStandardMaterial({color:scenario.setting==="mars"?0xa66a43:0x949c96,roughness:.95});
-    for(let k=0;k<30;k++){
-      const x=(k%2===0?-1:1)*(7+(k%6)*1.7);
-      const z=-8-Math.floor(k/6)*2.5;
-      const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(.3+(k%5)*.11,0),terrain);
-      stone.position.set(x,-.02,z);stone.scale.y=.46;scene.add(stone);
-    }
-    if(scenario.family==="lunar"&&/Apollo 15|Apollo 17/.test(scenario.title)){
-      const lunarRover=new THREE.Group();lunarRover.position.set(6,0,-12);scene.add(lunarRover);
-      box(lunarRover,2,.22,1.6,accent(),0,.78,0);
-      for(const side of [-1,1])for(const z of [-.8,.8])
-        cyl(lunarRover,.32,.32,.16,dark(),side*1,.29,z,0,0,Math.PI/2);
-      beam(lunarRover,new THREE.Vector3(0,.85,0),new THREE.Vector3(0,2.1,-.2),.05,aluminum());
-    }
+   // The cabin stays a cabin before egress. Geology beyond the forward windows
+   // belongs to this deck and disappears together with it on an excursion.
+   const panorama=new THREE.Group();panorama.position.z=-36;deck.add(panorama);
+   installSurfaceScenery(panorama,scenario.setting==="mars"?"mars":"moon",[],"battery");
   }else{
-    // Interior ribs and overhead rails of a crew training cabin / remote probe-control bay.
-    for(const side of [-1,1]){
-      for(let z=-6;z<=6;z+=2){
-        box(deck,.28,3.9,.25,aluminum(),side*6.2,1.92,z);
-        sphere(deck,.07,new THREE.MeshStandardMaterial({color:0x80cdbf,emissive:0x1a8470,emissiveIntensity:1}),side*6.05,2.6,z);
-      }
-      beam(deck,new THREE.Vector3(side*6.2,3.9,-6.2),new THREE.Vector3(side*6.2,3.9,6.7),.07,aluminum());
-    }
-    // Textured planetary bodies replace the single-colour placeholder sphere.
-    const planet=makePlanet(planetKind(scenario.destination),7);
-    planet.position.set(17,14,-32);scene.add(planet);
-    installStoryBridge(deck,scenario);
+   const planet=makePlanet(planetKind(scenario.destination),7);
+   planet.position.set(17,14,-32);deck.add(planet);
   }
+ }
 
  const stationMeshes:Record<Station,THREE.Group>={} as Record<Station,THREE.Group>;
  const taskTitles:Record<Station,string>={
@@ -104,22 +92,40 @@ export function createStoryScene(scenario:StoryScenario){
  (Object.keys(stationLocations) as Station[]).forEach((id,i)=>{
   const [x,z]=stationLocations[id];
   const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);stationMeshes[id]=g;
-  const base=aluminum();const light=new THREE.MeshStandardMaterial({color:0x2b7687,emissive:0x145a63,emissiveIntensity:.7,metalness:.6,roughness:.34});
-  box(g,2.35,1.2,1.2,dark(),0,.68,0);
+  const base=aluminum();
+  const light=new THREE.MeshStandardMaterial({color:0xbebba3,metalness:.2,roughness:.62});
+  const fascia=new THREE.MeshStandardMaterial({color:palette.shell,metalness:.25,roughness:.58});
+  const consoleOutline=new THREE.Shape();consoleOutline.moveTo(-.98,.08);consoleOutline.lineTo(.98,.08);consoleOutline.lineTo(1.15,1.25);consoleOutline.lineTo(-1.15,1.25);consoleOutline.closePath();
+  const plinth=new THREE.Mesh(new THREE.ExtrudeGeometry(consoleOutline,{depth:1.16,bevelEnabled:true,bevelSize:.045,bevelThickness:.045,bevelSegments:2,steps:1}),dark());
+  plinth.position.z=-.58;g.add(plinth);
   box(g,2.25,.12,1.37,base,0,1.35,0);
-  const scr=box(g,1.75,.85,.12,light,0,1.95,-.36);scr.rotation.x=-.18;
-  for(let k=0;k<5;k++)box(g,.22,.07,.18,k%2?accent():light,-.73+k*.36,1.43,.32);
-  for(let k=0;k<3;k++)box(g,1.5-k*.16,.035,.02,aluminum(),0,1.98+k*.15,-.292);
-  const tag=badge(taskTitles[id].toUpperCase().slice(0,38));if(tag){tag.position.set(0,2.47,-.25);g.add(tag);}
-  const spot=new THREE.PointLight(0x4ec9ca,.6,3.5);spot.position.set(0,2.5,0);g.add(spot);
-  const halo=new THREE.Mesh(new THREE.TorusGeometry(1.2,.025,5,48),new THREE.MeshBasicMaterial({color:i%2?0x6a99aa:0x63e4bf}));
+  const screenGroup=new THREE.Group();screenGroup.position.set(0,1.96,-.36);screenGroup.rotation.x=-.18;g.add(screenGroup);
+  box(screenGroup,1.94,1.02,.16,fascia);
+  box(screenGroup,1.77,.86,.18,dark(),0,0,.008);
+  const display=new THREE.Mesh(new THREE.PlaneGeometry(1.65,.76),storyInstrumentMaterial(scenario,id));
+  display.position.z=.105;screenGroup.add(display);
+  for(const side of [-1,1])for(const y of [-.43,.43])cyl(screenGroup,.025,.025,.022,base,side*.9,y,.094,Math.PI/2);
+  for(let k=0;k<7;k++){
+   const x=-.9+k*.3;
+   cyl(g,.042,.042,.07,k%3===0?light:base,x,1.45,.34);
+   box(g,.015,.07,.015,dark(),x,1.5,.34);
+  }
+  for(let k=0;k<3;k++){
+   cyl(g,.07,.07,.07,base,-.65+k*.65,1.03,.626,Math.PI/2);
+   box(g,.014,.055,.012,dark(),-.65+k*.65,1.03,.668);
+  }
+  box(g,1.96,.16,.025,fascia,0,.73,.626);
+  const tag=badge(taskTitles[id].toUpperCase().slice(0,38));if(tag){tag.position.set(0,2.67,-.25);tag.scale.set(1,.57,1);g.add(tag);}
+  // A discreet floor marker retains the existing target/active-state feedback.
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(1.2,.012,4,48),new THREE.MeshBasicMaterial({color:i%2?0x879797:0xa4b6a1}));
   halo.rotation.x=Math.PI/2;halo.position.y=.02;g.add(halo);
  });
  // Distinctive historic-vehicle equipment instead of a uniform generic simulator.
  // These are recognizable low-poly training interpretations, not museum-accurate plans.
  if(scenario.family==="lunar"){
    const lmPanel=new THREE.Group();lmPanel.position.set(0,0,-5.9);deck.add(lmPanel);
-   box(lmPanel,2.5,2,.22,dark(),0,1.45,0);
+   box(lmPanel,2.5,1.05,.48,dark(),0,.77,0);
+   const lmGuidance=new THREE.Mesh(new THREE.PlaneGeometry(2.25,.78),storyInstrumentMaterial(scenario,"operations"));lmGuidance.position.set(0,.82,.25);lmPanel.add(lmGuidance);
    for(let i=0;i<6;i++)box(lmPanel,.2,.22,.075,i%2?accent():aluminum(),-1+i*.4,1.95,-.16);
    for(const x of [-.65,.65])box(lmPanel,.55,.48,.09,new THREE.MeshStandardMaterial({color:0x3c7392,emissive:0x133246}),x,1.1,-.19);
    if(/Apollo 15|Apollo 17/.test(scenario.title)){
@@ -131,6 +137,7 @@ export function createStoryScene(scenario:StoryScenario){
  if(scenario.family==="gemini"||scenario.family==="capsule"||scenario.family==="apollo"||scenario.family==="sphere"){
    const console=new THREE.Group();console.position.set(0,0,-5.55);deck.add(console);
    box(console,3,1.6,.65,dark(),0,.95,0);
+   const flightInstruments=new THREE.Mesh(new THREE.PlaneGeometry(2.75,1.22),storyInstrumentMaterial(scenario,"operations"));flightInstruments.position.set(0,.98,.34);console.add(flightInstruments);
    for(let i=0;i<13;i++){const x=-1.32+(i%7)*.41,y=1.15+Math.floor(i/7)*.36;
      cyl(console,.075,.075,.04,i%3===0?accent():aluminum(),x,y,-.39,Math.PI/2);}
    if(scenario.family==="gemini")for(const side of [-1,1]){
@@ -140,6 +147,7 @@ export function createStoryScene(scenario:StoryScenario){
  if(scenario.family==="shuttle"){
    const flightdeck=new THREE.Group();flightdeck.position.set(0,0,-5.7);deck.add(flightdeck);
    box(flightdeck,3.6,1.4,.7,dark(),0,1.15,0);
+   const flightInstruments=new THREE.Mesh(new THREE.PlaneGeometry(3.3,1.06),storyInstrumentMaterial(scenario,"operations"));flightInstruments.position.set(0,1.15,.36);flightdeck.add(flightInstruments);
    for(let i=0;i<4;i++)box(flightdeck,.55,.43,.09,new THREE.MeshStandardMaterial({color:0x1b7184,emissive:0x13404e,emissiveIntensity:.6}),-1.17+i*.78,1.56,-.4);
    for(let i=0;i<8;i++)box(flightdeck,.17,.09,.17,accent(),-1.3+i*.37,.92,-.45);
  }
@@ -154,12 +162,33 @@ export function createStoryScene(scenario:StoryScenario){
  if(scenario.family==="rover"){
    const roboticBay=new THREE.Group();roboticBay.position.set(0,0,-5.8);deck.add(roboticBay);
    box(roboticBay,3.4,1.4,.52,dark(),0,1.12,0);
+   const roverInstruments=new THREE.Mesh(new THREE.PlaneGeometry(3.1,1.05),storyInstrumentMaterial(scenario,"science"));roverInstruments.position.set(0,1.12,.27);roboticBay.add(roverInstruments);
    for(let i=0;i<3;i++)box(roboticBay,.78,.55,.08,new THREE.MeshStandardMaterial({color:i===0?0xb66c40:0x3d7686,emissive:0x10222a}),-1+i,1.65,-.3);
  }
  const craft=createHistoricVehicle(scenario);
  craft.position.set(0,4,-15);craft.rotation.y=.4;
  const scale=scenario.family==="station"?.8:scenario.family==="shuttle"?.85:scenario.family==="lunar"?.9:1.04;
  craft.scale.setScalar(scale);scene.add(craft);
+ const references:{dispose():void}[]=[],referenceKey=historicReferenceKey(scenario);
+ const installReference=(owner:THREE.Group)=>{
+  if(!referenceKey)return;
+  const fallback=[...owner.children];
+  const floorLander=owner!==craft&&referenceKey==="lander"&&inField;
+  references.push(attachRealismModel(owner,referenceKey,{position:floorLander?[0,-owner.position.y/owner.scale.y,0]:undefined,extent:referenceKey==="station"?12:referenceKey==="probe"?9:referenceKey==="shuttle"?7.5:4.8,centered:!floorLander,shadows:false,onLoad:()=>{
+   // Retain the authored silhouette until the real, locally hosted model exists.
+   for(const part of fallback)part.visible=false;
+   owner.userData.vehicleSource="NASA reference model / educational reconstruction";
+  }}));
+ };
+ installReference(craft);
+ if(scenario.family==="shuttle"||scenario.family==="station"){
+  // Real orbital replaceable-unit hardware adds textured maintenance detail;
+  // these props have no gameplay collider and do not assert a flight procedure.
+  for(const side of [-1,1])references.push(attachRealismModel(deck,"equipment",{extent:1.4,position:[side*4.85,.3,-4.65],rotation:[0,side*Math.PI/2,0],shadows:false}));
+ }
+ if(scenario.role==="mission operator")references.push(attachRealismModel(deck,"controlRoom",{extent:17,position:[0,0,-16],shadows:false}));
+ let exteriorReferenceLoaded=false;
+ const loadExteriorReference=()=>{if(exteriorReferenceLoaded)return;exteriorReferenceLoaded=true;installReference(outerCraft);};
  // Pressure hatch: one control on the cabin side and one on the EVA side.
  const hatchAssembly=new THREE.Group();hatchAssembly.position.set(0,0,7.35);scene.add(hatchAssembly);
  const hatchShell=aluminum(),hatchPanel=dark(),hatchLight=accent();
@@ -188,6 +217,16 @@ export function createStoryScene(scenario:StoryScenario){
  const outerCraft=createHistoricVehicle(scenario);
  outerCraft.position.set(0,2,3.1);outerCraft.scale.setScalar(dusty?1.4:1.2);
  exterior.add(outerCraft);
+ if(scenario.family==="lunar"&&/Apollo 15|Apollo 17/.test(scenario.title)){
+  // Preserve the four-wheel lunar rover from these expeditions, now correctly
+  // located on the EVA terrain rather than inside the pressure cabin.
+  const lunarRover=new THREE.Group();lunarRover.position.set(6,0,17);exterior.add(lunarRover);
+  box(lunarRover,2,.22,1.6,accent(),0,.78,0);
+  for(const side of [-1,1])for(const z of [-.8,.8])cyl(lunarRover,.32,.32,.16,dark(),side, .29,z,0,0,Math.PI/2);
+  for(const side of [-1,1]){box(lunarRover,.65,.12,.65,ceramic(),side*.46,.99,.25);box(lunarRover,.65,.55,.12,ceramic(),side*.46,1.25,.55);}
+  beam(lunarRover,new THREE.Vector3(0,.85,-.35),new THREE.Vector3(0,2.1,-.55),.035,aluminum());
+ }
+
  // An actual external hatch housing, control panel and lit handle sit behind the vehicle.
  const outerHatch=new THREE.Group();outerHatch.position.set(0,0,9.05);
  exterior.add(outerHatch);
@@ -217,8 +256,9 @@ export function createStoryScene(scenario:StoryScenario){
  const z=(seed>>>0)/4294967295*2-1;
  positions.push(x*80,y*60+5,z*80);}
  stars.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
- const pts=new THREE.Points(stars,new THREE.PointsMaterial({color:0xbbdce1,size:.19,sizeAttenuation:true}));scene.add(pts);
- return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether};
+ const pts=new THREE.Points(stars,new THREE.PointsMaterial({color:0xc5cbd0,size:.075,sizeAttenuation:true}));
+ if(scenario.role==="astronaut"&&!inField)scene.add(pts);
+ return {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether,references,loadExteriorReference};
 }
 export type StoryWorldSnapshot={
  version:1;outside:boolean;position:[number,number,number];yaw:number;pitch:number;
@@ -256,15 +296,23 @@ export type StoryWorld={
  restore:(value:unknown)=>boolean;
 };
 export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario):StoryWorld{
- const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:"high-performance"});
- const pixelLimit=Math.min(window.devicePixelRatio||1,1.55);
+ let preferences=defaultPreferences;
+ try{preferences=readPreferences(localStorage);}catch{/* Storage can be denied in private browsing. */}
+ const renderer=new THREE.WebGLRenderer({canvas,antialias:preferences.graphics!=="battery",alpha:false,powerPreference:preferences.graphics==="battery"?"low-power":"high-performance"});
+ const ratioBounds=graphicsRatioBounds(window.devicePixelRatio||1,preferences.graphics);
+ const pixelLimit=ratioBounds.limit;
  let pixelRatio=pixelLimit,frameClock=performance.now(),drawn=0,lastRender=0;
  renderer.setPixelRatio(pixelRatio);
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.13;
- const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether}=createStoryScene(scenario);
- const camera=new THREE.PerspectiveCamera(72,1,.04,170);camera.position.set(0,1.65,6.25);
+ renderer.toneMappingExposure=1.04;
+ const {scene,craft,stationMeshes,deck,exterior,hatchAssembly,suitView,dusty,workMount,floor,tether,references,loadExteriorReference}=createStoryScene(scenario);
+ // One small prefiltered environment supplies soft material reflections. No
+ // screen-space effects or extra per-frame render passes are needed on tablets.
+ const pmrem=new THREE.PMREMGenerator(renderer),room=new RoomEnvironment();
+ const reflections=pmrem.fromScene(room,.06);room.dispose();pmrem.dispose();
+ scene.environment=reflections.texture;scene.environmentIntensity=.36;
+ const camera=new THREE.PerspectiveCamera(68,1,.04,170);camera.position.set(0,1.65,6.25);
  let yaw=0,pitch=0,t=0,outside=false;
  const motion=new THREE.Vector3(),AIRLOCK=new THREE.Vector3(0,1.65,9.05);
  const movement={x:0,z:0};
@@ -290,6 +338,7 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
   deck.visible=!next;floor.visible=!next;hatchAssembly.visible=!next;workMount.visible=!next;
   for(const g of Object.values(stationMeshes))g.visible=!next;
   exterior.visible=next;craft.visible=!next;
+  if(next)loadExteriorReference();
   suitView.visible=next;
   camera.position.set(0,1.65,next?10.55:5.9);
   yaw=next?Math.PI:0;pitch=0;
@@ -343,8 +392,13 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    const speed=(outside?(scenario.setting==="moon"?1.5:1.65):2.65)*(sprint?1.55:1);
    const nx=camera.position.x+movement.x*speed*time;
    const nz=camera.position.z+movement.z*speed*time;
-   camera.position.x=Math.max(outside?-23:-5.6,Math.min(outside?23:5.6,nx));
-   camera.position.z=Math.max(outside?9.9:-5.65,Math.min(outside?64:6.65,nz));
+   if(outside){
+    camera.position.x=Math.max(-23,Math.min(23,nx));camera.position.z=Math.max(9.9,Math.min(64,nz));
+   }else{
+    const bowConsole=["lunar","capsule","gemini","apollo","sphere","shuttle","rover"].includes(scenario.family);
+    const [x,z]=cabinStep(camera.position.x,camera.position.z,nx,nz,bowConsole);
+    camera.position.x=x;camera.position.z=z;
+   }
    if(outside){
     const gravity=scenario.setting==="moon"?1.62:3.71;
     jumpHeight=Math.max(0,jumpHeight+jumpSpeed*time);
@@ -385,7 +439,8 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
    const interval=now-frameClock;
    if(interval>3100){
     const fps=drawn*1000/interval;
-    const desired=storyPixelRatio(pixelRatio,pixelLimit,fps);
+    canvas.dataset.graphicsTrace=JSON.stringify({preset:preferences.graphics,measuredFps:Math.round(fps*10)/10,ratio:pixelRatio,limit:pixelLimit,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles});
+    const desired=Math.max(ratioBounds.floor,storyPixelRatio(pixelRatio,pixelLimit,fps));
     if(Math.abs(desired-pixelRatio)>.015){
      pixelRatio=desired;renderer.setPixelRatio(pixelRatio);
      renderer.setSize(Math.max(1,canvas.clientWidth),Math.max(1,canvas.clientHeight),false);
@@ -397,7 +452,8 @@ export function startStoryWorld(canvas:HTMLCanvasElement,scenario:StoryScenario)
  };
  const dispose=()=>{
   if(scene.userData.disposed)return;
-  disposeObjectResources(scene);renderer.dispose();
+  references.forEach(reference=>reference.dispose());
+  disposeObjectResources(scene);reflections.dispose();renderer.dispose();
  };
  return {canvas,look,update,resize,dispose,setExcursion,nearHatch,aimingAtHatch,jump,distanceToHatch,snapshot,restore};
 }

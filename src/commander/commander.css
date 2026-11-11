@@ -2192,3 +2192,13 @@ select {
    actions retain their own independently captured pointers. */
 .cmd-session .cmd-world .cmd-look-surface { touch-action:none; }
 .cmd-session .cmd-world .cmd-touch-actions .cmd-work { touch-action:none; }
+
+/* Flight controls keep their existing position and touch geometry. */
+.cmd-world{--cmd-mint:#b7cdd5;--cmd-amber:#d1ba91;--cmd-line:#8ea4b349;--cmd-text:#e4eaed}
+.cmd-world .cmd-icon-button,.cmd-world .cmd-tablet-trigger{background:#121f2be8;border-color:#869dab66;border-radius:5px;color:#e3ecef;backdrop-filter:none}
+.cmd-world .cmd-tablet{border-radius:6px;background:#111d28fa;border-color:#8b9fae6b;backdrop-filter:none;box-shadow:-12px 0 40px #0005}
+.cmd-world .cmd-tablet-head{border-bottom-color:#728a9b45}
+.cmd-world .cmd-tablet-trigger b{background:#a5bcc721;color:#d5dfe4}
+.cmd-world .cmd-flight-time strong,.cmd-world .cmd-hud-location,.cmd-world .cmd-tablet-telemetry{font-variant-numeric:tabular-nums}
+.cmd-world .cmd-touch-actions button{box-shadow:0 3px 12px #0005}
+.cmd-world .cmd-floating-zone .cmd-stick-base{box-shadow:none}

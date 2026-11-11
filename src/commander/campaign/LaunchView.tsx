@@ -1,3 +1,5 @@
+import {useState} from "react";
+import LaunchScene from "./LaunchScene";
 import TouchActionButton from "../../TouchActionButton";
 import { currentObjective, type Session } from "./engine";
 import type { CampaignAction } from "./definitions";
@@ -10,6 +12,7 @@ export default function LaunchView({
   onCommand: (a: CampaignAction) => void;
   onControls: (throttle: number, pitch: number) => void;
 }) {
+  const [modelReady,setModelReady]=useState(false);
   const f = s.flight,
     o = currentObjective(s),
     target = Math.max(25, 90 - f.altitude * 0.3);
@@ -25,8 +28,10 @@ export default function LaunchView({
     >
       <div className="launch-stars" aria-hidden="true" />
       <div className="launch-limb" aria-hidden="true" />
+      <LaunchScene session={s} onReady={()=>setModelReady(true)}/>
       <svg
         className="launch-vehicle"
+        style={{visibility:modelReady?"hidden":"visible"}}
         viewBox="0 0 200 460"
         role="img"
         aria-label={`Launch vehicle at ${f.altitude.toFixed(1)} kilometres`}
@@ -167,7 +172,7 @@ export default function LaunchView({
         ) : (
           <p className="launch-live">{o?.title}</p>
         )}
-        <small>SIMPLIFIED FLIGHT TRAINER · NOT A FLIGHT-PHYSICS MODEL</small>
+        <small>SIMPLIFIED FLIGHT TRAINER · SATURN V VISUAL REFERENCE</small>
       </section>
     </div>
   );

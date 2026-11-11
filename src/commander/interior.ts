@@ -3,6 +3,9 @@ import {makePlanet,planetKind,disposePlanet} from "./celestial";
 import { createEvaGloves } from "../presentation/evaGloves";
 import {installShipArchitecture} from "./shipArchitecture";
 import {installCabinDetail} from "./cabinDetailPass";
+import {attachRealismModel} from "../presentation/realismAssets";
+import {installForwardCockpit} from "./forwardCockpit";
+import {installPressureCabin} from "./pressureCabin";
 import {installCockpitFinishing} from "./cockpitFinishing";
 import * as T from "three";
 import { createDisplays, type Telemetry } from "./displays";
@@ -26,7 +29,8 @@ export function createInterior(
     cylinder = new T.CylinderGeometry(1, 1, 1, 12),
     sphere = new T.SphereGeometry(1, 20, 12),
     plane = new T.PlaneGeometry(1, 1);
-  geometries.push(box, cylinder, sphere, plane);
+  const fittingBox=new T.BoxGeometry(1,1,1);
+  geometries.push(box, fittingBox, cylinder, sphere, plane);
   const mat = (color: string, metal = 0.2, rough = 0.6, emissive?: string) => {
     const m = new T.MeshStandardMaterial({
       color,
@@ -93,6 +97,9 @@ export function createInterior(
     rotation: [number, number, number] = [0, 0, 0],
     geo: T.BufferGeometry = box,
   ) {
+    // Tiny ribs/fasteners never need 108 rounded-box triangles each. Their
+    // manufactured square edges are below a pixel at normal cockpit distance.
+    if(options.graphics!=="quality" && geo===box && Math.min(w,h,d)<.11)geo=fittingBox;
     dummy.position.set(x, y, z);
     dummy.rotation.set(...rotation);
     dummy.scale.set(w, h, d);
@@ -332,23 +339,8 @@ export function createInterior(
   }
   for (const side of [-1, 1])
     part(side * 0.9, 2.5, 7.65, 0.15, 0.07, 0.04, amber);
-  // Flight deck: layered console, two upholstered seats and an actual forward viewport.
-  part(0, 1.03, -6.6, 3.35, 0.22, 1, dark, [-0.13, 0, 0]);
-  part(0, 0.58, -6.8, 2.4, 0.85, 0.52, panel);
-  screen(-0.93, 1.48, -6.78, 0.8, 0.45, 3);
-  screen(0, 1.48, -6.78, 0.82, 0.45);
-  screen(0.93, 1.48, -6.78, 0.8, 0.45, 2);
-  for (let i = 0; i < 16; i++)
-    part(
-      -1.47 + i * 0.19,
-      1.2,
-      -6.2,
-      0.08,
-      0.025,
-      0.07,
-      i % 5 === 0 ? amber : panel,
-    );
-  label("FC-01 / FLIGHT CONTROL", 0, 0.97, -6.06, 0.65, 0.065);
+  // The single formed forward console replaces the former stacked banks.
+  // Existing live display materials still show actual simulation telemetry.
   for (const x of [-0.8, 0.8]) {
     part(x, 0.37, -5.2, 0.56, 0.1, 0.68, dark);
     part(x, 0.51, -5.2, 0.57, 0.2, 0.61, fabric);
@@ -365,12 +357,10 @@ export function createInterior(
       part(x + s * 0.35, 0.63, -4.99, 0.05, 0.3, 0.05, silver);
     }
   }
-  part(0, 2.65, -7.75, 6.5, 0.45, 0.2, shell);
-  part(0, 0.75, -7.75, 6.5, 1.5, 0.2, shell);
-  for (const x of [-2.85, 2.85]) part(x, 1.9, -7.75, 0.85, 1.4, 0.2, shell);
-  part(0, 1.96, -7.74, 4.9, 1.34, 0.05, glass);
-  for (const x of [-2.45, 0, 2.45])
-    part(x, 1.96, -7.67, 0.07, 1.4, 0.13, silver);
+  part(0, 2.82, -7.75, 6.5, 0.18, 0.2, shell);
+  part(0, 0.53, -7.75, 6.5, 1.06, 0.2, shell);
+  for (const x of [-3.1, 3.1]) part(x, 1.9, -7.75, 0.32, 1.4, 0.2, shell);
+
   const spaceMat = new T.MeshBasicMaterial({ color: "#060c16" });
   materials.push(spaceMat);
   dynamic(0, 2, -17, 30, 20, 1, spaceMat, plane);
@@ -596,13 +586,33 @@ export function createInterior(
     hull:shell,panel,dark,floor,metal:silver,fabric
   },options.graphics||"balanced");
   const disposeCockpitFinishing=installCockpitFinishing(scene,options.graphics||"balanced");
+  const disposeForwardCockpit=installForwardCockpit(scene);
+  const disposePressureCabin=installPressureCabin(scene,options.graphics||"balanced");
+  // Detailed agency reference hardware complements the authored controls.
+  // Stowed suits are equipment displays, never an unanimated T-pose crewmate.
+  const referenceHardware:ReturnType<typeof attachRealismModel>[]=[];
+  if(typeof window!=="undefined"){
+    referenceHardware.push(attachRealismModel(scene,"equipment",{
+      extent:.7,position:[2.35,1.5,4.45],rotation:[0,-.3,0],shadows:false,
+      onLoad:()=>options.onSceneChange?.(),
+    }));
+    referenceHardware.push(attachRealismModel(scene,"equipment",{
+      extent:.42,position:[2.08,1.25,-6.7],rotation:[0,.2,0],shadows:false,
+      onLoad:()=>options.onSceneChange?.(),
+    }));
+    referenceHardware.push(attachRealismModel(scene,"astronaut",{
+      extent:1.9,position:[2.77,.14,6.55],rotation:[0,Math.PI/2,0],shadows:false,
+      onLoad:()=>options.onSceneChange?.(),
+    }));
+    label("EMU / SECURED FOR STOWAGE",2.3,2.4,6.51,1.2,.09);
+  }
   // Ambient fill and bounded practical lights. No real-time shadows or post-processing.
-  scene.add(new T.HemisphereLight("#bed7e4", "#101821", 1.35));
+  scene.add(new T.HemisphereLight("#e5e7df", "#171b21", 1.05));
   const sun = new T.DirectionalLight("#d9ecfa", 1.75);
   sun.position.set(-2, 4, -10);
   scene.add(sun);
   // One bounded practical and two broad fills avoid a large per-fragment light loop.
-  const practical = new T.PointLight("#c9f4fc", 12, 12, 2);
+  const practical = new T.PointLight("#f4ecda", 12, 12, 2);
   practical.position.set(0, 2.5, 0.5);
   scene.add(practical);
   const aftFill = new T.DirectionalLight("#dfd4bd", 0.75);
@@ -753,6 +763,9 @@ export function createInterior(
       evaGloves.dispose();
       disposeArchitecture();
       disposeCockpitFinishing();
+      disposePressureCabin();
+      disposeForwardCockpit();
+      referenceHardware.forEach(handle=>handle.dispose());
       disposeDetails();
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());

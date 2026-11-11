@@ -2129,3 +2129,21 @@ html.mission-viewport-locked .campaign-flight.cmd-session{
   overflow:hidden!important;overscroll-behavior:none;
 }
 html.mission-viewport-locked .campaign-flight .cmd-world{touch-action:none;}
+
+/* Expedition directory and flight panels share the same matte instrument finish. */
+.campaign-home .campaign-destination-picker,.campaign-home .campaign-route-hero,.campaign-home .campaign-prep,.campaign-home .campaign-missions article,.campaign-home .mission-control-dashboard article{border-color:#7185915c;background:#121d27;border-radius:5px;box-shadow:none;backdrop-filter:none}
+.campaign-home .campaign-picker-intro h1,.campaign-home .campaign-route-hero h1,.campaign-home .campaign-hero h1{font-weight:440;letter-spacing:-.045em}
+.campaign-home .campaign-picker-intro h1 em{color:#b8cbd7;font-style:normal}
+.campaign-home .campaign-pick-card,.campaign-home .campaign-pick-card.pick-mars,.campaign-home .campaign-pick-card.pick-moon,.campaign-home .campaign-pick-card.pick-surface{background:linear-gradient(145deg,#1b2833,#111c26);border-color:#758a975c;border-radius:5px;box-shadow:none}
+.campaign-home .campaign-pick-card:hover{background:#253643;border-color:#bacbd5}
+.campaign-home .campaign-pick-card strong{font-weight:520;font-size:23px;letter-spacing:-.025em}
+.campaign-home .campaign-pick-card-top,.campaign-home .campaign-pick-card.pick-mars .campaign-pick-card-top,.campaign-home .campaign-pick-card.pick-asteroid .campaign-pick-card-top{color:#afc2cc;font-weight:500;letter-spacing:.13em}
+.campaign-home .campaign-pick-card b{font-size:9px;color:#c3d6df;font-weight:500;border-color:#8196a237}
+.campaign-home .campaign-pick-card>span:not(.campaign-pick-card-top){color:#b8c8d2;font-size:12px;line-height:1.8}
+.campaign-home .campaign-pick-card .campaign-card-planet{width:70px;height:70px;border-radius:50%;font-size:0!important;filter:none;margin:10px 0 12px;background:url("/assets/planetary/earth-bluemarble-svs2915-1024-d1d3cb36ae6a.png") center/cover;box-shadow:inset -18px -7px 20px #000c;position:relative}
+.campaign-home .campaign-pick-card.pick-moon .campaign-card-planet,.campaign-home .campaign-pick-card.pick-surface .campaign-card-planet{background-image:url("/assets/planetary/moon-lroc-svs4720-2019-1024-b246064f217f.jpg")}
+.campaign-home .campaign-pick-card.pick-asteroid .campaign-card-planet{background-image:url("/assets/planetary/moon-lroc-svs4720-2019-1024-b246064f217f.jpg");filter:grayscale(1);border-radius:45% 55% 58% 42%}
+.campaign-home .campaign-pick-card.pick-mars .campaign-card-planet{background:radial-gradient(ellipse at 35% 35%,#bd9878,#9f745b 40%,#533d33 75%);box-shadow:inset -18px -7px 20px #000b}
+.campaign-home .campaign-nav{border-color:#71859144}.campaign-home .campaign-nav button{color:#ccdae0}
+.campaign-home .campaign-route-stats strong,.campaign-home .campaign-totals strong{color:#c5d7df}
+.campaign-flight .campaign-objective-card,.campaign-flight .campaign-guide-card,.campaign-flight .cmd-tablet{border-color:#95a9b651;border-radius:6px;background:#101b26ef;box-shadow:0 6px 24px #0004;backdrop-filter:none}

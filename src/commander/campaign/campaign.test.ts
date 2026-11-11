@@ -1699,9 +1699,9 @@ test("new spacecraft visuals are instanced and do not relocate mission stations"
  const bridge=readFileSync("src/history/storyBridge.ts","utf8");
  assert.match(interior,/installShipArchitecture\(part,pipe,screen,label,mat/);
  assert.match(interior,/InstancedMesh/);
- assert.match(architecture,/panoramic canopy/i);
+ assert.match(interior,/installForwardCockpit\(scene\)/);
  assert.match(architecture,/pressure tunnel/i);
- assert.match(architecture,/FLIGHT CONTROL/);
+ assert.match(architecture,/ORBITAL \/ FLIGHT DECK/);
  assert.match(story,/installStoryBridge\(deck,scenario\)/);
  assert.match(bridge,/new THREE.InstancedMesh/);
  assert.match(bridge,/CREW VEHICLE/);
@@ -2116,7 +2116,7 @@ test("six Commander campaign branches each start at Level 1 and unlock only thei
   }
 });
 
-test("a fixed Earth background and legible text cover the five non-flight views", () => {
+test("fixed Earth scenery covers non-flight views and the landing has its own readable photographic hero", () => {
   const global=readFileSync("src/style.css","utf8");
   const home=readFileSync("src/home.css","utf8");
   const campaign=readFileSync("src/commander/campaign/campaign.css","utf8");
@@ -2125,7 +2125,16 @@ test("a fixed Earth background and legible text cover the five non-flight views"
   assert.match(global,/#root::before\s*\{/);
   assert.match(global,/position:fixed/);
   assert.match(global,/\.strategy-mission-board,\.app,\.history-hub,\.help-page,\.campaign-home/);
-  assert.match(home,/\.orbital-hero-picture\{display:none\}/);
+  const photo = "/assets/backgrounds/iss049e004248-1920-357943e89d20.jpg";
+  const fixedScenery = [...global.matchAll(/#root::before\s*\{([^}]+)\}/g)].map(match=>match[1]).join(";");
+  assert.match(fixedScenery,/position:fixed/);
+  assert.ok(fixedScenery.includes(photo),"shared scenery keeps the licensed Earth photograph");
+  assert.match(fixedScenery,/pointer-events:none/,"scenery cannot intercept menu controls");
+  const heroPicture=home.match(/\.orbital-hero-picture\s*\{([^}]+)\}/)?.[1]||"";
+  assert.ok(heroPicture.includes(photo),"landing owns an actual photographic hero");
+  assert.doesNotMatch(heroPicture,/display:none/,"hero photograph remains visible");
+  assert.match(home,/\.orbital-landing-hero:before\{[^}]*linear-gradient/,"photo has a contrast overlay behind text");
+  assert.match(home,/\.orbital-hero-content p\{[^}]*line-height:1\.85[^}]*color:/,"hero copy has deliberate readable spacing and color");
   assert.match(campaign,/campaign-home \.campaign-destination-picker/);
   assert.match(history,/history-hub \.history-card p/);
   assert.match(help,/help-page \.help-steps p/);
