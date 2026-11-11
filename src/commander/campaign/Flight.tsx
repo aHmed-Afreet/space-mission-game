@@ -221,7 +221,7 @@ export default function Flight({
     pendingInteractionArea.current = null;
     setActions(false);
     setShowOther(false);
-    setHelpOpen(false);
+    setHelpOpen(false); // Free the movement area when actually leaving a station.
   }, [area]);
   useEffect(() => {
     // An advancing mission objective intentionally closes stale station actions.
