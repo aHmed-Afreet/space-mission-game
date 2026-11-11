@@ -25,9 +25,9 @@ test("Commander INTERACT opens station operations idempotently instead of toggli
 });
 
 test("Commander accepts delayed live-position sync after opening the station menu",()=>{
- assert.match(flight,/const pendingInteractionArea = useRef<ReturnType<typeof nearby> \| null>\(null\)/);
- assert.match(flight,/area === pendingInteractionArea\.current/);
- assert.match(flight,/pendingInteractionArea\.current = areaAtPress \?\? null/);
+ assert.match(flight,/const pendingInteractionArea = useRef<\{area:ReturnType<typeof nearby>\} \| null>\(null\)/);
+ assert.match(flight,/area === pendingInteractionArea\.current\.area/);
+ assert.match(flight,/pendingInteractionArea\.current = \{area:areaAtPress\}/);
  assert.match(flight,/\}, \[area\]\)/);
  assert.match(flight,/\}, \[s\.objective\]\)/);
 });
