@@ -342,7 +342,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        {notice&&<div className="j3-info" role="status">{notice}</div>}
        </div>
        <div className="j3-panel-footer"><button className="j3-primary" onClick={()=>{setPanel(null);setNotice("");}}>RETURN TO 3D ROOM</button></div>
-     </section>
+     </section>}
      {panel==="event"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="Emergency briefing">
        <span className="j3-kicker">⚠ MISSION CONTROL</span><h2>{incident?.title||"Mission Status"}</h2>
        <p>{incident?.detail||"There is currently no unresolved emergency."}</p>
