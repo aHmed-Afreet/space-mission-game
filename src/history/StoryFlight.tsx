@@ -1,5 +1,6 @@
 import TouchActionButton from "../TouchActionButton";
-import {useCallback,useEffect,useRef,useState} from "react";
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from "react";
+import {lockMissionViewport} from "../missionViewport";
 import type {PointerEvent as ReactPointer} from "react";
 import {joystickVector} from "../commander/controls";
 import type {HistoryMission} from "./missionHistory";
@@ -40,6 +41,8 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
  const persistRef=useRef<()=>boolean>(()=>false);
  const advanceRef=useRef<()=>void>(()=>{});
  const root=useRef<HTMLDivElement>(null);
+ // Keep Apollo and other historical flight scenes fixed on iPad Chrome.
+ useLayoutEffect(()=>lockMissionViewport(),[]);
  const canvas=useRef<HTMLCanvasElement>(null);
  const world=useRef<StoryWorld|null>(null);
  const keys=useRef(new Set<string>());
