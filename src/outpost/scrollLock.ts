@@ -35,8 +35,12 @@ export function lockOutpostViewport():()=>void {
  };
  const blockPanning=(event:TouchEvent|WheelEvent)=>{
   const target=event.target;
-  // Maps, help/console dialogs and selection screen must remain scrollable.
-  if(target instanceof Element&&target.closest(".j3-panel,.j3-select"))return;
+  // Scroll only an actual Outpost panel/list (including the separate console
+  // options area). The 3D world and joystick must never pan the webpage.
+  if(target instanceof Element){
+   const region=target.closest(".j3-panel-content,.j3-panel,.j3-select,.j3-objective,.j3-map-directory-side,.j3-map-dialog");
+   if(region && (region.scrollHeight>region.clientHeight+1||region.scrollWidth>region.clientWidth+1))return;
+  }
   if(event.cancelable)event.preventDefault();
  };
  const resetScroll=()=>{

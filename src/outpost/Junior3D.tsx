@@ -306,11 +306,14 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
    {panel&&<div className="j3-overlay">
      {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
-     {panel==="console"&&currentFacility&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
+     {panel==="console"&&currentFacility&&<section className="j3-panel j3-panel-console" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
+       <div className="j3-panel-content" tabIndex={0} aria-label={currentFacility.title+" scrollable options"}>
        <span className="j3-kicker">3D FACILITY CONTROL · {currentFacility.title.toUpperCase()}</span>
        <h2>{currentFacility.title}</h2>
        <p>{currentFacility.description}</p>
-       <div className="j3-info">DAY {session.sol} · Credits {session.credits} · {selected?"Operation already performed: "+ACTIONS.find(x=>x.id===selected)?.title:"Choose one engineering task."}</div>
+       <div className="j3-info" role="status">DAY {session.sol} · Credits {session.credits} · {selected
+         ?"TODAY'S TASK COMPLETE: "+ACTIONS.find(x=>x.id===selected)?.title+". You can scroll through all options, but another engineering operation unlocks on the next day after dinner and sleep."
+         :"Choose one engineering operation today. Scroll down to see every option."}</div>
        {localEmergency&&incident&&<><span className="j3-kicker">⚠ URGENT CREW DECISION</span><h2>{incident.title}</h2><p>{incident.detail}</p>
          <div className="j3-choices">{incident.options.map(o=><button key={o.id} className="j3-choice"
            disabled={(o.id==="patch"&&session.credits<12)||(o.id==="sweep"&&session.credits<8)}
@@ -334,11 +337,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
            <span><b>{v.title}</b><em>{v.cost?v.cost+" CREDITS":"FREE"}</em></span>
            <small>{avail.ok?v.note:avail.reason}</small></button>;
        })}</div>
-       <div className="j3-choices"><button disabled={!availableAction(session,"monitor").ok}
-         onClick={()=>operate("monitor")}><b>Check equipment without upgrading</b><small>Free operation. Advance today without a construction purchase.</small></button></div>
+       <div className="j3-choices"><button className="j3-choice" disabled={!availableAction(session,"monitor").ok}
+         onClick={()=>operate("monitor")}><b>Check equipment without upgrading</b><small>{availableAction(session,"monitor").ok?"Free operation. Advance today without a construction purchase.":availableAction(session,"monitor").reason}</small></button></div>
        {notice&&<div className="j3-info" role="status">{notice}</div>}
-       <div className="j3-row"><button className="j3-primary" onClick={()=>{setPanel(null);setNotice("");}}>RETURN TO 3D ROOM</button>
-         </div>
+       </div>
+       <div className="j3-panel-footer"><button className="j3-primary" onClick={()=>{setPanel(null);setNotice("");}}>RETURN TO 3D ROOM</button></div>
      </section>}
      {panel==="event"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="Emergency briefing">
        <span className="j3-kicker">⚠ MISSION CONTROL</span><h2>{incident?.title||"Mission Status"}</h2>

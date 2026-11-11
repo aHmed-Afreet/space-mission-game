@@ -20,6 +20,12 @@ class FakeElement {
   contains:(value:string)=>this.classes.has(value)
  };
  scrollable=false;
+ // Simulate actual scroll metrics: a modal only accepts scroll gestures
+ // when its content is taller than the visible panel.
+ get scrollHeight(){return this.scrollable?620:200;}
+ get clientHeight(){return 200;}
+ get scrollWidth(){return 200;}
+ get clientWidth(){return 200;}
  closest(selector:string){
   return this.scrollable && selector.includes(".j3-panel") ? this : null;
  }

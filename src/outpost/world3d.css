@@ -369,3 +369,75 @@ html.outpost-viewport-locked .j3-root .j3-controls .j3-move-hint{
   top:max(190px,calc(var(--outpost-visible-height,100dvh) - 270px))!important;
  }
 }
+
+
+/* 2026-11-11 iPad Chrome Outpost console usability fix.
+ * The browser's visible viewport can be much shorter than CSS dvh.
+ * Scroll only options; the exit button must NEVER be below the screen. */
+html.outpost-viewport-locked .j3-root .j3-overlay{
+  inset:0;
+  height:100%;
+  min-height:0;
+  max-height:100%;
+  padding:clamp(8px,1.7vh,16px);
+  overflow:hidden;
+  touch-action:auto;
+}
+html.outpost-viewport-locked .j3-root .j3-panel{
+  max-height:calc(100% - 4px);
+  min-height:0;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console{
+  display:flex;
+  flex-direction:column;
+  height:min(800px,calc(var(--outpost-visible-height,100dvh) - 24px));
+  max-height:calc(100% - 4px);
+  min-height:0;
+  padding:0;
+  overflow:hidden;
+  touch-action:pan-y;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-content{
+  flex:1 1 auto;
+  min-height:0;
+  display:grid;
+  align-content:start;
+  gap:12px;
+  padding:clamp(16px,2.2vw,28px);
+  overflow-y:auto;
+  overflow-x:hidden;
+  touch-action:pan-y;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  scrollbar-color:#8dcab7 #102e3d;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer{
+  flex:0 0 auto;
+  z-index:2;
+  padding:12px clamp(16px,2.2vw,28px) max(12px,env(safe-area-inset-bottom,0px));
+  background:#0c2031;
+  border-top:1px solid #609a9a;
+  touch-action:manipulation;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer button{
+  display:block;
+  width:100%;
+  min-height:54px;
+  text-align:center;
+  touch-action:manipulation;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-choice{
+  min-height:52px;
+  white-space:normal;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-choice small{
+  display:block;
+  overflow-wrap:anywhere;
+}
+html.outpost-viewport-locked .j3-root .j3-objective{
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+}
