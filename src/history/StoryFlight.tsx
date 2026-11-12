@@ -1,6 +1,7 @@
 import TouchActionButton from "../TouchActionButton";
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from "react";
 import {lockMissionViewport} from "../missionViewport";
+import {QUICKBAR_USE_EVENT,type QuickbarDetail} from "../universalQuickbar";
 import type {PointerEvent as ReactPointer} from "react";
 import {joystickVector} from "../commander/controls";
 import type {HistoryMission} from "./missionHistory";
@@ -67,6 +68,16 @@ export default function StoryFlight({mission,onExit,onReadHistory,onComplete,sav
  const scienceExercise=storyScienceExercise(mission);
  const [paused,setPaused]=useState(false);
  const [showGuide,setShowGuide]=useState(!(resumed&&resumed.stage>=scenario.tasks.length));
+ // Historical mission tablet opens the existing documented briefing, never
+ // inventing a navigation map for spacecraft that lacked one.
+ useEffect(()=>{
+  const useTool=(event:Event)=>{
+   const detail=(event as CustomEvent<QuickbarDetail>).detail;
+   if((detail.mode==="history"||detail.mode==="history_all")&&detail.tool==="tablet")setShowGuide(true);
+  };
+  window.addEventListener(QUICKBAR_USE_EVENT,useTool);
+  return ()=>window.removeEventListener(QUICKBAR_USE_EVENT,useTool);
+ },[]);
  const [error,setError]=useState("");
  const [evaPanel,setEvaPanel]=useState(false);
  const [evaOutside,setEvaOutside]=useState(resumed?.world.outside??false);
