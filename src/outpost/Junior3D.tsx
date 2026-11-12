@@ -11,11 +11,12 @@ import {destinationGuide,missionDestination} from "./navigation";
 import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} from "./worldLogic";
 import {lockOutpostViewport} from "./scrollLock";
 import {greenhouseClimate} from "./greenhouseClimate";
+import {DAY_TIME_LIMIT_MS,DAY_WARNING_MS,DAY_URGENT_MS,dayTimerKey,dayTimerRuns,failDayDeadline,formatDayTime,normalizeSavedDayTime} from "./dayChallenge";
 import {createPostClickActivationQueue} from "../touchActivation";
 import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
 
-type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map";
+type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"timeout";
 type Result={before:Outpost;after:Outpost};
 const meters=[
  {key:"oxygen",label:"OXYGEN",icon:"◉"},{key:"water",label:"WATER",icon:"◈"},
@@ -28,6 +29,9 @@ const priorityChoices:{id:Priority;title:string;why:string}[]=[
  {id:"balanced",title:"Balance all systems",why:"Moderate crop growth and moderate power demand."},
  {id:"crops",title:"Grow more food",why:"Faster crops but higher energy and water demand."},
 ];
+function readDayTimer(destination:Destination,sol:number):number{
+ try{return normalizeSavedDayTime(localStorage.getItem(dayTimerKey(destination)),sol);}catch{return DAY_TIME_LIMIT_MS;}
+}
 function readSaved(destination:Destination){
  try{
    const s=localStorage.getItem(GAME_KEY+"-"+destination)??localStorage.getItem(LEGACY_GAME_KEY+"-"+destination);
@@ -83,6 +87,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [near,setNear]=useState<Proximity>(null);
  const [seq,setSeq]=useState(0);
  const [panel,setPanel]=useState<Panel>(null);
+ const [remainingMs,setRemainingMs]=useState(DAY_TIME_LIMIT_MS);
+ const lastTimerTick=useRef<number|null>(null);
  // iOS may dispatch a compatibility click after INTERACT opens the console;
  // avoid interpreting it as a separate press of the newly mounted Close.
  const consoleOpenedAt=useRef(-Infinity);
@@ -107,6 +113,36 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    try{localStorage.setItem(GAME_KEY+"-"+session.destination,JSON.stringify(session));setSaveOk(true);}
    catch{setSaveOk(false);}
  },[session]);
+ // Save the separate per-day clock without changing legacy v2 mission saves.
+ useEffect(()=>{
+   if(!session)return;
+   try{localStorage.setItem(dayTimerKey(session.destination),JSON.stringify({sol:session.sol,remainingMs:Math.floor(remainingMs)}));}
+   catch{setSaveOk(false);}
+ },[session?.destination,session?.sol,remainingMs]);
+ // The countdown tracks only time spent actively playing, not reading menus
+ // or leaving the browser in the background. A delayed Safari interval will
+ // never count hidden-tab time because visibilitychange resets the clock.
+ useEffect(()=>{
+   lastTimerTick.current=null;
+   const pause=()=>{lastTimerTick.current=null;};
+   const timer=window.setInterval(()=>{
+     if(!session||!dayTimerRuns(session.phase,panel,!document.hidden)){
+       lastTimerTick.current=null;return;
+     }
+     const now=performance.now(),previous=lastTimerTick.current;
+     lastTimerTick.current=now;
+     if(previous!==null)setRemainingMs(ms=>Math.max(0,ms-(now-previous)));
+   },250);
+   document.addEventListener("visibilitychange",pause);
+   return ()=>{window.clearInterval(timer);document.removeEventListener("visibilitychange",pause);lastTimerTick.current=null;};
+ },[session?.destination,session?.sol,session?.phase,panel]);
+ useEffect(()=>{
+   if(!session||session.phase!=="active"||remainingMs>0)return;
+   lastTimerTick.current=null;
+   movement.current={x:0,y:0,run:false};
+   setSession(old=>old?.phase==="active"?failDayDeadline(old):old);
+   setNotice("");setPanel("timeout");
+ },[remainingMs,session?.destination,session?.sol,session?.phase]);
  // Lock scroll before paint; restore homepage scroll on exit.
  useLayoutEffect(()=>lockOutpostViewport(),[]);
  // Avoid permanent key capture when an overlay hides movement controls.
@@ -114,6 +150,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  function start(destination:Destination){
    const saved=readSaved(destination);
    setSession(saved??initialOutpost(destination));setNear(null);setRoom("habitat");
+   lastTimerTick.current=null;
+   setRemainingMs(saved&&saved.phase==="active"?readDayTimer(destination,saved.sol):DAY_TIME_LIMIT_MS);
    setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
    spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
    enteredBuilding.current="habitat";
@@ -124,6 +162,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    if(!session)return;
    if(!window.confirm("Restart this "+session.destination+" mission? Your existing outpost progress will be replaced."))return;
    setSession(initialOutpost(session.destination));setRoom("habitat");setPanel("help");
+   lastTimerTick.current=null;setRemainingMs(DAY_TIME_LIMIT_MS);
    setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
    spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
    enteredBuilding.current="habitat";
@@ -155,6 +194,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    enteredBuilding.current="habitat";
    setRoom("habitat");setPlayerPosition({...HABITAT_WAKE});
    setLastResult({before:session,after:next});setSession(next);setPanel("outcome");
+   lastTimerTick.current=null;setRemainingMs(DAY_TIME_LIMIT_MS);
    setNotice("");setNear(null);movement.current.x=0;movement.current.y=0;
  }
  function routineInteraction(kind:"meal"|"sleep"){
