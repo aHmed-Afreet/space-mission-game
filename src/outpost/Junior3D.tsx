@@ -10,6 +10,7 @@ import OutpostMap from "./OutpostMap";
 import {destinationGuide,missionDestination} from "./navigation";
 import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} from "./worldLogic";
 import {lockOutpostViewport} from "./scrollLock";
+import {greenhouseClimate} from "./greenhouseClimate";
 import {createPostClickActivationQueue} from "../touchActivation";
 import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
@@ -246,6 +247,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const complete=session.phase!=="active";
  const selected=session.selected;
  const power=projectPower(session);
+ const greenhouseTemperature=room==="greenhouse"?greenhouseClimate(session):null;
  const currentFacility=room?focusAction(room):null;
  const localEmergency=room!==null&&room===required&&pending;
  const canAdvance=crewSleepStatus(session).ok;
@@ -323,7 +325,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    </div>}
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
-   {panel&&<div className="j3-overlay">
+   {panel&&<div className={"j3-overlay"+(panel==="console"?" j3-overlay-console":"")}>
      {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
      {panel==="console"&&currentFacility&&<section className="j3-panel j3-panel-console" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
        <div className="j3-panel-content" tabIndex={0} aria-label={currentFacility.title+" scrollable options"}>
@@ -338,7 +340,12 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
            disabled={(o.id==="patch"&&session.credits<12)||(o.id==="sweep"&&session.credits<8)}
            onClick={()=>chooseResponse(o.id)}><b>{o.title}</b><small>{o.detail}</small></button>)}</div>
        </>}
-       {room==="greenhouse"&&<><span className="j3-kicker">HYDROPONICS · CURRENT CROP {CROPS[session.cropType].label.toUpperCase()}</span>
+       {room==="greenhouse"&&<><div className="j3-greenhouse-climate" aria-label="Simulated greenhouse air temperature">
+           <div><span className="j3-kicker">GREENHOUSE CLIMATE · SIMULATED</span><strong>{greenhouseTemperature?.temperatureC}°C</strong></div>
+           <span className="j3-climate-state">{greenhouseTemperature?.status==="COOL"?"COOL":"NOMINAL"}</span>
+           <small>{greenhouseTemperature?.note}</small>
+         </div>
+         <span className="j3-kicker">HYDROPONICS · CURRENT CROP {CROPS[session.cropType].label.toUpperCase()}</span>
          <div className="j3-choices">{(Object.keys(CROPS) as CropType[]).map(c=><button key={c}
            disabled={Boolean(session.selected)} onClick={()=>setSession(s=>s?setCropPlan(s,c):s)}
            className="j3-choice"><b>{session.plannedCrop===c?"✓ ":""}{CROPS[c].label}</b>
