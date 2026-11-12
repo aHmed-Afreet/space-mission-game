@@ -12,13 +12,16 @@ import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} fro
 import {lockOutpostViewport} from "./scrollLock";
 import {greenhouseClimate} from "./greenhouseClimate";
 import MissionBoard from "./MissionBoard";
+import EngineeringMiniGame from "./EngineeringMiniGame";
+import RoverConsole from "./RoverConsole";
+import {ROVER_START,stepRover,type RoverPose,type RoverDrive} from "./roverPhysics";
 import {QUICKBAR_USE_EVENT,QUICKBAR_EQUIP_EVENT,QUICKBAR_EDIT_EVENT,type QuickbarDetail,type ToolId} from "../universalQuickbar";
 import {DAY_TIME_LIMIT_MS,DAY_WARNING_MS,DAY_URGENT_MS,dayTimerKey,dayTimerRuns,failDayDeadline,formatDayTime,normalizeSavedDayTime} from "./dayChallenge";
 import {createPostClickActivationQueue} from "../touchActivation";
 import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
 
-type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"timeout";
+type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"minigame"|"rover"|"timeout";
 type Result={before:Outpost;after:Outpost};
 const meters=[
  {key:"oxygen",label:"OXYGEN",icon:"◉"},{key:"water",label:"WATER",icon:"◈"},
@@ -89,11 +92,41 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [near,setNear]=useState<Proximity>(null);
  const [seq,setSeq]=useState(0);
  const [panel,setPanel]=useState<Panel>(null);
+ const [pendingAction,setPendingAction]=useState<Action|null>(null);
+ const [roverPose,setRoverPose]=useState<RoverPose>({...ROVER_START});
+ const roverDrive=useRef<RoverDrive>({throttle:0,steer:0});
+ const [desktopControls,setDesktopControls]=useState(()=>typeof window!=="undefined"&&window.matchMedia?.("(hover: hover) and (pointer: fine)").matches);
+ useEffect(()=>{
+   const detectPointer=(e:PointerEvent)=>{if(e.pointerType==="mouse")setDesktopControls(true);};
+   const detectKeys=(e:KeyboardEvent)=>{if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))setDesktopControls(true);};
+   window.addEventListener("pointerdown",detectPointer);
+   window.addEventListener("keydown",detectKeys);
+   return ()=>{window.removeEventListener("pointerdown",detectPointer);window.removeEventListener("keydown",detectKeys);};
+ },[]);
  const [toolbarEditing,setToolbarEditing]=useState(false);
  const [heldTool,setHeldTool]=useState<ToolId>("none");
  const [showObjective,setShowObjective]=useState(()=>{try{return localStorage.getItem("orbital-outpost-objective-visible-v1")!=="false";}catch{return true;}});
  useEffect(()=>{try{localStorage.setItem("orbital-outpost-objective-visible-v1",String(showObjective));}catch{/* UI remains usable without storage */}},[showObjective]);
  const [remainingMs,setRemainingMs]=useState(DAY_TIME_LIMIT_MS);
+ useEffect(()=>{
+   if(!session)return;
+   const timer=window.setTimeout(()=>{
+    try{localStorage.setItem(GAME_KEY+"-rover-v1-"+session.destination,JSON.stringify(roverPose));}
+    catch{setSaveOk(false);}
+   },500);
+   return ()=>window.clearTimeout(timer);
+ },[roverPose,session?.destination]);
+ useEffect(()=>{
+   if(!session||panel!=="rover")return;
+   let previous=performance.now();
+   const timer=window.setInterval(()=>{
+    const now=performance.now(),dt=Math.min(.1,(now-previous)/1000);
+    previous=now;
+    if(document.hidden)return;
+    setRoverPose(old=>stepRover(old,roverDrive.current,dt));
+   },50);
+   return ()=>{window.clearInterval(timer);roverDrive.current={throttle:0,steer:0};};
+ },[panel,session?.destination]);
  const lastTimerTick=useRef<number|null>(null);
  // iOS may dispatch a compatibility click after INTERACT opens the console;
  // avoid interpreting it as a separate press of the newly mounted Close.
@@ -177,9 +210,18 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  useLayoutEffect(()=>lockOutpostViewport(),[]);
  // Avoid permanent key capture when an overlay hides movement controls.
  useEffect(()=>{if(panel||toolbarEditing){movement.current.x=0;movement.current.y=0;movement.current.run=false;}},[panel,toolbarEditing]);
+ function storedRover(destination:Destination):RoverPose{
+   try{
+    const raw=JSON.parse(localStorage.getItem(GAME_KEY+"-rover-v1-"+destination)??"null");
+    if(raw&&[raw.x,raw.z,raw.heading,raw.speed].every((v:unknown)=>typeof v==="number"&&Number.isFinite(v))
+      &&Math.abs(raw.x)<28&&Math.abs(raw.z)<28)return raw as RoverPose;
+   }catch{/* Invalid optional rover save is ignored. */}
+   return {...ROVER_START};
+ }
  function start(destination:Destination){
    const saved=readSaved(destination);
    setSession(saved??initialOutpost(destination));setNear(null);setRoom("habitat");
+   setRoverPose(storedRover(destination));roverDrive.current={throttle:0,steer:0};setPendingAction(null);
    lastTimerTick.current=null;
    setRemainingMs(saved&&saved.phase==="active"?readDayTimer(destination,saved.sol):DAY_TIME_LIMIT_MS);
    setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
@@ -192,11 +234,18 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    if(!session)return;
    if(!window.confirm("Restart this "+session.destination+" mission? Your existing outpost progress will be replaced."))return;
    setSession(initialOutpost(session.destination));setRoom("habitat");setPanel("help");
+   setRoverPose({...ROVER_START});roverDrive.current={throttle:0,steer:0};setPendingAction(null);
    lastTimerTick.current=null;setRemainingMs(DAY_TIME_LIMIT_MS);
    setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
    spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
    enteredBuilding.current="habitat";
    setLastResult(null);setNotice("");setNear(null);
+ }
+ function beginEngineering(action:Action){
+   if(!session||!room)return;
+   const status=availableAction(session,action);
+   if(!status.ok){setNotice(status.reason??"Engineering task unavailable.");return;}
+   setPendingAction(action);setPanel("minigame");
  }
  function operate(action:Action){
    if(!session)return;
@@ -341,7 +390,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    guidance;
  return <div className="j3-root">
    <div className="j3-world">
-     <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} graphics={graphics} blocked={Boolean(panel)||toolbarEditing} heldTool={heldTool} movement={movement} lookDelta={cameraDelta} spawn={spawn}
+     <World3D key={session.sol+"-"+(room??"surface")} room={room} session={session} graphics={graphics} blocked={Boolean(panel)||toolbarEditing} heldTool={heldTool} roverPose={roverPose} movement={movement} lookDelta={cameraDelta} spawn={spawn}
        target={goal} interactSeq={seq} onPosition={positionCallback}
        onEnter={enter} onConsole={openConsole} onRoutine={routineInteraction} onNear={nearCallback} onError={setError}/>
    </div>
@@ -404,9 +453,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    </div>}
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
-   {panel&&<div className={"j3-overlay"+((panel==="console"||panel==="board")?" j3-overlay-console":"")}>
+   {panel&&<div className={"j3-overlay"+((panel==="console"||panel==="board"||panel==="minigame"||panel==="rover")?" j3-overlay-console":"")}>
      {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
      {panel==="board"&&<MissionBoard session={session} onClose={()=>setPanel(null)}/>}
+     {panel==="rover"&&<RoverConsole pose={roverPose} drive={roverDrive} onClose={()=>setPanel("console")}/>}
+     {panel==="minigame"&&pendingAction&&room&&<EngineeringMiniGame key={session.sol+"-"+pendingAction} action={pendingAction} room={room} sol={session.sol} onBack={()=>setPanel("console")} onComplete={()=>{operate(pendingAction);setPendingAction(null);setPanel("console");}}/>}
      {panel==="console"&&currentFacility&&<section className="j3-panel j3-panel-console" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
        <div className="j3-panel-content" tabIndex={0} aria-label={currentFacility.title+" scrollable options"}>
        <span className="j3-kicker">3D FACILITY CONTROL · {currentFacility.title.toUpperCase()}</span>
