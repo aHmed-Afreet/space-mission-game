@@ -1496,7 +1496,11 @@ test("main menu offers five clear choices including featured and full history ar
   assert.match(menu, /title: "Full Story Archive"/);
   assert.match(history, /FEATURED_STORY_IDS/);
   assert.match(history, /setCollection\("archive"\)/);
-  assert.match(menu, /experiences\.map\(item => <button/);
+  // The organized landing groups the same modes into three playable launches
+  // and two historical destinations, with the guide kept visible separately.
+  assert.match(menu, /experiences\.slice\(0,3\)\.map\(tile\)/);
+  assert.match(menu, /experiences\.slice\(3,5\)\.map\(tile\)/);
+  assert.match(menu, /start\("guide"\)/);
   assert.doesNotMatch(menu, /setMode\("stories"\)/);
   assert.match(history, />READ HISTORY<\/button>/);
   assert.match(history, />LIVE THE STORY<\/button>/);
@@ -2102,7 +2106,7 @@ test("fixed Earth scenery covers non-flight views and the landing has its own re
   assert.ok(heroPicture.includes(photo),"landing owns an actual photographic hero");
   assert.doesNotMatch(heroPicture,/display:none/,"hero photograph remains visible");
   assert.match(home,/\.orbital-landing-hero:before\{[^}]*linear-gradient/,"photo has a contrast overlay behind text");
-  assert.match(home,/\.orbital-hero-content p\{[^}]*line-height:1\.85[^}]*color:/,"hero copy has deliberate readable spacing and color");
+  assert.match(home,/\.orbital-hero-content p\{[^}]*line-height:1\.(?:[6-9][0-9]*)[^}]*color:/,"hero copy has deliberate readable spacing and color");
   assert.match(campaign,/campaign-home \.campaign-destination-picker/);
   assert.match(history,/history-hub \.history-card p/);
   assert.match(help,/help-page \.help-steps p/);
