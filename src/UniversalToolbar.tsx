@@ -17,7 +17,7 @@ export default function UniversalToolbar({mode}:{mode:QuickbarMode}){
  catch{/* Equipment remains editable in memory if storage is disabled. */}},[slots,mode]);
  useEffect(()=>{
   window.dispatchEvent(new CustomEvent(QUICKBAR_EDIT_EVENT,{detail:{editing,mode}}));
-  return ()=>window.dispatchEvent(new CustomEvent(QUICKBAR_EDIT_EVENT,{detail:{editing:false,mode}}));
+  return ()=>{window.dispatchEvent(new CustomEvent(QUICKBAR_EDIT_EVENT,{detail:{editing:false,mode}}));};
  },[editing,mode]);
  useEffect(()=>{
   if(!held||held==="none")return;
