@@ -552,7 +552,7 @@ html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer button{
 .j3-hud .j3-objective-head button{flex:none;border:1px solid #68898d;border-radius:5px;
  background:#1c3743;color:#e4f7ee;font-size:10px;font-weight:800;
  padding:7px 9px;min-height:35px;pointer-events:auto;touch-action:manipulation}
-.j3-hud .j3-objective-reopen{align-self:flex-end;margin-bottom:136px;
+.j3-root > .j3-objective-reopen{
  background:#14343dea;color:#d9f6e9;border:1px solid #9ad3c4;
  border-radius:7px;min-height:45px;padding:10px 14px;pointer-events:auto;
  font-size:11px;font-weight:800;touch-action:manipulation}
@@ -650,4 +650,44 @@ html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons button:not(.j3-ru
   top:max(110px,calc(var(--outpost-visible-height,100dvh) - 132px))!important;
  }
  .j3-rover-radar{height:170px;min-height:170px}
+}
+
+
+/* Regression fix: the mission reopen action is intentionally a direct child of
+ * the game root, NOT nested in the HUD's z-index:2 stacking context. The move
+ * joystick is in the z-index:4 controls layer, with a hit zone up to z-index:7.
+ * A higher, independent layer is necessary for iPad pointer hit testing. */
+html.outpost-viewport-locked .j3-root > .j3-objective-reopen,
+.j3-root > .j3-objective-reopen{
+ position:absolute;
+ z-index:9;
+ left:clamp(14px,2vw,30px);
+ top:clamp(140px,24vh,255px);
+ right:auto;
+ bottom:auto;
+ display:block;
+ min-width:168px;
+ min-height:48px;
+ padding:11px 17px;
+ pointer-events:auto;
+ touch-action:manipulation;
+ -webkit-user-select:none;
+ user-select:none;
+ color:#e1f5ec;
+ background:#14343dfa;
+ border:1px solid #9ad3c4;
+ border-radius:7px;
+ font-size:12px;
+ font-weight:850;
+ cursor:pointer;
+ box-shadow:0 8px 25px #0007;
+}
+.j3-root > .j3-objective-reopen:focus-visible{outline:3px solid #cbf5cb;outline-offset:3px}
+@media(max-width:900px){
+ html.outpost-viewport-locked .j3-root > .j3-objective-reopen,
+ .j3-root > .j3-objective-reopen{top:clamp(130px,25vh,210px)}
+}
+@media(max-width:600px){
+ html.outpost-viewport-locked .j3-root > .j3-objective-reopen,
+ .j3-root > .j3-objective-reopen{top:112px;left:10px;min-height:48px}
 }
