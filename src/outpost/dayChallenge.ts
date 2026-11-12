@@ -8,7 +8,7 @@ import {GAME_KEY,type Destination,type Outpost} from "./engine";
 export const DAY_TIME_LIMIT_MS=8*60*1000;
 export const DAY_WARNING_MS=60*1000;
 export const DAY_URGENT_MS=20*1000;
-export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"timeout";
+export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"timeout";
 
 export function dayTimerKey(destination:Destination):string {
   return GAME_KEY+"-"+destination+"-day-clock";
@@ -32,7 +32,7 @@ export function formatDayTime(ms:number):string {
  * Engineering consoles and ordinary exploration count against the deadline. */
 export function dayTimerRuns(phase:Outpost["phase"],panel:TimerPausePanel,visible:boolean):boolean {
   return phase==="active"&&visible&&
-    !["help","map","mission","event","outcome","timeout"].includes(panel??"");
+    !["help","map","mission","board","event","outcome","timeout"].includes(panel??"");
 }
 
 /** Pure transition: a missed day is a failed timed challenge, never a win.
