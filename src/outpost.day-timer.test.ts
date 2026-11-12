@@ -62,7 +62,7 @@ test("Outpost UI presents readable countdown, warnings, failure actions and rest
  assert.match(s,/document\.addEventListener\("visibilitychange",pause\)/);
  assert.match(s,/dayTimerKey\(session\.destination\)/);
  assert.match(s,/setRemainingMs\(DAY_TIME_LIMIT_MS\)/);
- assert.match(s,/dayTimerRuns\(session\.phase,panel,!document\.hidden\)/);
+ assert.match(s,/dayTimerRuns\(session\.phase,toolbarEditing\?"help":panel,!document\.hidden\)/);
  assert.match(s,/setSession\(old=>old\?\.phase==="active"\?failDayDeadline\(old\):old\)/);
  assert.match(s,/role="timer"/);
  assert.match(s,/formatDayTime\(remainingMs\)/);
