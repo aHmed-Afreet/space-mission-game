@@ -287,6 +287,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const complete=session.phase!=="active";
  const selected=session.selected;
  const power=projectPower(session);
+ const timerPaused=!dayTimerRuns(session.phase,panel,!document.hidden);
+ const timerLow=remainingMs<=DAY_WARNING_MS;
+ const timerUrgent=remainingMs<=DAY_URGENT_MS;
  const greenhouseTemperature=room==="greenhouse"?greenhouseClimate(session):null;
  const currentFacility=room?focusAction(room):null;
  const localEmergency=room!==null&&room===required&&pending;
@@ -331,6 +334,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          <button onClick={()=>{setSession(null);setPanel(null);setRoom(null);}}>EXIT</button>
        </div>
      </div>
+     <div className={"j3-day-timer"+(timerUrgent?" urgent":timerLow?" warning":"")} role="timer" aria-label={"Day "+session.sol+" remaining time "+formatDayTime(remainingMs)}>
+       <span>DAY {Math.min(10,session.sol)} DEADLINE · {timerPaused?"PAUSED":"LIVE"}</span>
+       <strong>{formatDayTime(remainingMs)}</strong>
+       <div className="j3-timer-track"><i style={{width:Math.max(0,100*remainingMs/DAY_TIME_LIMIT_MS)+"%"}}/></div>
+     </div>
      <div className="j3-middle"><span className="j3-reticle"/></div>
      <div className="j3-bottom">
        <div className="j3-objective">
@@ -371,6 +379,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <div className="j3-panel-content" tabIndex={0} aria-label={currentFacility.title+" scrollable options"}>
        <span className="j3-kicker">3D FACILITY CONTROL · {currentFacility.title.toUpperCase()}</span>
        <h2>{currentFacility.title}</h2>
+       <div className={"j3-console-deadline"+(timerUrgent?" urgent":timerLow?" warning":"")}>
+         <span>TIME TO FINISH TODAY'S ROUTINE</span><strong>{formatDayTime(remainingMs)}</strong>
+       </div>
        <p>{currentFacility.description}</p>
        <div className="j3-info" role="status">DAY {session.sol} · Credits {session.credits} · {selected
          ?"TODAY'S TASK COMPLETE: "+ACTIONS.find(x=>x.id===selected)?.title+". You can scroll through all options, but another engineering operation unlocks on the next day after dinner and sleep."
