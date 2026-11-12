@@ -325,7 +325,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    </div>}
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
-   {panel&&<div className="j3-overlay">
+   {panel&&<div className={"j3-overlay"+(panel==="console"?" j3-overlay-console":"")}>
      {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
      {panel==="console"&&currentFacility&&<section className="j3-panel j3-panel-console" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
        <div className="j3-panel-content" tabIndex={0} aria-label={currentFacility.title+" scrollable options"}>
