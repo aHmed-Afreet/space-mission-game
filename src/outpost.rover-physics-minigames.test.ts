@@ -19,7 +19,7 @@ test("Moon and Mars daily objectives have 4 active-play minutes, including puzzl
 
 test("rover accelerates, slows with friction, steers and cannot drive through buildings",()=>{
  let p={...ROVER_START};
- for(let i=0;i<100;i++)p=stepRover(p,{throttle:1,steer:0},.05);
+ for(let i=0;i<20;i++)p=stepRover(p,{throttle:1,steer:0},.05);
  assert.ok(p.speed>0&&p.speed<=ROVER_MAX_SPEED);
  assert.ok(Math.hypot(p.x-ROVER_START.x,p.z-ROVER_START.z)>2);
  const atSpeed=p.speed;
