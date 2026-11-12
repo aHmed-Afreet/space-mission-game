@@ -448,6 +448,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      {panel==="help"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="3D astronaut controls">
        <span className="j3-kicker">WELCOME TO THE 3D MISSION</span><h2>YOU ARE THE ASTRONAUT.</h2>
        <p>This is a walkable Moon/Mars base. The equipment you operate changes your mission resources and the world you see.</p>
+       <div className="j3-info"><b>NEW CHALLENGE: 08:00 PER DAY.</b> Eat breakfast, finish one engineering task, resolve emergencies, eat dinner and sleep at your bunk before the clock runs out. Miss the deadline and the mission fails. The clock pauses while reading HELP, MAP or MISSION, between days, and whenever this browser tab is hidden. It runs while you explore or use equipment.</div>
        <div className="j3-tutorial-steps">
          <div><b>1. WALK</b><br/>Touch anywhere in the bottom-left movement zone to make a joystick appear. Move your finger to walk (or use WASD).</div>
          <div><b>2. FIND YOUR WAY</b><br/>Open MAP to see yourself, your mission target and what every building does. Follow the highlighted building.</div>
@@ -456,6 +457,17 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        </div>
        <p className="j3-small">The visual environment and resource calculations are stylized educational simulations, not photorealistic NASA engineering predictions. Your mission is saved on this device.</p>
        <button className="j3-primary" onClick={()=>setPanel(null)}>ENTER 3D WORLD →</button>
+     </section>}
+     {panel==="timeout"&&<section className="j3-panel j3-timeout-panel" role="alertdialog" aria-modal="true" aria-label="Day deadline exceeded">
+       <span className="j3-kicker">MISSION CLOCK · DAY {Math.min(10,session.sol)}</span>
+       <h2>TIME'S UP — DAY FAILED</h2>
+       <div className="j3-timeout-number">00:00</div>
+       <p>You didn't finish the crew's full routine before the eight-minute deadline. The timed survival mission has ended.</p>
+       <div className="j3-info">To win, eat breakfast, complete the daily engineering operation, respond to any emergency, return for dinner, then sleep in your bunk before time expires.</div>
+       <div className="j3-row">
+         <button className="j3-primary" onClick={restart}>RESTART CHALLENGE ↻</button>
+         <button onClick={()=>{setSession(null);setRoom(null);setPanel(null);}}>CHOOSE A PLANET</button>
+       </div>
      </section>}
      {panel==="outcome"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="Mission results">
        <span className="j3-kicker">{complete?"FINAL MISSION RESULTS":"MISSION CONTROL · DAY "+lastResult?.before.sol+" COMPLETE"}</span>
