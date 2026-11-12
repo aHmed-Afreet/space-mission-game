@@ -1,4 +1,5 @@
 import TouchActionButton from "../../TouchActionButton";
+import {QUICKBAR_USE_EVENT,type QuickbarDetail} from "../../universalQuickbar";
 import ScientificReadings from "./ScientificReadings";
 import { fieldToolUse, fieldToolCostText } from "./fieldTools";
 import { sound } from "./audio";
@@ -139,6 +140,18 @@ export default function Flight({
     [rendezvousOpen,setRendezvousOpen] = useState(false),
     [helpOpen,setHelpOpen] = useState(false),
     [guideFeedback,setGuideFeedback] = useState("");
+  // Shared hotbar opens genuine Commander navigation and mission tablet
+  // without bypassing the station/mission interaction state machine.
+  useEffect(()=>{
+    const onQuickbar=(event:Event)=>{
+      const detail=(event as CustomEvent<QuickbarDetail>).detail;
+      if(detail.mode!=="commander")return;
+      if(detail.tool==="map")setNavOpen(true);
+      if(detail.tool==="tablet"){setTab("MISSION");setTablet(true);}
+    };
+    window.addEventListener(QUICKBAR_USE_EVENT,onQuickbar);
+    return ()=>window.removeEventListener(QUICKBAR_USE_EVENT,onQuickbar);
+  },[]);
   const attemptedCommand = useRef<{ objective: number; session: Session } | null>(null);
   const resumedAfterGuide = useRef(false),
     lastTutorial = useRef(""),
