@@ -26,6 +26,10 @@ const martian:DayBrief[]=[
  {title:"Survive the radiation warning",description:"Keep your crew protected without exhausting your last supplies.",focus:"shield",tip:"Sheltering uses some food and battery power."},
  {title:"Final Mars base check",description:"Complete your ten-sol demonstration with a working greenhouse and safe crew.",focus:"habitat",tip:"The mission evaluates survival, food production, safety, shielding and radiation."}
 ];
+/** All ten planned objectives, including future days, for the mission board. */
+export function missionSchedule(destination:Outpost["destination"]):readonly DayBrief[]{
+ return destination==="moon"?lunar:martian;
+}
 export function dayBrief(s:Outpost):DayBrief{
   if(s.phase!=="active")return {title:s.phase==="won"?"Mission accomplished!":"Mission debrief",description:"Review the consequences of your decisions and the crew's final condition.",focus:"habitat",tip:""};
   const incident=currentIncident(s);
