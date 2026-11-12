@@ -430,7 +430,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
           <small>{selected?"✓ Action completed: "+ACTIONS.find(x=>x.id===selected)?.title:
             session.breakfastSol!==session.sol?"Start with breakfast in Crew Habitat.":"Find a facility and perform one task."}
            {pending?" · ⚠ Emergency response required":""}</small>
-       </div>:<button type="button" className="j3-objective-reopen" onClick={()=>setShowObjective(true)}>☰ SHOW OBJECTIVE</button>}
+       </div>:null}
        <div className="j3-helptext">BOTTOM-LEFT: TOUCH TO WALK · DRAG TO LOOK · RUN / INTERACT SUPPORT CAMERA DRAG</div>
      </div>
    </div>
@@ -456,6 +456,14 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      </div>}
      {near&&<div className="j3-prompt">{near.title} · PRESS INTERACT</div>}
    </div>}
+   {/* Keep SHOW OBJECTIVE above the entire joystick touch-capture zone.
+       It must not live inside .j3-hud (z-index 2), because .j3-controls
+       and its floating joystick sit at z-index 4/7. */}
+   {!panel&&!showObjective&&<button type="button" className="j3-objective-reopen"
+     onPointerDown={e=>e.stopPropagation()}
+     onClick={e=>{e.stopPropagation();setShowObjective(true);}}>
+     ☰ SHOW OBJECTIVE
+   </button>}
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
    {panel&&<div className={"j3-overlay"+((panel==="console"||panel==="board"||panel==="minigame"||panel==="rover")?" j3-overlay-console":"")}>
