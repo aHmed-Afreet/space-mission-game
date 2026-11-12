@@ -357,7 +357,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      })}</div>
      <div className="j3-row"><button onClick={onExit} className="j3-info">← ALL GAME MODES</button></div>
      <label className="j3-graphics">GRAPHICS <select aria-label="Outpost graphics quality" value={graphics} onChange={e=>{const value=e.target.value as PlayerPreferences["graphics"];setGraphics(value);settings.save({...settings.value,graphics:value});}}><option value="battery">Battery · lower GPU load</option><option value="balanced">Balanced · recommended for iPad</option><option value="quality">Quality · detailed shadows</option></select></label>
-     <p className="j3-settings">3D scene rendered locally on your device · Touch joystick + drag to look · Keyboard WASD/E · Fictional resource values, not real mission engineering predictions</p>
+     <p className="j3-settings">3D scene rendered locally on your device · Touch joystick + drag to look · Keyboard WASD/E and SPACE jump · Fictional resource values, not real mission engineering predictions</p>
    </section>
  </div>;
  const brief=dayBrief(session),incident=currentIncident(session);
@@ -434,9 +434,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <div className="j3-helptext">BOTTOM-LEFT: TOUCH TO WALK · DRAG TO LOOK · RUN / INTERACT SUPPORT CAMERA DRAG</div>
      </div>
    </div>
-   {!panel&&<div className="j3-controls">
-     <Stick move={movement}/>
-     <div className="j3-buttons">
+   {!panel&&<div className={"j3-controls"+(desktopControls?" desktop-input":"")}>
+     {!desktopControls&&<Stick move={movement}/>}
+     {!desktopControls&&<div className="j3-buttons">
        <button className="j3-run" onPointerDown={e=>actionDown("run",e)}
          onPointerMove={e=>actionMove("run",e)} onPointerUp={e=>actionEnd("run",e)}
          onPointerCancel={e=>actionEnd("run",e)} onLostPointerCapture={e=>actionEnd("run",e)}>RUN</button>
@@ -447,8 +447,13 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
            const drag=skipInteractClick.current;skipInteractClick.current=false;
            if(!recent&&!drag)setSeq(n=>n+1);
          }}>INTERACT</button>
-       
-     </div>
+       <button className="j3-jump" type="button" onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);movement.current.jump=true;}}
+          onPointerUp={()=>{movement.current.jump=false;}} onPointerCancel={()=>{movement.current.jump=false;}}
+          onLostPointerCapture={()=>{movement.current.jump=false;}}>JUMP</button>
+     </div>}
+     {desktopControls&&<div className="j3-keyboard-hint">KEYBOARD + MOUSE · WASD MOVE · SPACE JUMP · E INTERACT
+       <button type="button" onClick={()=>setDesktopControls(false)}>ENABLE TOUCH</button>
+     </div>}
      {near&&<div className="j3-prompt">{near.title} · PRESS INTERACT</div>}
    </div>}
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
@@ -485,6 +490,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
            className="j3-choice"><b>{session.plannedCrop===c?"✓ ":""}{CROPS[c].label}</b>
              <small>Harvest {CROPS[c].harvest} food units · Water demand {CROPS[c].water} · Electrical load {CROPS[c].power}</small></button>)}</div>
        </>}
+       {room==="shield"&&<div className="j3-rover-link">
+         <span className="j3-kicker">REMOTE CONTROL · SURFACE EXPLORATION</span>
+         <p>The rover is parked outside the base. Drive it around the terrain on the shelter's control screen. Buildings and rocky boundaries have collision physics.</p>
+         <button type="button" onClick={()=>{roverDrive.current={throttle:0,steer:0};setPanel("rover");}}>OPEN ROVER DRIVE SCREEN ↗</button>
+       </div>}
        {room==="battery"&&<><span className="j3-kicker">BATTERY BANK · ENERGY ALLOCATION</span>
          <div className="j3-choices">{priorityChoices.map(v=><button key={v.id} onClick={()=>setSession(s=>s?setPriority(s,v.id):s)}>
            <b>{session.priority===v.id?"✓ ":""}{v.title}</b><small>{v.why}</small></button>)}</div>
@@ -493,12 +503,12 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <span className="j3-kicker">OPERATE REAL EQUIPMENT</span>
        <div className="j3-choices">{currentFacility.operations.map(a=>{
          const id=a as Action,v=ACTIONS.find(x=>x.id===id)!,avail=availableAction(session,id);
-         return <button key={id} className="j3-choice" disabled={!avail.ok} onClick={()=>operate(id)}>
+         return <button key={id} className="j3-choice" disabled={!avail.ok} onClick={()=>beginEngineering(id)}>
            <span><b>{v.title}</b><em>{v.cost?v.cost+" CREDITS":"FREE"}</em></span>
            <small>{avail.ok?v.note:avail.reason}</small></button>;
        })}</div>
        <div className="j3-choices"><button className="j3-choice" disabled={!availableAction(session,"monitor").ok}
-         onClick={()=>operate("monitor")}><b>Check equipment without upgrading</b><small>{availableAction(session,"monitor").ok?"Free operation. Advance today without a construction purchase.":availableAction(session,"monitor").reason}</small></button></div>
+         onClick={()=>beginEngineering("monitor")}><b>Check equipment without upgrading</b><small>{availableAction(session,"monitor").ok?"Free operation. Advance today without a construction purchase.":availableAction(session,"monitor").reason}</small></button></div>
        {notice&&<div className="j3-info" role="status">{notice}</div>}
        </div>
        <div className="j3-panel-footer"><button className="j3-primary" onClick={event=>{
@@ -534,9 +544,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <p>This is a walkable Moon/Mars base. The equipment you operate changes your mission resources and the world you see.</p>
        <div className="j3-info"><b>NEW CHALLENGE: 04:00 PER DAY.</b> Eat breakfast, finish one engineering task, resolve emergencies, eat dinner and sleep at your bunk before the clock runs out. Miss the deadline and the mission fails. The clock pauses while reading HELP, MAP or MISSION, between days, and whenever this browser tab is hidden. It runs while you explore or use equipment.</div>
        <div className="j3-tutorial-steps">
-         <div><b>1. WALK</b><br/>Touch anywhere in the bottom-left movement zone to make a joystick appear. Move your finger to walk (or use WASD).</div>
+         <div><b>1. WALK</b><br/>On a touchscreen, use the bottom-left joystick; touch JUMP to hop. Using a mouse and keyboard automatically hides touch walking. On desktop use WASD, SPACE to jump and E to interact.</div>
          <div><b>2. FIND YOUR WAY</b><br/>Open MAP to see yourself, your mission target and what every building does. Follow the highlighted building.</div>
-         <div><b>3. OPEN AND OPERATE</b><br/>Approach the door, press INTERACT, walk inside and operate the glowing console. Drag from RUN or INTERACT to turn the camera.</div>
+         <div><b>3. OPEN AND OPERATE</b><br/>Approach the door, press INTERACT to open it, walk inside, or press INTERACT again to close it. Use the glowing console for interactive equipment mini-games. Drag from RUN or INTERACT to turn the camera.</div>
          <div><b>4. CREW'S DAILY ROUTINE</b><br/>In Crew Habitat, INTERACT at the dining table for breakfast. Complete your engineering task, return for dinner, then INTERACT at the bed to sleep. Each new day begins here.</div>
        </div>
        <p className="j3-small">The visual environment and resource calculations are stylized educational simulations, not photorealistic NASA engineering predictions. Your mission is saved on this device.</p>
