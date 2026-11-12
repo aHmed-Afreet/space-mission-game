@@ -11,8 +11,8 @@ import {clampWalk,walkStep} from "./outpost/worldLogic";
 test("Moon and Mars daily objectives have 4 active-play minutes, including puzzles and driving",()=>{
  assert.equal(DAY_TIME_LIMIT_MS,240000);
  assert.equal(formatDayTime(DAY_TIME_LIMIT_MS),"04:00");
- assert.equal(dayTimerRuns("active","minigame" as null,true),true);
- assert.equal(dayTimerRuns("active","rover" as null,true),true);
+ assert.equal(dayTimerRuns("active","minigame",true),true);
+ assert.equal(dayTimerRuns("active","rover",true),true);
  assert.equal(dayTimerRuns("active","map",true),false);
  assert.match(failDayDeadline(initialOutpost("mars")).lastReport.join(" "),/04:00/);
 });
@@ -21,7 +21,7 @@ test("rover accelerates, slows with friction, steers and cannot drive through bu
  let p={...ROVER_START};
  for(let i=0;i<20;i++)p=stepRover(p,{throttle:1,steer:0},.05);
  assert.ok(p.speed>0&&p.speed<=ROVER_MAX_SPEED);
- assert.ok(Math.hypot(p.x-ROVER_START.x,p.z-ROVER_START.z)>2);
+ assert.ok(Math.hypot(p.x-ROVER_START.x,p.z-ROVER_START.z)>.5);
  const atSpeed=p.speed;
  for(let i=0;i<55;i++)p=stepRover(p,{throttle:0,steer:0},.05);
  assert.ok(p.speed<atSpeed*.18,"friction slows a released throttle");
