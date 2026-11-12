@@ -575,3 +575,79 @@ body:has(.orbital-quickbar) .j3-helptext{display:none}
 .j3-board-progress{width:100%;height:6px;background:#425461;overflow:hidden;border-radius:7px;margin:10px 0 7px}
 .j3-board-progress i{display:block;background:#9fdec2;height:100%}
 @media(max-width:700px){.j3-board-tabs{grid-template-columns:1fr}.j3-board-head{align-items:flex-start;flex-direction:column;gap:4px}}
+
+
+/* Four-minute physics/engineering challenge and drivable rover release. */
+html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons{
+ grid-template-columns:minmax(0,106px) minmax(0,106px);
+ grid-template-rows:43px 56px;
+ width:min(232px,32vw);
+ gap:7px;
+ top:max(145px,calc(var(--outpost-visible-height,100dvh) - 137px))!important;
+ justify-items:stretch;
+}
+html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons button{
+ min-height:0!important;min-width:0!important;width:100%;
+ padding:6px 9px;font-size:11px;
+}
+html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons button.j3-run{
+ grid-column:1;grid-row:1;
+}
+html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons button.j3-jump{
+ grid-column:2;grid-row:1;background:#253c4a;color:#e5f4e9;border:1px solid #90b9aa;
+}
+html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons button:not(.j3-run):not(.j3-jump){
+ grid-column:1/3;grid-row:2;
+}
+.j3-keyboard-hint{position:absolute;bottom:max(13px,env(safe-area-inset-bottom,0px));left:16px;
+ pointer-events:none;background:#122c36d9;border:1px solid #709ea1;border-radius:7px;padding:10px;
+ max-width:min(64vw,470px);font-size:10px;color:#d8f3eb;line-height:1.5}
+.j3-keyboard-hint button{pointer-events:auto;display:inline-block;border-radius:6px;min-height:36px;
+ border:1px solid #92c4b4;background:#b2e7ce;color:#1e473d;padding:7px 10px;
+ margin-left:12px;font-weight:750;cursor:pointer}
+.j3-minigame-panel .j3-panel-content{display:grid;align-content:start}
+.j3-minigame-target{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:5px 0 8px}
+.j3-minigame-target b{display:grid;place-items:center;min-height:60px;border:1px solid #9ccebb;
+ border-radius:10px;background:#1e4547;color:#c7f7e2;font-size:22px;text-align:center}
+.j3-minigame-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.j3-minigame-buttons button{display:flex;flex-direction:column;justify-content:center;align-items:center;
+ gap:9px;border-radius:10px;min-height:83px;font-weight:750;touch-action:manipulation}
+.j3-minigame-buttons button[aria-pressed=true]{background:#387e6c;border:2px solid #e6f7c5}
+.j3-minigame-buttons small{font-size:9px}
+.j3-minigame-buttons strong{font-size:23px}
+.j3-root .j3-panel-console .j3-minigame-actions{display:flex;gap:10px}
+.j3-root .j3-panel-console .j3-minigame-actions button{width:auto;flex:1;text-align:center;min-width:0}
+.j3-root .j3-panel-console .j3-minigame-actions button:disabled{opacity:.5;cursor:not-allowed}
+.j3-rover-link{border:1px solid #84b7b3;border-radius:9px;background:#183d43;padding:14px;display:grid;gap:10px}
+.j3-rover-link button{background:#b4eaca;color:#153c35;border:0;min-height:50px;text-align:center}
+.j3-rover-readouts{display:flex;gap:9px;flex-wrap:wrap}
+.j3-rover-readouts b{padding:8px 12px;border:1px solid #5a9b90;background:#143d42;border-radius:7px;font-variant-numeric:tabular-nums}
+.j3-rover-radar{position:relative;min-height:220px;height:clamp(180px,30svh,300px);
+ border:2px solid #8baeb6;border-radius:10px;overflow:hidden;
+ background:linear-gradient(#6b8b9540 1px,transparent 1px),
+ linear-gradient(90deg,#6b8b9540 1px,transparent 1px),
+ radial-gradient(circle at center,#365865,#142936 82%);
+ background-size:10% 10%,10% 10%,auto}
+.j3-rover-map-building{position:absolute;transform:translate(-50%,-50%);font-size:9px;font-weight:800;
+ max-width:98px;text-align:center;background:#3e646a;border:1px solid #a6cdbd;border-radius:5px;padding:5px;color:#eff6e9}
+.j3-rover-map-car{position:absolute;width:34px;height:34px;display:grid;place-items:center;
+ font-size:22px;color:#102d27;background:#acecc7;border:3px solid #dcffdc;box-shadow:0 0 14px #b7f6d6;border-radius:7px;z-index:2}
+.j3-rover-controls{display:flex;flex-direction:column;gap:8px;align-items:center}
+.j3-rover-controls>div{display:flex;justify-content:center;gap:9px;width:100%}
+.j3-rover-controls button{min-width:110px;max-width:170px;text-align:center;background:#264954;
+ border:1px solid #a0c5bc;min-height:48px;touch-action:none;user-select:none}
+.j3-rover-controls button:active{background:#4e9d84}
+@media(max-width:730px){
+ html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons{width:198px;grid-template-columns:repeat(2,96px)}
+ .j3-minigame-target b{min-height:44px;font-size:16px}
+ .j3-minigame-buttons{gap:5px}
+ .j3-minigame-buttons button{min-height:66px;padding:5px;font-size:11px}
+ .j3-root .j3-panel-console .j3-minigame-actions{flex-direction:column}
+ .j3-rover-controls button{min-width:75px}
+}
+@media(max-height:620px){
+ html.outpost-viewport-locked .j3-root .j3-controls .j3-buttons{
+  top:max(110px,calc(var(--outpost-visible-height,100dvh) - 132px))!important;
+ }
+ .j3-rover-radar{height:170px;min-height:170px}
+}
