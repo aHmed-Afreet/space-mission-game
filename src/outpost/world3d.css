@@ -454,3 +454,64 @@ html.outpost-viewport-locked .j3-root .j3-objective{
 .j3-root .j3-quick button{background:#1a272ee8;border-color:#849398;border-radius:5px}
 .j3-root .j3-graphics{display:flex;gap:12px;align-items:center;font-size:11px;letter-spacing:1px;color:#c5d0d0}
 .j3-root .j3-graphics select{min-height:44px;max-width:65vw;background:#1d2a32;color:#edf0ed;border:1px solid #85969a;border-radius:5px;padding:8px 12px;font:inherit;letter-spacing:0}
+
+
+/* iPad Safari / Chrome: the visual viewport can over-report available height
+ * below the browser bars. A centered 800px modal clips the bottom button.
+ * Top-align a deliberately shorter modal with its own scrolling content. */
+html.outpost-viewport-locked .j3-root .j3-overlay-console{
+  align-items:flex-start;
+  justify-content:center;
+  padding:clamp(10px,1.5svh,18px) clamp(10px,2vw,18px) 20px;
+}
+html.outpost-viewport-locked .j3-root .j3-overlay-console .j3-panel-console{
+  width:min(760px,100%);
+  height:min(620px,68svh,calc(var(--outpost-visible-height,100dvh) - 136px));
+  max-height:calc(100% - 28px);
+  min-height:0;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-content{
+  min-height:0;
+  flex:1 1 auto;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer{
+  position:relative;
+  flex:0 0 auto;
+  z-index:5;
+  background:#122c36;
+  padding:12px clamp(16px,2.2vw,28px) max(14px,env(safe-area-inset-bottom,0px));
+  box-shadow:0 -8px 20px #0005;
+}
+html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer button{
+  min-height:54px;
+  width:100%;
+  display:block;
+  touch-action:manipulation;
+  pointer-events:auto;
+}
+.j3-greenhouse-climate{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px 15px;
+  border:1px solid #8eb3ae8a;
+  border-radius:9px;
+  padding:14px 16px;
+  background:#16383d;
+}
+.j3-greenhouse-climate>div{display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+.j3-greenhouse-climate strong{font-size:clamp(28px,3vw,37px);font-weight:750;color:#dcfdf2;line-height:1}
+.j3-greenhouse-climate .j3-climate-state{font-size:10px;letter-spacing:.12em;font-weight:800;border:1px solid #a1cab091;border-radius:20px;padding:7px 10px;color:#d8f9e8}
+.j3-greenhouse-climate small{grid-column:1/-1;color:#bdd4d3;font-size:11px;line-height:1.5}
+@media(max-height:550px){
+ html.outpost-viewport-locked .j3-root .j3-overlay-console .j3-panel-console{height:min(420px,65svh,calc(var(--outpost-visible-height,100dvh) - 100px))}
+ html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-content{padding:12px 17px;gap:9px}
+ html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer{padding:9px 16px}
+}
