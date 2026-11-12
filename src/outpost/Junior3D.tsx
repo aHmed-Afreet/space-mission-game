@@ -11,12 +11,13 @@ import {destinationGuide,missionDestination} from "./navigation";
 import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} from "./worldLogic";
 import {lockOutpostViewport} from "./scrollLock";
 import {greenhouseClimate} from "./greenhouseClimate";
+import MissionBoard from "./MissionBoard";
 import {DAY_TIME_LIMIT_MS,DAY_WARNING_MS,DAY_URGENT_MS,dayTimerKey,dayTimerRuns,failDayDeadline,formatDayTime,normalizeSavedDayTime} from "./dayChallenge";
 import {createPostClickActivationQueue} from "../touchActivation";
 import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
 
-type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"timeout";
+type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"timeout";
 type Result={before:Outpost;after:Outpost};
 const meters=[
  {key:"oxygen",label:"OXYGEN",icon:"◉"},{key:"water",label:"WATER",icon:"◈"},
@@ -87,6 +88,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [near,setNear]=useState<Proximity>(null);
  const [seq,setSeq]=useState(0);
  const [panel,setPanel]=useState<Panel>(null);
+ const [showObjective,setShowObjective]=useState(()=>{try{return localStorage.getItem("orbital-outpost-objective-visible-v1")!=="false";}catch{return true;}});
+ useEffect(()=>{try{localStorage.setItem("orbital-outpost-objective-visible-v1",String(showObjective));}catch{/* UI remains usable without storage */}},[showObjective]);
  const [remainingMs,setRemainingMs]=useState(DAY_TIME_LIMIT_MS);
  const lastTimerTick=useRef<number|null>(null);
  // iOS may dispatch a compatibility click after INTERACT opens the console;
@@ -329,7 +332,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        })}</div>
        <div className="j3-quick">
          <button onClick={()=>setPanel("map")}>MAP</button>
-         <button onClick={()=>setPanel("mission")}>MISSION</button>
+         <button onClick={()=>setPanel("board")}>QUESTS</button>
          <button onClick={()=>setPanel("help")}>?</button>
          <button onClick={()=>{setSession(null);setPanel(null);setRoom(null);}}>EXIT</button>
        </div>
@@ -341,8 +344,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      </div>
      <div className="j3-middle"><span className="j3-reticle"/></div>
      <div className="j3-bottom">
-       <div className="j3-objective">
-         <span className="j3-kicker">TODAY'S OBJECTIVE · DAY {Math.min(10,session.sol)}</span>
+       {showObjective?<div className="j3-objective">
+         <div className="j3-objective-head"><span className="j3-kicker">TODAY'S OBJECTIVE · DAY {Math.min(10,session.sol)}</span>
+           <button type="button" onClick={()=>setShowObjective(false)} aria-label="Hide left mission panel">− HIDE</button></div>
          <strong>{brief.title}</strong><p>{brief.description}</p>
          <div className="j3-direction"><b>★ {nav.title}</b><span>{nav.description}</span>
            <button onClick={()=>setPanel("map")}>OPEN MAP ↗</button></div>
@@ -350,7 +354,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
           <small>{selected?"✓ Action completed: "+ACTIONS.find(x=>x.id===selected)?.title:
             session.breakfastSol!==session.sol?"Start with breakfast in Crew Habitat.":"Find a facility and perform one task."}
            {pending?" · ⚠ Emergency response required":""}</small>
-       </div>
+       </div>:<button type="button" className="j3-objective-reopen" onClick={()=>setShowObjective(true)}>☰ SHOW OBJECTIVE</button>}
        <div className="j3-helptext">BOTTOM-LEFT: TOUCH TO WALK · DRAG TO LOOK · RUN / INTERACT SUPPORT CAMERA DRAG</div>
      </div>
    </div>
@@ -373,8 +377,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    </div>}
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
-   {panel&&<div className={"j3-overlay"+(panel==="console"?" j3-overlay-console":"")}>
+   {panel&&<div className={"j3-overlay"+((panel==="console"||panel==="board")?" j3-overlay-console":"")}>
      {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
+     {panel==="board"&&<MissionBoard session={session} onClose={()=>setPanel(null)}/>}
      {panel==="console"&&currentFacility&&<section className="j3-panel j3-panel-console" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
        <div className="j3-panel-content" tabIndex={0} aria-label={currentFacility.title+" scrollable options"}>
        <span className="j3-kicker">3D FACILITY CONTROL · {currentFacility.title.toUpperCase()}</span>
@@ -435,6 +440,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <span className="j3-kicker">MISSION CONTROL / DAY {session.sol}</span><h2>{brief.title}</h2><p>{brief.description}</p>
        <div className="j3-map-direction"><b>★ {nav.title}</b><span>{nav.description}</span></div>
        <button onClick={()=>setPanel("map")}>VIEW BASE MAP AND BUILDING GUIDE ↗</button>
+       <button onClick={()=>setPanel("board")}>OPEN ALL 10 MISSIONS + SIDE QUESTS ↗</button>
        <div className="j3-info">{brief.tip}</div>
        <div className="j3-split"><div className="j3-info">CREW SAFETY<br/><b>{Math.round(session.safety)}%</b></div>
          <div className="j3-info">RADIATION<br/><b>{Math.round(session.radiation)} INDEX</b></div></div>
