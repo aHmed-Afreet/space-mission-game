@@ -330,8 +330,8 @@ function createScene(session:Outpost,room:FacilityId|null){
    const prop=new T.Group();astro.add(prop);prop.position.set(.65,.98,-.34);
    prop.rotation.set(.15,-.22,-.15);prop.visible=false;
    if(tool==="wrench"){
-     box(prop,.095,.58,.075,0,.11,0,hull);box(prop,.26,.085,.07,0,.43,0,metal);
-     box(prop,.07,.18,.08,-.12,.50,0,metal);
+     box(prop,.095,.58,.075,0,.11,0,hull);box(prop,.26,.085,.07,0,.43,0,trim);
+     box(prop,.07,.18,.08,-.12,.50,0,trim);
    }else if(tool==="sample"){
      box(prop,.16,.31,.16,0,.14,0,glow);box(prop,.20,.055,.19,0,.32,0,gold);
    }else if(tool==="radio"){
