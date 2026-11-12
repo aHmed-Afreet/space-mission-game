@@ -11,11 +11,12 @@ import {destinationGuide,missionDestination} from "./navigation";
 import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} from "./worldLogic";
 import {lockOutpostViewport} from "./scrollLock";
 import {greenhouseClimate} from "./greenhouseClimate";
+import {DAY_TIME_LIMIT_MS,DAY_WARNING_MS,DAY_URGENT_MS,dayTimerKey,dayTimerRuns,failDayDeadline,formatDayTime,normalizeSavedDayTime} from "./dayChallenge";
 import {createPostClickActivationQueue} from "../touchActivation";
 import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
 
-type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map";
+type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"timeout";
 type Result={before:Outpost;after:Outpost};
 const meters=[
  {key:"oxygen",label:"OXYGEN",icon:"◉"},{key:"water",label:"WATER",icon:"◈"},
@@ -28,6 +29,9 @@ const priorityChoices:{id:Priority;title:string;why:string}[]=[
  {id:"balanced",title:"Balance all systems",why:"Moderate crop growth and moderate power demand."},
  {id:"crops",title:"Grow more food",why:"Faster crops but higher energy and water demand."},
 ];
+function readDayTimer(destination:Destination,sol:number):number{
+ try{return normalizeSavedDayTime(localStorage.getItem(dayTimerKey(destination)),sol);}catch{return DAY_TIME_LIMIT_MS;}
+}
 function readSaved(destination:Destination){
  try{
    const s=localStorage.getItem(GAME_KEY+"-"+destination)??localStorage.getItem(LEGACY_GAME_KEY+"-"+destination);
@@ -83,6 +87,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const [near,setNear]=useState<Proximity>(null);
  const [seq,setSeq]=useState(0);
  const [panel,setPanel]=useState<Panel>(null);
+ const [remainingMs,setRemainingMs]=useState(DAY_TIME_LIMIT_MS);
+ const lastTimerTick=useRef<number|null>(null);
  // iOS may dispatch a compatibility click after INTERACT opens the console;
  // avoid interpreting it as a separate press of the newly mounted Close.
  const consoleOpenedAt=useRef(-Infinity);
@@ -107,6 +113,36 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    try{localStorage.setItem(GAME_KEY+"-"+session.destination,JSON.stringify(session));setSaveOk(true);}
    catch{setSaveOk(false);}
  },[session]);
+ // Save the separate per-day clock without changing legacy v2 mission saves.
+ useEffect(()=>{
+   if(!session)return;
+   try{localStorage.setItem(dayTimerKey(session.destination),JSON.stringify({sol:session.sol,remainingMs:Math.floor(remainingMs)}));}
+   catch{setSaveOk(false);}
+ },[session?.destination,session?.sol,remainingMs]);
+ // The countdown tracks only time spent actively playing, not reading menus
+ // or leaving the browser in the background. A delayed Safari interval will
+ // never count hidden-tab time because visibilitychange resets the clock.
+ useEffect(()=>{
+   lastTimerTick.current=null;
+   const pause=()=>{lastTimerTick.current=null;};
+   const timer=window.setInterval(()=>{
+     if(!session||!dayTimerRuns(session.phase,panel,!document.hidden)){
+       lastTimerTick.current=null;return;
+     }
+     const now=performance.now(),previous=lastTimerTick.current;
+     lastTimerTick.current=now;
+     if(previous!==null)setRemainingMs(ms=>Math.max(0,ms-(now-previous)));
+   },1000);
+   document.addEventListener("visibilitychange",pause);
+   return ()=>{window.clearInterval(timer);document.removeEventListener("visibilitychange",pause);lastTimerTick.current=null;};
+ },[session?.destination,session?.sol,session?.phase,panel]);
+ useEffect(()=>{
+   if(!session||session.phase!=="active"||remainingMs>0)return;
+   lastTimerTick.current=null;
+   movement.current={x:0,y:0,run:false};
+   setSession(old=>old?.phase==="active"?failDayDeadline(old):old);
+   setNotice("");setPanel("timeout");
+ },[remainingMs,session?.destination,session?.sol,session?.phase]);
  // Lock scroll before paint; restore homepage scroll on exit.
  useLayoutEffect(()=>lockOutpostViewport(),[]);
  // Avoid permanent key capture when an overlay hides movement controls.
@@ -114,6 +150,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  function start(destination:Destination){
    const saved=readSaved(destination);
    setSession(saved??initialOutpost(destination));setNear(null);setRoom("habitat");
+   lastTimerTick.current=null;
+   setRemainingMs(saved&&saved.phase==="active"?readDayTimer(destination,saved.sol):DAY_TIME_LIMIT_MS);
    setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
    spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
    enteredBuilding.current="habitat";
@@ -124,6 +162,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    if(!session)return;
    if(!window.confirm("Restart this "+session.destination+" mission? Your existing outpost progress will be replaced."))return;
    setSession(initialOutpost(session.destination));setRoom("habitat");setPanel("help");
+   lastTimerTick.current=null;setRemainingMs(DAY_TIME_LIMIT_MS);
    setPlayerPosition({...HABITAT_WAKE});cameraDelta.current={yaw:0,pitch:0};
    spawn.current={position:{...HABITAT_WAKE},yaw:0,pitch:.15};
    enteredBuilding.current="habitat";
@@ -155,6 +194,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    enteredBuilding.current="habitat";
    setRoom("habitat");setPlayerPosition({...HABITAT_WAKE});
    setLastResult({before:session,after:next});setSession(next);setPanel("outcome");
+   lastTimerTick.current=null;setRemainingMs(DAY_TIME_LIMIT_MS);
    setNotice("");setNear(null);movement.current.x=0;movement.current.y=0;
  }
  function routineInteraction(kind:"meal"|"sleep"){
@@ -247,6 +287,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
  const complete=session.phase!=="active";
  const selected=session.selected;
  const power=projectPower(session);
+ const timerPaused=!dayTimerRuns(session.phase,panel,!document.hidden);
+ const timerLow=remainingMs<=DAY_WARNING_MS;
+ const timerUrgent=remainingMs<=DAY_URGENT_MS;
  const greenhouseTemperature=room==="greenhouse"?greenhouseClimate(session):null;
  const currentFacility=room?focusAction(room):null;
  const localEmergency=room!==null&&room===required&&pending;
@@ -291,6 +334,11 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
          <button onClick={()=>{setSession(null);setPanel(null);setRoom(null);}}>EXIT</button>
        </div>
      </div>
+     <div className={"j3-day-timer"+(timerUrgent?" urgent":timerLow?" warning":"")} role="timer" aria-label={"Day "+session.sol+" remaining time "+formatDayTime(remainingMs)}>
+       <span>DAY {Math.min(10,session.sol)} DEADLINE · {timerPaused?"PAUSED":"LIVE"}</span>
+       <strong>{formatDayTime(remainingMs)}</strong>
+       <div className="j3-timer-track"><i style={{width:Math.max(0,100*remainingMs/DAY_TIME_LIMIT_MS)+"%"}}/></div>
+     </div>
      <div className="j3-middle"><span className="j3-reticle"/></div>
      <div className="j3-bottom">
        <div className="j3-objective">
@@ -331,6 +379,9 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <div className="j3-panel-content" tabIndex={0} aria-label={currentFacility.title+" scrollable options"}>
        <span className="j3-kicker">3D FACILITY CONTROL · {currentFacility.title.toUpperCase()}</span>
        <h2>{currentFacility.title}</h2>
+       <div className={"j3-console-deadline"+(timerUrgent?" urgent":timerLow?" warning":"")}>
+         <span>TIME TO FINISH TODAY'S ROUTINE</span><strong>{formatDayTime(remainingMs)}</strong>
+       </div>
        <p>{currentFacility.description}</p>
        <div className="j3-info" role="status">DAY {session.sol} · Credits {session.credits} · {selected
          ?"TODAY'S TASK COMPLETE: "+ACTIONS.find(x=>x.id===selected)?.title+". You can scroll through all options, but another engineering operation unlocks on the next day after dinner and sleep."
@@ -397,6 +448,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      {panel==="help"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="3D astronaut controls">
        <span className="j3-kicker">WELCOME TO THE 3D MISSION</span><h2>YOU ARE THE ASTRONAUT.</h2>
        <p>This is a walkable Moon/Mars base. The equipment you operate changes your mission resources and the world you see.</p>
+       <div className="j3-info"><b>NEW CHALLENGE: 08:00 PER DAY.</b> Eat breakfast, finish one engineering task, resolve emergencies, eat dinner and sleep at your bunk before the clock runs out. Miss the deadline and the mission fails. The clock pauses while reading HELP, MAP or MISSION, between days, and whenever this browser tab is hidden. It runs while you explore or use equipment.</div>
        <div className="j3-tutorial-steps">
          <div><b>1. WALK</b><br/>Touch anywhere in the bottom-left movement zone to make a joystick appear. Move your finger to walk (or use WASD).</div>
          <div><b>2. FIND YOUR WAY</b><br/>Open MAP to see yourself, your mission target and what every building does. Follow the highlighted building.</div>
@@ -405,6 +457,17 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        </div>
        <p className="j3-small">The visual environment and resource calculations are stylized educational simulations, not photorealistic NASA engineering predictions. Your mission is saved on this device.</p>
        <button className="j3-primary" onClick={()=>setPanel(null)}>ENTER 3D WORLD →</button>
+     </section>}
+     {panel==="timeout"&&<section className="j3-panel j3-timeout-panel" role="alertdialog" aria-modal="true" aria-label="Day deadline exceeded">
+       <span className="j3-kicker">MISSION CLOCK · DAY {Math.min(10,session.sol)}</span>
+       <h2>TIME'S UP — DAY FAILED</h2>
+       <div className="j3-timeout-number">00:00</div>
+       <p>You didn't finish the crew's full routine before the eight-minute deadline. The timed survival mission has ended.</p>
+       <div className="j3-info">To win, eat breakfast, complete the daily engineering operation, respond to any emergency, return for dinner, then sleep in your bunk before time expires.</div>
+       <div className="j3-row">
+         <button className="j3-primary" onClick={restart}>RESTART CHALLENGE ↻</button>
+         <button onClick={()=>{setSession(null);setRoom(null);setPanel(null);}}>CHOOSE A PLANET</button>
+       </div>
      </section>}
      {panel==="outcome"&&<section className="j3-panel" role="dialog" aria-modal="true" aria-label="Mission results">
        <span className="j3-kicker">{complete?"FINAL MISSION RESULTS":"MISSION CONTROL · DAY "+lastResult?.before.sol+" COMPLETE"}</span>

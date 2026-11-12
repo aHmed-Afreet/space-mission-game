@@ -515,3 +515,32 @@ html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer button{
  html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-content{padding:12px 17px;gap:9px}
  html.outpost-viewport-locked .j3-root .j3-panel-console .j3-panel-footer{padding:9px 16px}
 }
+
+
+/* Timed eight-minute Outpost sol challenge. Status is rendered inside the
+ * HUD without intercepting camera drags, joystick, RUN or INTERACT. */
+.j3-day-timer{
+  pointer-events:none;position:absolute;left:50%;top:clamp(78px,13vh,116px);
+  transform:translateX(-50%);min-width:176px;max-width:min(42vw,230px);
+  padding:9px 13px 11px;text-align:center;background:#0b1d28eb;
+  border:1px solid #86b9b9b0;border-radius:10px;box-shadow:0 5px 22px #0009;
+  display:grid;gap:3px;z-index:3;
+}
+.j3-day-timer>span{font-size:9px;letter-spacing:.115em;color:#b8d2d7;font-weight:750}
+.j3-day-timer>strong{font-size:clamp(21px,2.6vw,30px);font-variant-numeric:tabular-nums;line-height:1.1;color:#e6fff4;font-weight:850;letter-spacing:.055em}
+.j3-timer-track{width:100%;height:4px;overflow:hidden;background:#43535e;border-radius:5px;margin-top:4px}
+.j3-timer-track i{display:block;height:100%;background:#7cc9ad;transition:width .22s linear}
+.j3-day-timer.warning,.j3-console-deadline.warning{border-color:#e8bb72;color:#ffdf9f}
+.j3-day-timer.warning>strong,.j3-console-deadline.warning>strong{color:#ffda90}
+.j3-day-timer.warning .j3-timer-track i{background:#e8bb72}
+.j3-day-timer.urgent,.j3-console-deadline.urgent{border-color:#f18f82;background:#4b2429ee}
+.j3-day-timer.urgent>strong,.j3-console-deadline.urgent>strong{color:#ffd2ca}
+.j3-day-timer.urgent .j3-timer-track i{background:#ff978c}
+.j3-console-deadline{display:flex;justify-content:space-between;align-items:center;gap:14px;
+ padding:9px 14px;background:#152f38;border:1px solid #789c9b;border-radius:7px}
+.j3-console-deadline span{font-weight:800;font-size:10px;letter-spacing:.07em;color:#b5d4d3}
+.j3-console-deadline strong{font-size:23px;color:#d4f5e4;font-variant-numeric:tabular-nums}
+.j3-timeout-panel{border-color:#ecae8c!important;max-width:660px}
+.j3-timeout-number{font-variant-numeric:tabular-nums;font-size:clamp(40px,7vw,76px);font-weight:850;color:#ffbda0}
+@media(max-width:850px){.j3-day-timer{top:100px;min-width:140px;max-width:170px;padding:8px 10px}.j3-day-timer>span{font-size:8px}}
+@media(max-height:610px){.j3-day-timer{top:72px;max-width:165px;padding:6px 9px}.j3-day-timer>strong{font-size:23px}}
