@@ -8,7 +8,7 @@ import {GAME_KEY,type Destination,type Outpost} from "./engine";
 export const DAY_TIME_LIMIT_MS=4*60*1000;
 export const DAY_WARNING_MS=60*1000;
 export const DAY_URGENT_MS=20*1000;
-export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"timeout";
+export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"minigame"|"rover"|"timeout";
 
 export function dayTimerKey(destination:Destination):string {
   return GAME_KEY+"-"+destination+"-day-clock";
