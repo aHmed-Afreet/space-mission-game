@@ -3,6 +3,7 @@ import LoadingScreen from "./LoadingScreen";
 import GlobalGraphics from "./GlobalGraphics";
 import "./home.css";
 
+import UniversalToolbar from "./UniversalToolbar";
 const JuniorOutpost = lazy(() => import("./outpost/JuniorOutpost"));
 const Commander = lazy(() => import("./commander/Commander"));
 const Strategy = lazy(() => import("./App"));
@@ -140,14 +141,15 @@ export default function ModeSelect() {
       </footer>
     </div>;
   }
-  if (mode === "outpost") return <Suspense fallback={<LoadingScreen detail="Preparing the Moon and Mars outpost systems…" />}><JuniorOutpost onExit={() => setMode(null)} /></Suspense>;
+  if (mode === "outpost") return <><UniversalToolbar mode="outpost"/><Suspense fallback={<LoadingScreen detail="Preparing the Moon and Mars outpost systems…" />}><JuniorOutpost onExit={() => setMode(null)} /></Suspense></>;
   if (mode === "history" || mode === "history_all" || mode === "guide")
-    return <Suspense fallback={<LoadingScreen detail="Opening your mission records…" />}>
+    return <>{mode!=="guide"&&<UniversalToolbar mode={mode}/>}<Suspense fallback={<LoadingScreen detail="Opening your mission records…" />}>
       {mode === "guide" ? <HowToPlay onExit={() => setMode(null)} /> :
         <HistoryHub startIn="archive" startCollection={mode==="history_all"?"archive":"featured"} onExit={() => setMode(null)} />}
-    </Suspense>;
+    </Suspense></>;
 
   return <>
+    <UniversalToolbar mode={mode==="strategy"?"strategy":"commander"}/>
     {mode === "strategy" && <div className="cmd-mode-bar">
       <button onClick={() => setMode(null)}>← Main menu</button><span>ENGINEERING SUPPORT · ASTRONAUT FLIES</span>
     </div>}

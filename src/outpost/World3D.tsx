@@ -1,5 +1,6 @@
 import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
+import type {ToolId} from "../universalQuickbar";
 import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,confinedInteriorCamera,nearHabitatRoutine,CREW_BED,CREW_DINING,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
 import type {FacilityId} from "./FacilityScene";
@@ -15,7 +16,7 @@ export type CameraDelta={yaw:number;pitch:number};
 export type WorldPose={position:Point2;yaw:number;pitch:number};
 export type Proximity={title:string;kind:"door"|"console"|"exit"|"meal"|"sleep";id:FacilityId}|null;
 type Props={
- session:Outpost;room:FacilityId|null;graphics:PlayerPreferences["graphics"];blocked:boolean;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
+ session:Outpost;room:FacilityId|null;graphics:PlayerPreferences["graphics"];blocked:boolean;heldTool:ToolId;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
  onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;onRoutine:(kind:"meal"|"sleep")=>void;
  onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
@@ -321,6 +322,32 @@ function createScene(session:Outpost,room:FacilityId|null){
    suitFallback.forEach(object=>object.visible=false);
  }}));
  const releaseBatches=batchOutpostStructure(world,[astro,...[...doors.values()].map(d=>d.mesh),...[...markers.values()],...solarPanels,...foliage,...(doors.get("habitat")?.mesh.userData.pressureBody?[doors.get("habitat")!.mesh.userData.pressureBody as T.Group]:[])]);
+ // Real held 3D equipment on the astronaut's right glove. These simple
+ // low-poly tools are separate from mission simulation and never change
+ // inventory resources or interactable geometry.
+ const heldModels=new Map<Exclude<ToolId,"none">,T.Group>();
+ for(const tool of ["map","tablet","scanner","wrench","camera","sample","radio","medical"] as const){
+   const prop=new T.Group();astro.add(prop);prop.position.set(.65,.98,-.34);
+   prop.rotation.set(.15,-.22,-.15);prop.visible=false;
+   if(tool==="wrench"){
+     box(prop,.095,.58,.075,0,.11,0,hull);box(prop,.26,.085,.07,0,.43,0,trim);
+     box(prop,.07,.18,.08,-.12,.50,0,trim);
+   }else if(tool==="sample"){
+     box(prop,.16,.31,.16,0,.14,0,glow);box(prop,.20,.055,.19,0,.32,0,gold);
+   }else if(tool==="radio"){
+     box(prop,.27,.40,.13,0,.13,0,darkSteel);
+     box(prop,.025,.31,.025,.10,.47,0,hull);
+   }else if(tool==="camera"){
+     box(prop,.38,.28,.24,0,.16,0,darkSteel);box(prop,.15,.15,.03,0,.16,-.14,glow);
+   }else if(tool==="medical"){
+     box(prop,.34,.32,.16,0,.14,0,hull);
+     box(prop,.20,.045,.03,0,.14,-.095,red);box(prop,.045,.2,.03,0,.14,-.097,red);
+   }else{
+     box(prop,tool==="map"?.38:.28,.39,.08,0,.17,0,darkSteel);
+     box(prop,tool==="scanner"?.18:.30,.26,.015,0,.20,-.05,glow);
+   }
+   heldModels.set(tool,prop);
+ }
  const camera=new T.PerspectiveCamera(59,1,.12,250);
  const dispose=()=>{
    referenceSuit?.dispose();referenceAssets.forEach(asset=>asset.dispose());
@@ -328,12 +355,12 @@ function createScene(session:Outpost,room:FacilityId|null){
    world.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.InstancedMesh){o.geometry.dispose();}});
    materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());
  };
- return {scene,camera,astro,limbs,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
+ return {scene,camera,astro,limbs,heldModels,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
 }
-export default function World3D({session,room,graphics,blocked,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
+export default function World3D({session,room,graphics,blocked,heldTool,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
- const latest=useRef({session,blocked,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
- latest.current={session,blocked,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
+ const latest=useRef({session,blocked,heldTool,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
+ latest.current={session,blocked,heldTool,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
  useEffect(()=>{
    const container=host.current;if(!container)return;
    let renderer:T.WebGLRenderer;
@@ -513,6 +540,7 @@ export default function World3D({session,room,graphics,blocked,movement,lookDelt
      if(label!==lastPrompt){lastPrompt=label;latest.current.onNear(near);}
      // Light the current mission target on the actual 3D terrain.
      scene.markers.forEach((o,id)=>{o.visible=id===latest.current.target;o.rotation.y+=dt*.18;});
+     scene.heldModels.forEach((model,id)=>{model.visible=id===latest.current.heldTool;});
      // Make the environment react immediately to the actual game resources.
      const power=data.battery/100;
      if(Math.round(data.battery)!==lastBattery){

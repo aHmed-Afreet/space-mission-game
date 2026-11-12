@@ -41,7 +41,7 @@ test("Outpost console ignores a compatibility click immediately after INTERACT",
 });
 
 test("Outpost 3D loop does not consume queued input behind a menu",()=>{
- assert.match(outpost,/blocked=\{Boolean\(panel\)\}/);
+ assert.match(outpost,/blocked=\{Boolean\(panel\)\|\|toolbarEditing\}/);
  assert.match(world,/blocked:boolean/);
  assert.match(world,/const isBlocked=latest\.current\.blocked/);
  assert.match(world,/if\(isBlocked\)\{/);

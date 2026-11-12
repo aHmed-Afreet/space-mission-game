@@ -1,0 +1,58 @@
+
+/* Shared six-slot equipment bar, deliberately centered between iPad's
+ * bottom-left movement thumb and bottom-right interaction buttons. */
+.orbital-quickbar{position:fixed;z-index:70;bottom:max(8px,env(safe-area-inset-bottom,0px));left:50%;
+ transform:translateX(-50%);display:flex;align-items:center;gap:5px;border:1px solid #819da7a8;
+ border-radius:11px;padding:5px;background:#101b25f0;box-shadow:0 8px 23px #000a;color:#e3f5f1;
+ max-width:calc(100vw - 190px);pointer-events:auto;font-family:Inter,system-ui,sans-serif;
+ touch-action:manipulation}
+.orbital-quickbar button{border:1px solid #728d9b;background:#1e3443;color:#e6f4f2;min-height:42px;
+ border-radius:6px;padding:5px 8px;cursor:pointer;touch-action:manipulation;font-family:inherit}
+.orbital-quickbar button:focus-visible,.orbital-quickbar-shade button:focus-visible,
+.orbital-quickbar-shade select:focus-visible{outline:3px solid #9ce9d0;outline-offset:2px}
+.orbital-quickbar-toggle{font-size:9px;letter-spacing:.05em;min-width:30px}
+.orbital-quickbar.is-collapsed{padding:4px}
+.orbital-quickbar-slots{display:grid;grid-template-columns:repeat(6,minmax(0,42px));gap:4px}
+.orbital-quickbar .orbital-quickbar-slot{height:44px;min-height:44px;min-width:0;position:relative;
+ display:grid;place-items:center;padding:2px}
+.orbital-quickbar-slot small{position:absolute;top:2px;left:5px;font-size:8px;opacity:.7}
+.orbital-quickbar-slot b{font-size:23px;font-weight:550;line-height:1}
+.orbital-quickbar .orbital-quickbar-slot.active{border:2px solid #c9f6c9;background:#3d6b63;box-shadow:inset 0 0 8px #d8f8dd55}
+.orbital-quickbar-edit,.orbital-quickbar-use{font-size:10px;font-weight:800;letter-spacing:.04em}
+.orbital-quickbar .orbital-quickbar-use{background:#bcecd4;color:#10372c}
+.orbital-quickbar-held{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);
+ white-space:nowrap;font-size:9px;padding:4px 8px;border-radius:5px;background:#102c39df;
+ color:#cbecdf;border:1px solid #597d80}
+.orbital-quickbar-feedback{position:fixed;z-index:71;bottom:100px;left:50%;transform:translateX(-50%);
+ background:#162d3bdd;color:#ddf5e9;border:1px solid #769a96;border-radius:7px;padding:8px 12px;
+ font:12px Inter,system-ui,sans-serif;max-width:min(480px,85vw);text-align:center;pointer-events:none}
+.orbital-quickbar-shade{position:fixed;z-index:130;inset:0;display:grid;place-items:center;
+ padding:16px;background:#020a14e8;overscroll-behavior:contain}
+.orbital-quickbar-editor{max-height:min(82svh,680px);width:min(660px,100%);
+ padding:clamp(16px,3vw,28px);border:1px solid #749eac;border-radius:12px;
+ background:#142735;color:#eef8f3;overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;
+ font-family:Inter,system-ui,sans-serif;box-sizing:border-box}
+.orbital-quickbar-editor *{box-sizing:border-box}
+.orbital-quickbar-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:15px}
+.orbital-quickbar-editor-head small{font-size:10px;color:#a5d6c9;letter-spacing:.12em}
+.orbital-quickbar-editor-head h2{font-size:clamp(20px,3vw,28px);margin:7px 0}
+.orbital-quickbar-editor-head p{font-size:12px;line-height:1.5;color:#c1d2d4}
+.orbital-quickbar-editor button{border:1px solid #85a9ac;background:#23424c;color:#e4f5ec;
+ border-radius:7px;padding:9px 12px;min-height:44px;font-size:11px;font-weight:750;cursor:pointer}
+.orbital-quickbar-editor-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:17px 0}
+.orbital-quickbar-editor-list label{display:flex;flex-direction:column;gap:6px;font-size:10px;font-weight:800;letter-spacing:.08em}
+.orbital-quickbar-editor-list select{min-height:44px;max-width:100%;font:13px Inter,system-ui,sans-serif;
+ border-radius:6px;border:1px solid #98babb;background:#1c3743;color:#fff;padding:8px}
+.orbital-quickbar-caveat{font-size:11px;line-height:1.6;color:#afc8ca}
+.orbital-quickbar-editor-actions{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-top:16px}
+.orbital-quickbar-editor-actions button:last-child{background:#abecd0;color:#183b34}
+@media(max-width:780px){.orbital-quickbar{max-width:calc(100vw - 170px);gap:3px;padding:3px}
+ .orbital-quickbar-slots{grid-template-columns:repeat(6,minmax(0,34px));gap:2px}
+ .orbital-quickbar .orbital-quickbar-slot{height:37px;min-height:37px}
+ .orbital-quickbar button{min-height:38px;font-size:9px;padding:3px 5px}
+ .orbital-quickbar-slot b{font-size:19px}
+ .orbital-quickbar-editor-list{grid-template-columns:1fr}
+}
+body:has(.j3-overlay) .orbital-quickbar,body:has(.j3-overlay) .orbital-quickbar-feedback,
+body:has(.orbital-quickbar-shade) .orbital-quickbar-feedback{visibility:hidden}
+@media(prefers-reduced-motion:reduce){.orbital-quickbar *{transition:none!important;animation:none!important}}
