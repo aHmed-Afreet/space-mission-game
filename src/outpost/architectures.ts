@@ -305,7 +305,7 @@ export function furnishDistinctInterior(id:FacilityId,k:StructureKit,group:T.Gro
  // Flattened pressure-vessel ribs tie the interior shell together. These
  // stop above head height and leave every existing interaction aisle clear.
  const rib=k.mat(0xb6bab3,.38,.54);
- if(id==="habitat"||id==="greenhouse"||id==="recycle")for(const z of [-3.5,-1.75,0,1.75,3.5]){
+ if(id==="greenhouse"||id==="recycle")for(const z of [-3.5,-1.75,0,1.75,3.5]){
    const arch=k.mesh(new T.TorusGeometry(4.12,.078,6,28,Math.PI),rib,group);
    arch.position.set(0,2.67,z);arch.scale.y=.25;
    for(const x of [-4.12,4.12])k.box(group,.14,2.65,.14,x,1.34,z,rib);
@@ -342,12 +342,9 @@ export function furnishDistinctInterior(id:FacilityId,k:StructureKit,group:T.Gro
    // Webbed sleeping restraints on the midsection, with buckles.
    for(const x of [-3.65,-2.67])k.box(group,.07,.04,1.12,x,1.02,z+.32,webbing);
    k.box(group,.23,.065,.16,-3.16,1.05,z+.36,k.darkSteel);
-   // Rounded-looking protective rails are deliberately below the
-   // astronaut's interaction line; no opaque slab above the bed.
-   for(const x of [-3.92,-2.42]){
-     k.box(group,.075,.16,2.04,x,.73,z,k.darkSteel);
-     for(const dz of [-.88,.88])k.box(group,.075,.29,.08,x,.59,z+dz,k.hull);
-   }
+   // No overhead pole, crossbeam or raised side guard: the sleeping berth
+   // remains visually open and approachable from the central cabin aisle.
+   k.box(group,.055,.045,1.8,-3.94,.69,z,k.darkSteel);
    // A directional reading lamp, locker, and visible bunk identifier.
    k.box(group,.20,.35,.22,-3.99,1.40,z-.76,k.darkSteel);
    k.box(group,.08,.09,.30,-3.88,1.40,z-.61,k.glow).castShadow=false;
@@ -382,6 +379,12 @@ export function furnishDistinctInterior(id:FacilityId,k:StructureKit,group:T.Gro
   }
  }else if(id==="shield"){
   const armor=k.mat(0x495761,.73,.54);
+  // Dedicated, usable rover remote-control station with a glowing terrain
+  // telemetry monitor; the corresponding control opens from this facility.
+  k.box(group,1.26,1.35,.72,2.85,1.08,.05,k.darkSteel);
+  k.box(group,.98,.76,.075,2.76,2.04,-.32,k.glow).castShadow=false;
+  k.box(group,1.05,.09,.42,2.77,1.51,-.17,k.trim);
+  for(let i=0;i<4;i++)k.box(group,.105,.065,.11,2.45+i*.21,1.61,.08,i===0?k.gold:k.glow);
   for(const side of [-1,1]){
    for(let i=0;i<3;i++){
     k.box(group,.75,2.2,1.1,side*3.7,1.4,-2.2+i*1.6,armor);

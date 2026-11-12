@@ -1,6 +1,8 @@
 import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
 import type {ToolId} from "../universalQuickbar";
+import {inertialMovement,jumpStep,type PlanarVelocity,type JumpState} from "./motionPhysics";
+import type {RoverPose} from "./roverPhysics";
 import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,confinedInteriorCamera,nearHabitatRoutine,CREW_BED,CREW_DINING,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
 import type {FacilityId} from "./FacilityScene";
@@ -11,19 +13,19 @@ import {readPreferences,type PlayerPreferences} from "../commander/campaign/pref
 import {graphicsRatioBounds,adaptiveGraphicsRatio,publishGraphicsTrace} from "../commander/graphicsPolicy";
 import {facilityDisplay,batchOutpostStructure,outpostTerrainHeight} from "./visualFinish";
 import "./world3d.css";
-export type Movement={x:number;y:number;run:boolean};
+export type Movement={x:number;y:number;run:boolean;jump?:boolean};
 export type CameraDelta={yaw:number;pitch:number};
 export type WorldPose={position:Point2;yaw:number;pitch:number};
 export type Proximity={title:string;kind:"door"|"console"|"exit"|"meal"|"sleep";id:FacilityId}|null;
 type Props={
- session:Outpost;room:FacilityId|null;graphics:PlayerPreferences["graphics"];blocked:boolean;heldTool:ToolId;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
+ session:Outpost;room:FacilityId|null;graphics:PlayerPreferences["graphics"];blocked:boolean;heldTool:ToolId;roverPose:RoverPose;movement:RefObject<Movement>;lookDelta:RefObject<CameraDelta>;spawn:RefObject<WorldPose>;interactSeq:number;target:FacilityId;
  onEnter:(id:FacilityId|null,pose:WorldPose)=>void;onConsole:(id:FacilityId)=>void;onRoutine:(kind:"meal"|"sleep")=>void;
  onNear:(near:Proximity)=>void;onPosition:(pos:Point2)=>void;onError:(message:string)=>void;
 };
 function createScene(session:Outpost,room:FacilityId|null){
  const scene=new T.Scene(),dark=session.destination==="moon"&&[5,6].includes(session.sol);
  const dust=session.destination==="mars"&&[4,5,8].includes(session.sol);
- scene.background=new T.Color(room?0x11171c:dust?0x98715a:dark?0x010204:session.destination==="mars"?0xb58d70:0x010204);
+ scene.background=new T.Color(room?(room==="greenhouse"?(session.destination==="mars"?0xb58d70:0x222c3d):0x11171c):dust?0x98715a:dark?0x010204:session.destination==="mars"?0xb58d70:0x010204);
  // The Moon has no atmospheric haze; Mars has dust, with reduced visibility
  // during the existing storm sols. Cabin surfaces remain crisp at close range.
  if(!room&&session.destination==="mars")scene.fog=new T.FogExp2(scene.background as T.Color,dust?.024:.0055);
@@ -96,6 +98,7 @@ function createScene(session:Outpost,room:FacilityId|null){
  const lamps:T.PointLight[]=[];
  const solarPanels:T.Group[]=[];
  const doors=new Map<FacilityId,{mesh:T.Mesh;open:number}>();
+ let roverGroup:T.Group|null=null;
  const markers=new Map<FacilityId,T.Object3D>();
  const kit:StructureKit={box,cylinder,dome,mesh,mat,light,glass,hull,trim,darkSteel,gold,glow,
    solarMat,green,soil,solarPanels,foliage,batteryLights,lamps};
@@ -192,9 +195,21 @@ function createScene(session:Outpost,room:FacilityId|null){
        (leaf.userData.pressureBody as T.Group).visible=false;
      }}));
    }
-   // A genuine self-hosted science rover is parked off the marked routes.
-   referenceAssets.push(attachRealismModel(world,"rover",{extent:3.6,position:[8,0,0],rotation:[0,-.7,0],onLoad:model=>{
-     world.updateMatrixWorld(true);externalProps.push(new T.Box3().setFromObject(model));
+   // A movable 3D rover with a compact procedural fallback so it remains
+   // drivable even before the optimized reference GLB loads.
+   roverGroup=new T.Group();world.add(roverGroup);roverGroup.position.set(8,0,0);
+   const fallback=new T.Group();roverGroup.add(fallback);
+   box(fallback,2.7,.4,1.7,0,.62,0,darkSteel);
+   box(fallback,1.45,.66,1.25,-.12,1.13,.10,hull);
+   box(fallback,1.08,.4,.28,0,1.0,-.75,glow);
+   for(const x of [-1.12,1.12])for(const z of [-.73,.73]){
+     const wheel=cylinder(fallback,.43,.22,x,.4,z,rubber,14);
+     wheel.rotation.z=Math.PI/2;
+     box(fallback,.11,.13,.11,x,.4,z+(z>0?.12:-.12),gold);
+   }
+   for(const x of [-.75,.75])box(fallback,.16,.1,.85,x,1.45,.04,solarMat);
+   referenceAssets.push(attachRealismModel(roverGroup,"rover",{extent:3.6,position:[0,0,0],rotation:[0,0,0],onLoad:()=>{
+     fallback.visible=false;
    }}));
    // Walkway lights indicate routes to every building.
    for(const f of BASE_FACILITIES){const door=doorPosition(f);
@@ -208,6 +223,16 @@ function createScene(session:Outpost,room:FacilityId|null){
    }
  }else{
    // In-room geometry is actual 3D, navigated by the same avatar and camera.
+   if(room==="greenhouse"){
+     // Outside scenery behind true translucent panes gives glass depth from
+     // the INSIDE; otherwise transparent walls would reveal a black void.
+     const soilOutside=mat(session.destination==="mars"?0xa77961:0x66696f,.02,.96);
+     box(world,44,.2,44,0,-.47,0,soilOutside).castShadow=false;
+     for(let i=0;i<10;i++){
+       const x=-18+i*3.9,z=(i%2===0?-10:11);
+       const rock=box(world,1.15,.4,.75,x,-.06,z,soilOutside);rock.rotation.y=i*.61;
+     }
+   }
    const floor=box(world,9,.4,9,0,-.21,0,mat(0x636965,.06,.86));
    const greenhouseRoof=mat(0xb7c6b4,.15,.24);
    if(room==="greenhouse"){greenhouseRoof.transparent=true;greenhouseRoof.opacity=.22;greenhouseRoof.depthWrite=false;}
@@ -215,9 +240,25 @@ function createScene(session:Outpost,room:FacilityId|null){
    roof.castShadow=room!=="greenhouse";
    const wall=mat(room==="shield"?0x777972:0xc1c3b9,.15,.78);
    if(metalDetail){wall.map=metalDetail;wall.needsUpdate=true;}
-   box(world,9,4,.3,0,1.95,-4.5,wall);
-   box(world,.3,4,9,-4.5,1.95,0,wall);
-   box(world,.3,4,9,4.5,1.95,0,wall);
+   const greenhousePane=mat(0x98ddde,.08,.13,0x344a54,.05);
+   greenhousePane.transparent=true;greenhousePane.opacity=.23;greenhousePane.depthWrite=false;
+   greenhousePane.side=T.DoubleSide;
+   const actualWall=room==="greenhouse"?greenhousePane:wall;
+   box(world,9,4,.3,0,1.95,-4.5,actualWall);
+   box(world,.3,4,9,-4.5,1.95,0,actualWall);
+   box(world,.3,4,9,4.5,1.95,0,actualWall);
+   if(room==="greenhouse"){
+     // Structural glazing frames, rather than opaque painted walls.
+     for(const x of [-4.42,4.42])for(const z of [-3.45,-1.15,1.15,3.45]){
+       box(world,.14,3.63,.14,x,1.85,z,trim);
+     }
+     for(const z of [-4.42])for(const x of [-3.4,-1.1,1.1,3.4])
+       box(world,.14,3.63,.14,x,1.85,z,trim);
+     for(const y of [.35,2.7]){
+       for(const x of [-4.42,4.42])box(world,.13,.12,8.7,x,y,0,trim);
+       box(world,8.7,.12,.13,0,y,-4.42,trim);
+     }
+   }
    // Front wall includes a door-sized corridor opening. Door leaf slides.
    box(world,3.5,4,.3,-2.75,1.95,4.5,wall);
    box(world,3.5,4,.3,2.75,1.95,4.5,wall);
@@ -355,12 +396,12 @@ function createScene(session:Outpost,room:FacilityId|null){
    world.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.InstancedMesh){o.geometry.dispose();}});
    materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());
  };
- return {scene,camera,astro,limbs,heldModels,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
+ return {scene,camera,astro,limbs,heldModels,roverGroup,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
 }
-export default function World3D({session,room,graphics,blocked,heldTool,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
+export default function World3D({session,room,graphics,blocked,heldTool,roverPose,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
- const latest=useRef({session,blocked,heldTool,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
- latest.current={session,blocked,heldTool,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
+ const latest=useRef({session,blocked,heldTool,roverPose,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target});
+ latest.current={session,blocked,heldTool,roverPose,onEnter,onConsole,onRoutine,onNear,onPosition,onError,interactSeq,target};
  useEffect(()=>{
    const container=host.current;if(!container)return;
    let renderer:T.WebGLRenderer;
@@ -392,6 +433,8 @@ export default function World3D({session,room,graphics,blocked,heldTool,movement
    let previous=performance.now(),frame=0,alive=true,lastPrompt="",lastInteraction=latest.current.interactSeq;
    let entered=false,lastBattery=-1,lastReported=0,cameraInitialized=false;
    let gait=0,smoothedSpeed=0,sampleStart=performance.now(),sampleFrames=0,measuredFps:number|null=null;
+   let velocity:PlanarVelocity={x:0,y:0};
+   let jump:JumpState={height:0,velocity:0},jumpWasPressed=false;
    let interactRequest=false;
    const down=(e:KeyboardEvent)=>{if(latest.current.blocked)return;const k=e.key.toLowerCase();
      if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","e","shift"," "].includes(k)){
@@ -428,10 +471,13 @@ export default function World3D({session,room,graphics,blocked,heldTool,movement
          if(routine){latest.current.onRoutine(routine);return;}
        }
        if(nearConsole(state.position)){latest.current.onConsole(room);return;}
-       if(nearExit(state.position)){state.open=room;state.openAt=performance.now();return;}
+       if(nearExit(state.position)){
+         state.open=state.open===room?null:room;
+         state.openAt=performance.now();return;
+       }
      }else{
        const target=nearestDoor(state.position,2.5);
-       if(target){state.open=target.id;state.openAt=performance.now();}
+       if(target){state.open=state.open===target.id?null:target.id;state.openAt=performance.now();}
      }
    };
    const animate=(now:number)=>{
@@ -448,11 +494,13 @@ export default function World3D({session,room,graphics,blocked,heldTool,movement
      const motion=isBlocked?{x:0,y:0,run:false}:movement.current||{x:0,y:0,run:false};
      const right=isBlocked?0:Number(keys.has("d")||keys.has("arrowright"))-Number(keys.has("a")||keys.has("arrowleft"));
      const front=isBlocked?0:Number(keys.has("w")||keys.has("arrowup"))-Number(keys.has("s")||keys.has("arrowdown"));
-     const x=Math.max(-1,Math.min(1,motion.x+right)),y=Math.max(-1,Math.min(1,motion.y+front));
+     const inputX=Math.max(-1,Math.min(1,motion.x+right)),inputY=Math.max(-1,Math.min(1,motion.y+front));
+     velocity=inertialMovement(velocity,{x:inputX,y:inputY},dt);
+     const x=velocity.x,y=velocity.y;
      const running=!isBlocked&&(motion.run||keys.has("shift"));
-     const next=walkStep(state.position,state.yaw,x,y,dt*(running?1.43:1),Boolean(room),state.open);
-     if(!room){const dx=next.x-8,dz=next.z,r=Math.hypot(dx,dz);
-       if(r<2.15){next.x=8+(r>.001?dx/r:1)*2.15;next.z=(r>.001?dz/r:0)*2.15;}}
+     const next=walkStep(state.position,state.yaw,x,y,dt*(running?1.43:1),Boolean(room),state.open,room);
+     if(!room){const pose=latest.current.roverPose,dx=next.x-pose.x,dz=next.z-pose.z,r=Math.hypot(dx,dz);
+       if(r<1.85){next.x=pose.x+(r>.001?dx/r:1)*1.85;next.z=pose.z+(r>.001?dz/r:0)*1.85;}}
      state.position.x=next.x;state.position.z=next.z;
      if(now-lastReported>250){
        lastReported=now;
@@ -466,8 +514,11 @@ export default function World3D({session,room,graphics,blocked,heldTool,movement
      const lunar=!room&&data.destination==="moon";
      gait+=dt*(room?7.6:lunar?4.8:6.3)*(running?1.25:1)*Math.max(.12,smoothedSpeed);
      const lift=lunar?.095:room?.023:.045;
+     const pressingJump=!isBlocked&&(keys.has(" ")||Boolean(motion.jump));
+     jump=jumpStep(jump,dt,data.destination,pressingJump&&!jumpWasPressed);
+     jumpWasPressed=pressingJump;
      const bob=Math.pow(Math.sin(gait),2)*lift*smoothedSpeed+Math.sin(now*.0018)*.003;
-     scene.astro.position.set(state.position.x,bob,state.position.z);
+     scene.astro.position.set(state.position.x,bob+jump.height,state.position.z);
      if(speed>.04){const facing=Math.atan2(-Math.sin(state.yaw)*y+Math.cos(state.yaw)*x,-Math.cos(state.yaw)*y-Math.sin(state.yaw)*x)-Math.PI;
        const turn=Math.atan2(Math.sin(facing-scene.astro.rotation.y),Math.cos(facing-scene.astro.rotation.y));
        scene.astro.rotation.y+=turn*(1-Math.exp(-dt*10));}
@@ -478,7 +529,7 @@ export default function World3D({session,room,graphics,blocked,heldTool,movement
      // Collision-aware 3rd-person camera: every indoor position stays below
      // the ceiling and inside the room shell, with no wall/console clipping.
      const back=new T.Vector3(Math.sin(state.yaw),0,Math.cos(state.yaw));
-     const focus=new T.Vector3(state.position.x,1.54+state.pitch*.2,state.position.z);
+     const focus=new T.Vector3(state.position.x,1.54+state.pitch*.2+jump.height*.65,state.position.z);
      const wanted=new T.Vector3(
        state.position.x+back.x*(room?3.3:6.2),
        (room?2.92:3.4)+state.pitch*(room?2.0:4),
@@ -514,6 +565,11 @@ export default function World3D({session,room,graphics,blocked,heldTool,movement
        lastInteraction=latest.current.interactSeq;interactRequest=false;interact();
      }
      // Render physical airlock slide and require walking across the doorway.
+     if(scene.roverGroup){
+       const rp=latest.current.roverPose;
+       scene.roverGroup.position.set(rp.x,.02,rp.z);
+       scene.roverGroup.rotation.y=rp.heading;
+     }
      for(const [id,gate] of scene.doors){
        const shouldOpen=state.open===id;
        const goal=shouldOpen?1:0;
@@ -534,8 +590,8 @@ export default function World3D({session,room,graphics,blocked,heldTool,movement
        routine==="meal"?{kind:"meal",id:"habitat",title:data.breakfastSol!==data.sol?"EAT BREAKFAST":data.dinnerSol!==data.sol?"EAT DINNER":"DINING AREA"}:
        routine==="sleep"?{kind:"sleep",id:"habitat",title:"SLEEP IN CREW BED"}:
        nearConsole(state.position)?{kind:"console",id:room,title:"OPERATE "+room.toUpperCase()}:
-       nearExit(state.position)?{kind:"exit",id:room,title:state.open?"EXIT THROUGH AIRLOCK":"OPEN EXIT AIRLOCK"}:null
-       :(()=>{const f=nearestDoor(state.position,2.5);return f?{kind:"door",id:f.id,title:state.open===f.id?"AIRLOCK OPEN · WALK INSIDE":"OPEN "+f.title.toUpperCase()+" AIRLOCK"}:null;})();
+       nearExit(state.position)?{kind:"exit",id:room,title:state.open===room?"CLOSE EXIT AIRLOCK · INTERACT":"OPEN EXIT AIRLOCK"}:null
+       :(()=>{const f=nearestDoor(state.position,2.5);return f?{kind:"door",id:f.id,title:state.open===f.id?"CLOSE AIRLOCK · INTERACT (OR WALK INSIDE)":"OPEN "+f.title.toUpperCase()+" AIRLOCK"}:null;})();
      const label=near?near.title:"";
      if(label!==lastPrompt){lastPrompt=label;latest.current.onNear(near);}
      // Light the current mission target on the actual 3D terrain.

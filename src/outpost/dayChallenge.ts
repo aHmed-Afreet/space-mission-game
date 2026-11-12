@@ -1,14 +1,14 @@
 /**
- * Eight active-play minutes to finish each simulated Outpost sol.
+ * Four active-play minutes to finish each simulated Outpost sol.
  * This is a gameplay deadline, not the length of a lunar/Martian day.
  * Time is accounted for separately from the v2 survival save format.
  */
 import {GAME_KEY,type Destination,type Outpost} from "./engine";
 
-export const DAY_TIME_LIMIT_MS=8*60*1000;
+export const DAY_TIME_LIMIT_MS=4*60*1000;
 export const DAY_WARNING_MS=60*1000;
 export const DAY_URGENT_MS=20*1000;
-export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"timeout";
+export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"minigame"|"rover"|"timeout";
 
 export function dayTimerKey(destination:Destination):string {
   return GAME_KEY+"-"+destination+"-day-clock";
@@ -39,7 +39,7 @@ export function dayTimerRuns(phase:Outpost["phase"],panel:TimerPausePanel,visibl
  * Existing mission score already caps failed games at 39. */
 export function failDayDeadline(s:Outpost):Outpost {
   if(s.phase!=="active")return s;
-  const reason="DAY "+s.sol+" FAILED: the 08:00 active-play deadline expired before the crew completed breakfast, engineering, dinner and sleep.";
+  const reason="DAY "+s.sol+" FAILED: the 04:00 active-play deadline expired before the crew completed breakfast, engineering, dinner and sleep.";
   return {...s,phase:"lost",
     log:[...s.log,reason].slice(-35),
     lastReport:[reason,"The time limit is a game challenge, not actual lunar or Martian day length. Restart the mission to try again."]};

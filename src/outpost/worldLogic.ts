@@ -24,9 +24,33 @@ export function nearestDoor(pos:Point2,max=2.4):Place|null{
   const ordered=BASE_FACILITIES.map(f=>({f,d:distance(pos,doorPosition(f))})).sort((a,b)=>a.d-b.d);
   return ordered[0]&&ordered[0].d<=max?ordered[0].f:null;
 }
-export function clampWalk(position:Point2,inside:boolean,openDoor:FacilityId|null):Point2{
+export function clampWalk(position:Point2,inside:boolean,openDoor:FacilityId|null,room:FacilityId|null=null):Point2{
   let p={x:Math.max(-29,Math.min(29,position.x)),z:Math.max(-29,Math.min(29,position.z))};
-  if(inside)return {x:Math.max(-4,Math.min(4,p.x)),z:Math.max(-3.8,Math.min(4.3,p.z))};
+  if(inside){
+   // A closed physical hatch cannot be walked through. Once opened the
+   // astronaut can cross the actual exit threshold at z>4.05.
+   p={x:Math.max(-4,Math.min(4,p.x)),z:Math.max(-3.8,Math.min(openDoor?4.3:3.81,p.z))};
+   const solids:{minX:number;maxX:number;minZ:number;maxZ:number}[]=[];
+   if(room==="habitat"){
+     solids.push({minX:-4,maxX:-2.36,minZ:-3.28,maxZ:1.84});
+     solids.push({minX:1.83,maxX:3.31,minZ:.62,maxZ:2.02});
+   }else if(room==="greenhouse"){
+     for(const x of [-2.95,2.95])solids.push({minX:x-.95,maxX:x+.95,minZ:-3.0,maxZ:2.8});
+   }
+   // Slide along furniture instead of teleporting through it. Gameplay
+   // interaction radii remain reachable from beside the equipment.
+   for(const b of solids){
+     if(p.x>b.minX&&p.x<b.maxX&&p.z>b.minZ&&p.z<b.maxZ){
+       const edges=[p.x-b.minX,b.maxX-p.x,p.z-b.minZ,b.maxZ-p.z];
+       const edge=Math.min(...edges),side=edges.indexOf(edge);
+       if(side===0)p.x=b.minX;
+       else if(side===1)p.x=b.maxX;
+       else if(side===2)p.z=b.minZ;
+       else p.z=b.maxZ;
+     }
+   }
+   return p;
+  }
   for(const f of BASE_FACILITIES){
     if(openDoor===f.id)continue;
     const dx=p.x-f.x,dz=p.z-f.z,dist=Math.hypot(dx,dz);
@@ -43,13 +67,13 @@ export function clampWalk(position:Point2,inside:boolean,openDoor:FacilityId|nul
   }
   return p;
 }
-export function walkStep(pos:Point2,yaw:number,strafe:number,forward:number,dt:number,inside:boolean,openDoor:FacilityId|null):Point2{
+export function walkStep(pos:Point2,yaw:number,strafe:number,forward:number,dt:number,inside:boolean,openDoor:FacilityId|null,room:FacilityId|null=null):Point2{
   const mag=Math.max(1,Math.hypot(strafe,forward));
   const x=strafe/mag,z=forward/mag;
   const speed=inside?2.8:4.2;
   const step=Math.min(.06,Math.max(0,dt))*speed;
   return clampWalk({x:pos.x+(-Math.sin(yaw)*z+Math.cos(yaw)*x)*step,
-                    z:pos.z+(-Math.cos(yaw)*z-Math.sin(yaw)*x)*step},inside,openDoor);
+                    z:pos.z+(-Math.cos(yaw)*z-Math.sin(yaw)*x)*step},inside,openDoor,room);
 }
 export function doorwayCrossed(pos:Point2,id:FacilityId):boolean{
   const f=BASE_FACILITIES.find(x=>x.id===id)!;

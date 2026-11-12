@@ -5,11 +5,11 @@ import {initialOutpost,advanceSol,missionScore} from "./outpost/engine";
 import {DAY_TIME_LIMIT_MS,DAY_WARNING_MS,DAY_URGENT_MS,dayTimerKey,dayTimerRuns,failDayDeadline,
  formatDayTime,normalizeSavedDayTime} from "./outpost/dayChallenge";
 
-test("each timed sol has 8 minutes, readable clock, and a 60-second warning",()=>{
- assert.equal(DAY_TIME_LIMIT_MS,480000);
+test("each timed sol has 4 minutes, readable clock, and a 60-second warning",()=>{
+ assert.equal(DAY_TIME_LIMIT_MS,240000);
  assert.equal(DAY_WARNING_MS,60000);
  assert.equal(DAY_URGENT_MS,20000);
- assert.equal(formatDayTime(DAY_TIME_LIMIT_MS),"08:00");
+ assert.equal(formatDayTime(DAY_TIME_LIMIT_MS),"04:00");
  assert.equal(formatDayTime(59999),"01:00");
  assert.equal(formatDayTime(19999),"00:20");
  assert.equal(formatDayTime(0),"00:00");
@@ -47,7 +47,7 @@ test("missed daily deadline fails run without mutating previous save or resource
  assert.equal(failed.safety,before.safety);
  assert.equal(failed.credits,before.credits);
  assert.equal(failed.food,before.food);
- assert.match(failed.lastReport.join(" "),/08:00 active-play deadline expired/);
+ assert.match(failed.lastReport.join(" "),/04:00 active-play deadline expired/);
  assert.ok(failed.log.some(x=>x.includes("DAY 1 FAILED")));
  assert.deepEqual(original,before);
  assert.ok(missionScore(failed)<=39);
@@ -69,7 +69,7 @@ test("Outpost UI presents readable countdown, warnings, failure actions and rest
  assert.match(s,/className="j3-panel j3-timeout-panel"/);
  assert.match(s,/RESTART CHALLENGE ↻/);
  assert.match(s,/CHOOSE A PLANET/);
- assert.match(s,/08:00 PER DAY/);
+ assert.match(s,/04:00 PER DAY/);
  assert.match(css,/\.j3-day-timer\{/);
  assert.match(css,/\.j3-console-deadline\{/);
  assert.match(css,/\.j3-timeout-panel\{/);

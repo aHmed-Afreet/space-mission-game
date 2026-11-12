@@ -85,7 +85,8 @@ test("correct final iPad controls: left movement, right RUN and INTERACT",()=>{
  const code=readFileSync("src/outpost/Junior3D.tsx","utf8");
  assert.match(css,/\.j3-root \.j3-move-zone\{\s*left:0;right:auto/);
  assert.match(css,/\.j3-root \.j3-buttons\{\s*left:auto;right:/);
- assert.match(code,/bottom-left movement zone/);
+ assert.match(code,/bottom-left joystick/);
+ assert.match(code,/!desktopControls&&<Stick move=\{movement\}\/>/);
  assert.match(code,/onPointerMove=\{e=>actionMove\("run",e\)\}/);
  assert.match(code,/onPointerMove=\{e=>actionMove\("interact",e\)\}/);
 });

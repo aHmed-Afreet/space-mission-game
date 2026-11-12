@@ -42,7 +42,8 @@ test("one-operation-per-day gameplay remains enforced with an explicit explanati
  assert.match(ui,/another engineering operation unlocks on the next day/);
  assert.match(ui,/availableAction\(session,id\)/);
  assert.match(ui,/disabled=\{!avail\.ok\}/);
- assert.match(ui,/onClick=\{\(\)=>operate\(id\)\}/);
+ assert.match(ui,/onClick=\{\(\)=>beginEngineering\(id\)\}/);
+ assert.match(ui,/onComplete=\{\(\)=>\{operate\(pendingAction\)/);
  assert.match(ui,/consoleOpenedAt\.current<450/);
  assert.match(ui,/setPanel\(null\);setNotice\(""\);/);
  assert.match(ui,/RETURN TO 3D ROOM/);
