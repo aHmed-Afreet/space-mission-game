@@ -132,7 +132,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
      const now=performance.now(),previous=lastTimerTick.current;
      lastTimerTick.current=now;
      if(previous!==null)setRemainingMs(ms=>Math.max(0,ms-(now-previous)));
-   },250);
+   },1000);
    document.addEventListener("visibilitychange",pause);
    return ()=>{window.clearInterval(timer);document.removeEventListener("visibilitychange",pause);lastTimerTick.current=null;};
  },[session?.destination,session?.sol,session?.phase,panel]);
