@@ -10,7 +10,7 @@ export function batchStaticVisuals(root:T.Group, excluded:readonly T.Object3D[]=
   const batches=new Map<T.Material,T.Mesh[]>();
   const moving=new Set(excluded);
   const visit=(object:T.Object3D)=>{
-    if(moving.has(object)||object.userData.dynamicVisual)return;
+    if(moving.has(object)||object.userData.dynamicVisual||!object.visible)return;
     if(object instanceof T.Mesh&&!(object instanceof T.InstancedMesh)&&!(object instanceof T.SkinnedMesh)&&!Array.isArray(object.material)&&!object.material.transparent&&!object.children.length){
       const list=batches.get(object.material)??[];list.push(object);batches.set(object.material,list);
     }

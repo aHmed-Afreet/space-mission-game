@@ -1,0 +1,172 @@
+{
+  "results": [
+    {
+      "pose": {
+        "name": "cockpit",
+        "area": "cockpit",
+        "position": [
+          0,
+          1.63,
+          -4.95
+        ],
+        "target": [
+          0,
+          1.44,
+          -7.1
+        ]
+      },
+      "calls": 84,
+      "triangles": 115862,
+      "textures": 46,
+      "geometries": 55,
+      "draws": 11
+    },
+    {
+      "pose": {
+        "name": "communications",
+        "area": "communications",
+        "position": [
+          0.45,
+          1.63,
+          -2.1
+        ],
+        "target": [
+          2.25,
+          1.6,
+          -3.15
+        ]
+      },
+      "calls": 152,
+      "triangles": 116530,
+      "textures": 46,
+      "geometries": 55,
+      "draws": 13
+    },
+    {
+      "pose": {
+        "name": "engineering",
+        "area": "power",
+        "position": [
+          -0.25,
+          1.63,
+          1.45
+        ],
+        "target": [
+          -2.25,
+          1.65,
+          0.45
+        ]
+      },
+      "calls": 212,
+      "triangles": 100590,
+      "textures": 46,
+      "geometries": 55,
+      "draws": 15
+    },
+    {
+      "pose": {
+        "name": "galley",
+        "area": "galley",
+        "position": [
+          0.25,
+          1.63,
+          1.45
+        ],
+        "target": [
+          2.25,
+          1.65,
+          0.45
+        ]
+      },
+      "calls": 190,
+      "triangles": 100268,
+      "textures": 46,
+      "geometries": 55,
+      "draws": 17
+    },
+    {
+      "pose": {
+        "name": "eva",
+        "area": "equipment",
+        "position": [
+          0.25,
+          1.63,
+          5.25
+        ],
+        "target": [
+          2.3,
+          1.65,
+          4.3
+        ]
+      },
+      "calls": 241,
+      "triangles": 104564,
+      "textures": 52,
+      "geometries": 59,
+      "draws": 19
+    },
+    {
+      "pose": {
+        "name": "science",
+        "area": "science",
+        "position": [
+          -0.45,
+          1.63,
+          -2.1
+        ],
+        "target": [
+          -2.25,
+          1.6,
+          -3.15
+        ]
+      },
+      "calls": 168,
+      "triangles": 113998,
+      "textures": 52,
+      "geometries": 59,
+      "draws": 21
+    },
+    {
+      "pose": {
+        "name": "corridor",
+        "position": [
+          0,
+          1.63,
+          6.2
+        ],
+        "target": [
+          0,
+          1.8,
+          -4.6
+        ]
+      },
+      "calls": 431,
+      "triangles": 125840,
+      "textures": 52,
+      "geometries": 59,
+      "draws": 23
+    },
+    {
+      "pose": {
+        "name": "airlock",
+        "position": [
+          0,
+          1.63,
+          6.4
+        ],
+        "target": [
+          0,
+          1.5,
+          8.6
+        ]
+      },
+      "calls": 124,
+      "triangles": 126277,
+      "textures": 59,
+      "geometries": 69,
+      "draws": 25
+    }
+  ],
+  "errors": [],
+  "assetErrors": []
+}

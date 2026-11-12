@@ -103,33 +103,29 @@ test("worksite construction keeps bounded meshes and geometry in every tier",()=
   }
 });
 
-test("Battery cabin keeps full stations and hatch assemblies with a cheaper geometry path",()=>withCanvas((labels)=>{
-  const triangles:number[]=[],drawables:number[]=[];
-  for(const tier of ["battery","balanced","quality"] as const){
-    const cabin=createInterior({eva:true,destination:"mars",graphics:tier});
-    let count=0,meshes=0;
-    cabin.scene.traverse(object=>{if(object instanceof T.Mesh){meshes++;count+=(object.geometry.index?.count??object.geometry.attributes.position.count)/3*(object instanceof T.InstancedMesh?object.count:1);}});
-    triangles.push(count);drawables.push(meshes);
-    // All tiers must construct the same interaction presentation/camera and
-    // retain the expensive scene's shared disposals; no WebGL is involved.
-    assert.equal(cabin.camera instanceof T.PerspectiveCamera,true);
-    for(const station of ["SCIENCE LAB","COMMUNICATIONS","ECLSS / POWER DISTRIBUTION","GALLEY / FOOD & WATER","CREW BERTH / 06","EQUIPMENT STORAGE"])assert.ok(labels.includes(station),station);
-    const forward=cabin.scene.getObjectByName("Formed cockpit pressure glazing and console")!;
-    assert.ok(forward);
-    const frame=forward.children[0] as T.Mesh<T.ExtrudeGeometry>;
-    assert.equal((frame.geometry.parameters.shapes as T.Shape).holes.length,2,"real shaped twin viewport apertures");
-    const leaves=cabin.scene.children.filter(o=>o instanceof T.Mesh&&o.position.z===-4.35&&o.scale.y===2.5);
-    assert.equal(leaves.length,2,"retain independently animated flight hatch leaves");
-    let disposedTextures=0;
+test("all cabin tiers retain live MFDs, authored architecture and independently animated hatch leaves",()=>withCanvas((labels)=>{
+  const budgets:{triangles:number;drawables:number}[]=[],shellBudgets:number[]=[];
+  for(const graphics of ["battery","balanced","quality"] as const){
+    const cabin=createInterior({eva:true,destination:"mars",graphics});
+    let triangles=0,drawables=0;
+    cabin.scene.traverse(object=>{if(object instanceof T.Mesh){drawables++;triangles+=(object.geometry.index?.count??object.geometry.attributes.position.count)/3*(object instanceof T.InstancedMesh?object.count:1);}});
+    budgets.push({triangles,drawables});
+    assert.ok(cabin.camera instanceof T.PerspectiveCamera);
+    const shell=cabin.scene.getObjectByName("ORBITAL / manufactured pressure module");assert.ok(shell,"immediate original authored hull works offline");
+    let shellTriangles=0;shell!.traverse(o=>{if(o instanceof T.Mesh)shellTriangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;});shellBudgets.push(shellTriangles);
+    for(const [name,pos]of [["Live communications MFD",[1.765,1.68,-3.1]],["Live engineering MFD",[-1.765,1.68,.45]]]as const){
+      assert.deepEqual(cabin.scene.getObjectByName(name)?.position.toArray(),[...pos]);
+    }
+    assert.equal(cabin.scene.children.filter(o=>o.name==="Animated flight pressure leaf").length,2);
+    for(const title of["01 / FLIGHT DECK","02 / VEHICLE SYSTEMS","03 / CREW & EVA","UPLINK / RF ROUTING","ECLSS / RECOVERY","POTABLE WATER","SAMPLE / ANALYSIS"])assert.ok(labels.includes(title),title);
     const textures=new Set<T.Texture>();
-    cabin.scene.traverse(object=>{if(object instanceof T.Mesh)for(const material of Array.isArray(object.material)?object.material:[object.material])for(const value of Object.values(material))if(value instanceof T.Texture)textures.add(value);});
-    for(const texture of textures)texture.addEventListener("dispose",()=>disposedTextures++);
-    cabin.dispose();assert.equal(disposedTextures,textures.size);
+    cabin.scene.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])for(const value of Object.values(m))if(value instanceof T.Texture)textures.add(value);});
+    let releases=0;for(const tx of textures)tx.addEventListener("dispose",()=>releases++);
+    cabin.dispose();cabin.dispose();assert.equal(releases,textures.size,"idempotent owner releases every map exactly once");
   }
-  assert.ok(triangles[0]<50000);assert.ok(triangles[1]<340000);assert.ok(triangles[2]<350000);
-  assert.ok(triangles[0]<triangles[1]);assert.ok(triangles[1]<150000,"balanced keeps tiny fittings inexpensive");
-  assert.ok(triangles[1]<triangles[2]);
-  assert.ok(drawables.every(count=>count>80&&count<210),"batch static details while retaining all live stations");
+  for(const budget of budgets){assert.ok(budget.triangles<160000,JSON.stringify(budget));assert.ok(budget.drawables<90,JSON.stringify(budget));}
+  assert.equal(shellBudgets[0],shellBudgets[2],"graphics choices retain the complete authored architecture");
+  assert.ok(budgets[0].triangles<=budgets[2].triangles,"EVA glove detail can scale independently");
 }));
 
 test("crater bowls deform terrain while hatch and sample approaches stay clear",()=>{

@@ -23,3 +23,14 @@ test("static batching preserves transformed scenery and excludes moving doors, i
   let count=0;(merged as T.Mesh).geometry.addEventListener("dispose",()=>count++);release();assert.equal(count,1);
   geometry.dispose();material.dispose();(alpha.material as T.Material).dispose();instanced.dispose();
 });
+
+
+test("hidden pressure-retention panels stay hidden when batching an animated closure",()=>{
+ const root=new T.Group(),m=new T.MeshStandardMaterial(),g=new T.BoxGeometry();
+ const hidden=new T.Mesh(g,m);hidden.visible=false;root.add(hidden);
+ const hiddenAssembly=new T.Group();hiddenAssembly.visible=false;const child=new T.Mesh(g,m);hiddenAssembly.add(child);root.add(hiddenAssembly);
+ root.add(new T.Mesh(g,m),new T.Mesh(g,m));
+ const release=batchStaticVisuals(root);
+ assert.equal(hidden.parent,root);assert.equal(hidden.visible,false);assert.equal(child.parent,hiddenAssembly);
+ assert.deepEqual(root.userData.staticBatch,{before:2,after:1});release();m.dispose();g.dispose();
+});

@@ -1,10 +1,13 @@
 import * as T from "three";
+import {createStowageFabrication} from "../stowageFabrication";
 import type { Session } from "./engine";
 import { doors, lockers, equipmentLocker, type LockerId } from "./ship";
 import { sectionDoorLeafX, sectionDoorOpenFraction } from "../doorMotion";
-export function createFixtures(scene: T.Scene) {
+export function createFixtures(scene: T.Scene, onSceneChange:()=>void=()=>{}) {
   const root = new T.Group();
+  root.name="Mission interior interactive fixtures";
   scene.add(root);
+  const fabrication=createStowageFabrication(root,onSceneChange);
   const geo = new T.BoxGeometry(1, 1, 1),
     extraGeometry: T.BufferGeometry[] = [],
     materials: T.Material[] = [],
@@ -18,19 +21,7 @@ export function createFixtures(scene: T.Scene) {
     materials.push(m);
     return m;
   };
-  const panel = mat("#56616b"),
-    dark = mat("#18242e"),
-    silver = mat("#91a1a8"),
-    itemMat = mat("#b6aa8e"),
-    oxygenWhite=mat("#d6e1e0"), waterBlue=mat("#3a9bbc"),
-    suitGold=mat("#c4a867"), toolSteel=mat("#97a9ae"),
-    firstAid=mat("#a1cbd0"), sampleRock=mat("#787875");
-  const round=new T.CylinderGeometry(1,1,1,12);
-  extraGeometry.push(round);
-  const cyl=(parent:T.Object3D,x:number,y:number,z:number,r:number,height:number,m:T.Material)=>{
-    const obj=new T.Mesh(round,m);obj.position.set(x,y,z);
-    obj.scale.set(r,height,r);parent.add(obj);return obj;
-  };
+  const panel = mat("#c6c9c2"), dark = mat("#293238");
 
   const box = (
     parent: T.Object3D,
@@ -64,7 +55,7 @@ export function createFixtures(scene: T.Scene) {
    }
   // Large illuminated panels physically attached to each moving hatch.
   const hatchPlate=mat("#142b35"),hatchGreen=new T.MeshStandardMaterial({
-    color:"#b2ffe8",emissive:"#20dcaa",emissiveIntensity:1.3,metalness:.2,roughness:.24
+    color:"#c1d5c7",emissive:"#688777",emissiveIntensity:.25,metalness:.2,roughness:.24
   });
   materials.push(hatchGreen);
   const leafSwitches:{door:keyof typeof doors;plate:T.Mesh;key:T.Mesh}[]=[];
@@ -78,7 +69,7 @@ export function createFixtures(scene: T.Scene) {
   for (const [id, d] of Object.entries(doors)) {
     if (id === "flight") continue;
     leaves[id] = [-1, 1].map((side) =>
-      box(root, side * 0.53, 1.28, d.z, 1.02, 2.5, 0.08),
+      fabrication.hatchLeaf(root, side * 0.53, 1.28, d.z, id, side),
     );
   }
   const positions: Partial<Record<LockerId, [number, number, number]>> = {
@@ -95,68 +86,8 @@ export function createFixtures(scene: T.Scene) {
   for (const [id, p] of Object.entries(positions)) {
     const key = id as LockerId,
       [x, y, z] = p;
-    // A hollow stowage compartment: the previous SOLID cuboid blocked every
-    // item from the camera. Construct the back, frame and shelves separately.
-    box(root,x,y,z-.17,.9,1.15,.045,dark);
-    for(const side of [-1,1])box(root,x+side*.46,y,z+.035,.055,1.15,.47,panel);
-    for(const side of [-1,1])box(root,x,y+side*.56,z+.045,.95,.05,.48,panel);
-    for(const dy of [-.35,.05])box(root,x,y+dy,z+.05,.86,.028,.43,silver);
-    const pivot = new T.Group();
-    pivot.position.set(x-.47,y,z+.31);
-    root.add(pivot);
-    box(pivot,.47,0,0,.92,1.1,.045,panel);
-    box(pivot,.84,0,.035,.028,.26,.04,silver);
-    const c = document.createElement("canvas");
-    c.width = 512;
-    c.height = 64;
-    const ctx = c.getContext("2d")!;
-    ctx.fillStyle = "#17232b";
-    ctx.fillRect(0, 0, 512, 64);
-    ctx.fillStyle = "#c1d4ce";
-    ctx.font = "22px sans-serif";
-    ctx.fillText(lockers[key].name.toUpperCase(), 12, 40);
-    const texture = new T.CanvasTexture(c);
-    textures.push(texture);
-    const labelMat = new T.MeshBasicMaterial({ map: texture });
-    materials.push(labelMat);
-    const labelGeometry = new T.PlaneGeometry(0.78, 0.1);
-    extraGeometry.push(labelGeometry);
-    const label = new T.Mesh(labelGeometry, labelMat);
-    label.position.set(0.46, 0.42, 0.035);
-    pivot.add(label);
-    // Each compartment has real recognizable contents rather than three empty cubes.
-    const items=[0,1,2].map(i=>{
-      const tray=new T.Group();tray.position.set(x-.29+i*.29,y-.11,z+.12);root.add(tray);
-      if(key==="water"){
-        cyl(tray,0,0,0,.07,.26,waterBlue);
-        cyl(tray,0,.15,0,.044,.04,oxygenWhite);
-      }else if(key==="eva"){
-        box(tray,0,.035,0,.18,.26,.14,oxygenWhite);
-        const helmet=new T.Mesh(new T.SphereGeometry(.083,12,8),oxygenWhite);
-        helmet.position.y=.22;tray.add(helmet);extraGeometry.push(helmet.geometry);
-        box(tray,0,-.11,.09,.19,.085,.08,suitGold);
-      }else if(key==="repair"||key==="maintenance"){
-        box(tray,0,0,0,.13,.2,.13,dark);
-        cyl(tray,0,.135,0,.055,.085,toolSteel);
-        box(tray,.055,-.12,.09,.03,.24,.04,toolSteel);
-      }else if(key==="science"){
-        cyl(tray,0,-.02,0,.07,.2,toolSteel);
-        cyl(tray,0,.1,0,.05,.1,waterBlue);
-        box(tray,.04,-.12,0,.1,.04,.1,suitGold);
-      }else if(key==="samples"){
-        cyl(tray,0,0,0,.075,.24,toolSteel);
-        const rock=new T.Mesh(new T.DodecahedronGeometry(.06,0),sampleRock);
-        rock.position.y=.1;tray.add(rock);extraGeometry.push(rock.geometry);
-      }else if(key==="emergency"){
-        box(tray,0,0,0,.16,.21,.14,firstAid);
-        box(tray,0,0,.075,.035,.12,.012,toolSteel);
-        box(tray,0,0,.085,.11,.035,.013,toolSteel);
-      }else{
-        box(tray,0,0,0,.16,.2,.12,itemMat);
-        box(tray,0,.07,.066,.12,.03,.01,waterBlue);
-      }
-      return tray;
-    });
+    const installation=fabrication.cabinet(key,lockers[key].name,[x,y,z]);
+    const {pivot,items,anchor}=installation;
     // A clearly readable empty stowage plaque is better than a black hole:
     // it never implies gear exists when the mission manifest says otherwise.
     const marker=document.createElement("canvas");marker.width=512;marker.height=90;
@@ -169,9 +100,11 @@ export function createFixtures(scene: T.Scene) {
     const m2=new T.MeshBasicMaterial({map:map2,side:T.DoubleSide});materials.push(m2);
     const plaque=new T.Mesh(new T.PlaneGeometry(.73,.13),m2);
     extraGeometry.push(plaque.geometry);
-    plaque.position.set(x,y-.18,z+.15);root.add(plaque);plaque.visible=false;
+    plaque.name=`stowage-empty-${key}`;
+    plaque.position.copy(installation.plaquePosition);anchor.add(plaque);plaque.visible=false;
     cabinets[key] = { pivot, items, empty:plaque };
   }
+  fabrication.finish();
   return {
     update(s: Session) {
       // Same wall-clock time as door.readyAt and the gameplay crossing rule.
@@ -214,13 +147,15 @@ export function createFixtures(scene: T.Scene) {
                     : 1
                   : s.world.stored.filter((g) => equipmentLocker(g) === key)
                       .length;
-        c.items.forEach(
-          (o, i) => (o.visible = s.world.lockers[key] && i < count),
-        );
+        c.items.forEach((o,i)=>{
+          o.visible=(key === "eva" || s.world.lockers[key]) && i < count;
+          if(o.visible)o.userData.loadStowageVisual?.();
+        });
         c.empty.visible=s.world.lockers[key]&&count<=0;
       }
     },
     dispose() {
+      fabrication.dispose();
       scene.remove(root);
       geo.dispose();
       extraGeometry.forEach((g) => g.dispose());

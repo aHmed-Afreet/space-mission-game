@@ -1176,15 +1176,16 @@ test("door interaction label stays OPENING or CLOSING until its clearance period
   assert.match(cabin,/WAIT FOR DOOR/);
 });
 test("exactly one rendered pair owns each section door, preventing overlapping hatch geometry",()=>{
-  const interior=readFileSync("src/commander/interior.ts","utf8");
-  const fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8");
-  assert.match(interior,/hatchLeaves\.push\(m\)/);
-  assert.match(interior,/Engineering and Habitation leaves belong ONLY to createFixtures/);
-  assert.doesNotMatch(interior,/hatchLeaves\.push\(dynamic/);
-  assert.match(fixtures,/if \(id === "flight"\) continue/);
-  assert.match(fixtures,/sectionDoorLeafX\(/);
-  assert.match(interior,/sectionDoorLeafX\(/);
+ const interior=readFileSync("src/commander/interior.ts","utf8"),fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8");
+ assert.match(interior,/const hatchLeaves=\[-1,1\]\.map/);
+ assert.match(interior,/Animated flight pressure leaf/);
+ assert.match(fixtures,/if \(id === "flight"\) continue/);
+ assert.match(fixtures,/sectionDoorLeafX\(/);assert.match(interior,/sectionDoorLeafX\(/);
+ // The behavioral interiorSafety tests also count one real pair at each plane
+ // and verify exact completion at the same collision-interlock wall clock.
+ assert.doesNotMatch(interior,/installShipArchitecture|installCabinDetail|installCockpitFinishing/);
 });
+
 test("physical section doors block crossing, animate before clearance and reject closure on the player", () => {
   let s = createSession(missions[0], design, life, [], emptyProgress());
   const before = s.position;
@@ -1605,30 +1606,14 @@ test("historical stories have airlocks, suit requirement, safe return and real e
  assert.match(world,/SUIT/gi);
 });
 test("Commander cabinet inventory, visible EVA suit and both-sided hatch buttons",()=>{
- const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
- const fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8");
- const field=readFileSync("src/commander/campaign/world.ts","utf8");
- const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
- const engine=readFileSync("src/commander/campaign/engine.ts","utf8");
- // Hatch reach, occlusion and controls on both faces are exercised through
- // pickAimTarget with real cameras in targeting.test.ts.
- assert.match(cabin,/pickAimTarget/);
- assert.match(cabin,/OPEN/);
- assert.match(fixtures,/for\(const face of \[-1,1\]\)/);
- assert.match(fixtures,/leafSwitches/);
- assert.match(fixtures,/hatchGreen/);
- assert.match(fixtures,/key==="eva"/);
- assert.match(fixtures,/key==="samples"/);
- assert.match(fixtures,/COMPARTMENT EMPTY/);
- assert.match(fixtures,/A hollow stowage compartment/);
- assert.match(field,/orbitEarth/);
- assert.match(flight,/target\?\.kind==="airlock"/);
- assert.match(engine,/atSite\(s, "outerHatch"\)/);
- const interior=readFileSync("src/commander/interior.ts","utf8");
- assert.match(interior,/evaHands\.visible/);
- assert.match(interior,/flightDoorButtons/);
- assert.match(interior,/EVA LOCKED/);
- assert.match(flight,/hatchNotice/);
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8"),fixtures=readFileSync("src/commander/campaign/fixtures.ts","utf8"),formed=readFileSync("src/commander/stowageFabrication.ts","utf8");
+ const field=readFileSync("src/commander/campaign/world.ts","utf8"),flight=readFileSync("src/commander/campaign/Flight.tsx","utf8"),engine=readFileSync("src/commander/campaign/engine.ts","utf8");
+ assert.match(cabin,/pickAimTarget/);assert.match(fixtures,/leafSwitches/);assert.match(fixtures,/hatchGreen/);
+ assert.match(fixtures,/key === "eva"/);assert.match(fixtures,/key === "samples"/);assert.match(fixtures,/COMPARTMENT EMPTY/);
+ assert.match(formed,/attachRealismModel\(tray,"astronaut"/);assert.match(formed,/loadStowageVisual/);
+ assert.match(field,/inner pressure hatch/);assert.match(field,/outer pressure hatch/);assert.match(field,/\["inner",7.75\],\["outer",10.25\]/);
+ assert.match(flight,/target\?\.kind==="airlock"/);assert.match(engine,/atSite\(s, "outerHatch"\)/);
+ const interior=readFileSync("src/commander/interior.ts","utf8");assert.match(interior,/evaHands\.visible/);assert.match(interior,/flightDoorButtons/);assert.match(flight,/hatchNotice/);
 });
 
 test("realism update preserves physical EVA hatch targeting and distinct exterior physics",()=>{
@@ -1674,13 +1659,11 @@ test("realism update preserves physical EVA hatch targeting and distinct exterio
  assert.ok(assetManifest.moon.runtimeUrl.startsWith("./assets/planetary/"));
 });
 
-test("quality setting adds surface microdetail without affecting battery mode",()=>{
- const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
- const interior=readFileSync("src/commander/interior.ts","utf8");
- assert.match(cabin,/graphics: props.settings\?\.graphics/);
- assert.match(interior,/options.graphics === "quality"/);
- assert.match(interior,/bumpMap/);
- assert.match(interior,/CanvasTexture/);
+test("quality setting applies bounded PBR detail without changing cabin geometry or controls",()=>{
+ const cabin=readFileSync("src/commander/Cabin.tsx","utf8"),interior=readFileSync("src/commander/interior.ts","utf8"),assets=readFileSync("src/presentation/interiorAssets.ts","utf8");
+ assert.match(cabin,/graphics: props.settings\?\.graphics/);assert.match(interior,/quality:options.graphics/);
+ assert.match(assets,/quality !== "battery"/);assert.match(assets,/normalMap/);assert.match(assets,/quality === "quality" \? 4/);
+ assert.match(assets,/1024|fabric-base\.webp/);
 });
 
 test("door aim feedback matches the real physical interaction distance",()=>{
@@ -1692,21 +1675,13 @@ test("door aim feedback matches the real physical interaction distance",()=>{
  assert.doesNotMatch(flight,/Math\.abs\(s\.position\.z-door\.z\)>1\.6/);
 });
 
-test("new spacecraft visuals are instanced and do not relocate mission stations",()=>{
- const interior=readFileSync("src/commander/interior.ts","utf8");
- const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");
- const story=readFileSync("src/history/storyWorld.ts","utf8");
- const bridge=readFileSync("src/history/storyBridge.ts","utf8");
- assert.match(interior,/installShipArchitecture\(part,pipe,screen,label,mat/);
- assert.match(interior,/InstancedMesh/);
- assert.match(interior,/installForwardCockpit\(scene\)/);
- assert.match(architecture,/pressure tunnel/i);
- assert.match(architecture,/ORBITAL \/ FLIGHT DECK/);
- assert.match(story,/installStoryBridge\(deck,scenario\)/);
- assert.match(bridge,/new THREE.InstancedMesh/);
- assert.match(bridge,/CREW VEHICLE/);
- assert.match(bridge,/GROUND MISSION CONTROL/);
+test("new spacecraft visuals use one authored architecture and preserve fixed mission stations",()=>{
+ const interior=readFileSync("src/commander/interior.ts","utf8"),story=readFileSync("src/history/storyWorld.ts","utf8"),bridge=readFileSync("src/history/storyBridge.ts","utf8");
+ assert.match(interior,/mission-shell/);assert.match(interior,/mission-workstations/);assert.match(interior,/preserveCoordinates:true/);assert.match(interior,/batchStaticVisuals/);
+ assert.doesNotMatch(interior,/installShipArchitecture|installCabinDetail|installCockpitFinishing|installForwardCockpit/);
+ assert.match(story,/installStoryBridge\(deck,scenario\)/);assert.match(bridge,/finishFabrication/);assert.match(bridge,/CREW VEHICLE/);assert.match(bridge,/GROUND MISSION CONTROL/);
 });
+
 test("performance options adapt image quality within device bounds without removing controls",()=>{
  const cabin=readFileSync("src/commander/Cabin.tsx","utf8");
  const story=readFileSync("src/history/storyWorld.ts","utf8");
@@ -1761,14 +1736,10 @@ test("Mission 2 supports accessible tap-to-operate and an automatic alignment op
  assert.match(panel,/Confirm approach manoeuvre/);
  assert.match(panel,/role="dialog"/);
 });
-test("Realism materials preserve performance and have an offline asset fallback",()=>{
- const file=readFileSync("src/commander/cabinDetailPass.ts","utf8");
- const interior=readFileSync("src/commander/interior.ts","utf8");
- assert.match(file,/installCabinDetail/);
- assert.match(file,/new T.CanvasTexture/);
- assert.match(file,/CatmullRomCurve3/);
- assert.match(file,/materials.fabric.bumpMap/);
- assert.match(interior,/disposeDetails\(\)/);
+test("realism models keep an immediate offline fallback and owned asynchronous cleanup",()=>{
+ const interior=readFileSync("src/commander/interior.ts","utf8"),assets=readFileSync("src/presentation/interiorAssets.ts","utf8");
+ assert.match(interior,/const fallback=build\(\)/);assert.match(interior,/fallback\.removeFromParent\(\)/);assert.match(interior,/fallbackModels\.forEach/);assert.match(interior,/references\.forEach/);
+ assert.match(assets,/createReferenceModelLoader/);assert.match(assets,/parent\.userData\.resourcesDisposed/);assert.match(assets,/disposed/);
 });
 
 test("satellite reference model is lazy, attributed and has an offline fallback",()=>withGeometryCanvas(async()=>{
@@ -1949,15 +1920,12 @@ test("New task guide buttons and instructions are available from HUD and Mission
  assert.match(tablet,/campaign-tablet-help/);
  assert.match(css,/max-height: min\(40dvh, 300px\)/);
 });
-test("Redesigned ship uses stamped panel materials and shared instanced assets",()=>{
- const architecture=readFileSync("src/commander/shipArchitecture.ts","utf8");
- assert.match(architecture,/CanvasTexture/);
- assert.match(architecture,/PANEL ASSY/);
- assert.match(architecture,/INSPECT/);
- const interior=readFileSync("src/commander/interior.ts","utf8");
- assert.match(interior,/installShipArchitecture/);
+test("redesigned ship uses locally stored woven and metal PBR maps with purpose-built geometry",()=>{
+ const assets=readFileSync("src/presentation/interiorAssets.ts","utf8"),shell=readFileSync("src/commander/pressureShellModel.ts","utf8");
+ for(const name of ["fabric-base","fabric-normal","metal-roughness","metal-metallic"])assert.ok(assets.includes(name),name);
+ assert.match(shell,/ExtrudeGeometry/);assert.match(shell,/billow/);assert.match(shell,/batchStaticVisuals/);
+ assert.ok(existsSync("public/assets/interior/mission-shell.glb"));assert.ok(existsSync("public/assets/interior/mission-workstations.glb"));
 });
-
 
 test("all implemented Commander missions trigger scripted repairs at their own checklist, not earlier", () => {
   const progress = emptyProgress();

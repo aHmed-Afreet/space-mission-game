@@ -61,7 +61,8 @@ test("new visuals never change mission object IDs, collision rules, or iPad cont
   assert.match(cabin,/props\.world!\.session\.missionId,\s*graphicsMode/);
   assert.match(cabin,/renderer\.setPixelRatio\(renderRatio\)/);
   assert.match(cabin,/campaignWalkable\(/);
-  assert.match(interior,/disposeCockpitFinishing\(\)/);
+  assert.match(interior,/references\.forEach/);
+  assert.match(interior,/fallbackModels\.forEach/);
   assert.match(cockpit,/InstancedMesh/);
   assert.match(surface,/texture\.repeat\.set\(10,10\)/);
   assert.doesNotMatch(surface,/https?:\/\//);

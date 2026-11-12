@@ -1,0 +1,214 @@
+{
+  "results": [
+    {
+      "pose": {
+        "name": "cockpit",
+        "area": "cockpit",
+        "position": [
+          0,
+          1.63,
+          -4.95
+        ],
+        "target": [
+          0,
+          1.44,
+          -7.1
+        ]
+      },
+      "calls": 40,
+      "triangles": 149590,
+      "textures": 30,
+      "geometries": 34,
+      "draws": 2
+    },
+    {
+      "pose": {
+        "name": "communications",
+        "area": "communications",
+        "position": [
+          0.45,
+          1.63,
+          -2.1
+        ],
+        "target": [
+          2.25,
+          1.6,
+          -3.15
+        ]
+      },
+      "calls": 114,
+      "triangles": 178892,
+      "textures": 32,
+      "geometries": 45,
+      "draws": 4
+    },
+    {
+      "pose": {
+        "name": "engineering",
+        "area": "power",
+        "position": [
+          -0.25,
+          1.63,
+          1.45
+        ],
+        "target": [
+          -2.25,
+          1.65,
+          0.45
+        ]
+      },
+      "calls": 168,
+      "triangles": 190130,
+      "textures": 41,
+      "geometries": 66,
+      "draws": 6
+    },
+    {
+      "pose": {
+        "name": "galley",
+        "area": "galley",
+        "position": [
+          0.25,
+          1.63,
+          1.45
+        ],
+        "target": [
+          2.25,
+          1.65,
+          0.45
+        ]
+      },
+      "calls": 165,
+      "triangles": 186546,
+      "textures": 43,
+      "geometries": 79,
+      "draws": 8
+    },
+    {
+      "pose": {
+        "name": "eva",
+        "area": "equipment",
+        "position": [
+          0.25,
+          1.63,
+          5.25
+        ],
+        "target": [
+          2.3,
+          1.65,
+          4.3
+        ]
+      },
+      "calls": 182,
+      "triangles": 193954,
+      "textures": 46,
+      "geometries": 99,
+      "draws": 10
+    },
+    {
+      "pose": {
+        "name": "science",
+        "area": "science",
+        "position": [
+          -0.45,
+          1.63,
+          -2.1
+        ],
+        "target": [
+          -2.25,
+          1.6,
+          -3.15
+        ]
+      },
+      "calls": 116,
+      "triangles": 184356,
+      "textures": 46,
+      "geometries": 99,
+      "draws": 12
+    },
+    {
+      "pose": {
+        "name": "corridor",
+        "position": [
+          0,
+          1.63,
+          6.2
+        ],
+        "target": [
+          0,
+          1.8,
+          -4.6
+        ]
+      },
+      "calls": 363,
+      "triangles": 204538,
+      "textures": 52,
+      "geometries": 106,
+      "draws": 14
+    },
+    {
+      "pose": {
+        "name": "airlock",
+        "position": [
+          0,
+          1.63,
+          6.4
+        ],
+        "target": [
+          0,
+          1.5,
+          8.6
+        ]
+      },
+      "calls": 112,
+      "triangles": 146219,
+      "textures": 59,
+      "geometries": 167,
+      "draws": 16
+    },
+    {
+      "pose": {
+        "name": "cockpit-wide",
+        "area": "cockpit",
+        "position": [
+          0,
+          1.63,
+          -3.85
+        ],
+        "target": [
+          0,
+          1.4,
+          -6.7
+        ]
+      },
+      "calls": 61,
+      "triangles": 180066,
+      "textures": 59,
+      "geometries": 167,
+      "draws": 18
+    },
+    {
+      "pose": {
+        "name": "eva-suit",
+        "area": "equipment",
+        "position": [
+          0.35,
+          1.63,
+          3.45
+        ],
+        "target": [
+          2.45,
+          1.2,
+          3.8
+        ]
+      },
+      "calls": 124,
+      "triangles": 185206,
+      "textures": 59,
+      "geometries": 167,
+      "draws": 20
+    }
+  ],
+  "errors": [],
+  "assetErrors": []
+}

@@ -1,0 +1,329 @@
+{
+  "sourceRevision": "11ebb4ee043715aefbba6aeec8a61746fad67fa7",
+  "models": [
+    {
+      "key": "crew-lock-bag",
+      "sourceUrl": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Crew%20Lock%20Bag/Crew%20Lock%20Bag.glb",
+      "sourceBytes": 609256,
+      "sourceSha256": "abd3be0b79fef602ce9ec603f19980d313dfc46a5974d347a4a5ec201a7baf24",
+      "sourceMetadata": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceMaterials": 1,
+      "sourceMeshes": 1,
+      "runtimeUrl": "./assets/interior/crew-lock-bag.glb",
+      "runtimeBytes": 32268,
+      "runtimeSha256": "548a49608ed52284da3bdb7e670ac0004313866cdef006c915795495ae4b1f99",
+      "runtimeTriangles": 502,
+      "runtimePrimitives": 1,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "pistol-grip-tool",
+      "sourceUrl": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Pistol%20Grip%20Tool/Pistol%20Grip%20Tool.glb",
+      "sourceBytes": 236300,
+      "sourceSha256": "597e57c1520aef51d0edced9991497c85bbe8f551bbd44e2e03c936892c285c9",
+      "sourceMetadata": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceMaterials": 1,
+      "sourceMeshes": 1,
+      "runtimeUrl": "./assets/interior/pistol-grip-tool.glb",
+      "runtimeBytes": 25664,
+      "runtimeSha256": "86493167659e690139b9515f1f48006e6c9dbd48d7078a1536d03f5bd685afad",
+      "runtimeTriangles": 960,
+      "runtimePrimitives": 1,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "infrared-camera",
+      "sourceUrl": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Infrared%20Camera/Infrared%20Camera.glb",
+      "sourceBytes": 145640,
+      "sourceSha256": "b525beb765dcf97d5d48907d5f4ca7cadccc4f10ffb1e2b37a74fc28d6116148",
+      "sourceMetadata": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceMaterials": 6,
+      "sourceMeshes": 1,
+      "runtimeUrl": "./assets/interior/infrared-camera.glb",
+      "runtimeBytes": 81316,
+      "runtimeSha256": "e4b442b4f22954f4a68bc582fb14668466fa6d9eb301470c5ae8e175f3076e75",
+      "runtimeTriangles": 27688,
+      "runtimePrimitives": 6,
+      "runtimeExtensions": [
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "docking-system",
+      "sourceUrl": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Space%20Shuttle%20Parts/Orbiter%20Docking%20System.glb",
+      "sourceBytes": 841040,
+      "sourceSha256": "781267aab7f8bcee7373e1db0777fc00d4f01f090a11852313050c706952f2c1",
+      "sourceMetadata": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceMaterials": 4,
+      "sourceMeshes": 1,
+      "runtimeUrl": "./assets/interior/docking-system.glb",
+      "runtimeBytes": 48868,
+      "runtimeSha256": "37922d0c5c0a0b6b1a2140cbd2c324bb64eca8e7ef545da9f91b4f39a69161e6",
+      "runtimeTriangles": 5526,
+      "runtimePrimitives": 4,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    },
+    {
+      "key": "flight-support",
+      "sourceUrl": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/11ebb4ee043715aefbba6aeec8a61746fad67fa7/3D%20Models/Flight%20System%20Support/Flight%20System%20Support.glb",
+      "sourceBytes": 443068,
+      "sourceSha256": "7b07acb8303a2dec1aa33438db12c27c760ab504a833329deb4eb201f0a5b878",
+      "sourceMetadata": {
+        "generator": "Khronos glTF Blender I/O v4.2.57",
+        "version": "2.0"
+      },
+      "sourceMaterials": 1,
+      "sourceMeshes": 1,
+      "runtimeUrl": "./assets/interior/flight-support.glb",
+      "runtimeBytes": 38156,
+      "runtimeSha256": "faa48d843f2cbebe90676640bc93f7b06f6f74bbbe5fadb5862cff01ddd5e28e",
+      "runtimeTriangles": 1284,
+      "runtimePrimitives": 1,
+      "runtimeExtensions": [
+        "EXT_texture_webp",
+        "KHR_draco_mesh_compression"
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "file": "fabric-base.webp",
+      "asset": "Fabric030",
+      "license": "CC0-1.0",
+      "source": "https://ambientcg.com/a/Fabric030",
+      "sourceArchiveUrl": "https://ambientcg.com/get?file=Fabric030_1K-JPG.zip",
+      "sourceArchiveSha256": "82d4d00ccf901cf4707c5489005945ab8574933fc60437e26c6737f0436699e0",
+      "sourceArchiveFile": "Fabric030_1K-JPG_Color.jpg",
+      "sourceSha256": "6388762708722de48cdbdfb4878b9ae6d8012de5948d564006067b629f0b84ef",
+      "runtimeBytes": 443390,
+      "runtimeSha256": "6e0b011af1595574adac29eedbe3dd04d56075bc952fae5e7d4068b1ed1216e6",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "modifications": "Re-encoded as WebP; quality95 normal maps,86 other maps; no content or color edits."
+    },
+    {
+      "file": "fabric-normal.webp",
+      "asset": "Fabric030",
+      "license": "CC0-1.0",
+      "source": "https://ambientcg.com/a/Fabric030",
+      "sourceArchiveUrl": "https://ambientcg.com/get?file=Fabric030_1K-JPG.zip",
+      "sourceArchiveSha256": "82d4d00ccf901cf4707c5489005945ab8574933fc60437e26c6737f0436699e0",
+      "sourceArchiveFile": "Fabric030_1K-JPG_NormalGL.jpg",
+      "sourceSha256": "c9a8f4ff15527af0b226b8a8840405f944c45a32c2e4462864d3b0136827e6e2",
+      "runtimeBytes": 851382,
+      "runtimeSha256": "217b365ff3babcff4e6b1e2063e058dedbac3f995b9bf0275e554fb29099ebfa",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "modifications": "Re-encoded as WebP; quality95 normal maps,86 other maps; no content or color edits."
+    },
+    {
+      "file": "fabric-roughness.webp",
+      "asset": "Fabric030",
+      "license": "CC0-1.0",
+      "source": "https://ambientcg.com/a/Fabric030",
+      "sourceArchiveUrl": "https://ambientcg.com/get?file=Fabric030_1K-JPG.zip",
+      "sourceArchiveSha256": "82d4d00ccf901cf4707c5489005945ab8574933fc60437e26c6737f0436699e0",
+      "sourceArchiveFile": "Fabric030_1K-JPG_Roughness.jpg",
+      "sourceSha256": "221bf708cb614b01ae83b856376fa79fff22dc249d8a397ab0f89dd3b7fe6da6",
+      "runtimeBytes": 442512,
+      "runtimeSha256": "3f46ee58442c9d7f6e5aa1705c3df1c2cd217c1b4be1a9f9d49479769c83156f",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "modifications": "Re-encoded as WebP; quality95 normal maps,86 other maps; no content or color edits."
+    },
+    {
+      "file": "metal-base.webp",
+      "asset": "Metal038",
+      "license": "CC0-1.0",
+      "source": "https://ambientcg.com/a/Metal038",
+      "sourceArchiveUrl": "https://ambientcg.com/get?file=Metal038_1K-JPG.zip",
+      "sourceArchiveSha256": "804a0e45cc923c71277f89b7e1a7b95bd8786899254e43692eb781b8c3981aae",
+      "sourceArchiveFile": "Metal038_1K-JPG_Color.jpg",
+      "sourceSha256": "f89631556587042a5973806c822af39928098743c28effcbab531d3dc68d7421",
+      "runtimeBytes": 26388,
+      "runtimeSha256": "f0603e0c79b20523a211ae544c2b6995c3a9a1b40a2260596bc8cc08539fe33e",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "modifications": "Re-encoded as WebP; quality95 normal maps,86 other maps; no content or color edits."
+    },
+    {
+      "file": "metal-normal.webp",
+      "asset": "Metal038",
+      "license": "CC0-1.0",
+      "source": "https://ambientcg.com/a/Metal038",
+      "sourceArchiveUrl": "https://ambientcg.com/get?file=Metal038_1K-JPG.zip",
+      "sourceArchiveSha256": "804a0e45cc923c71277f89b7e1a7b95bd8786899254e43692eb781b8c3981aae",
+      "sourceArchiveFile": "Metal038_1K-JPG_NormalGL.jpg",
+      "sourceSha256": "0f49cbf317e84b7e0f058fa692b13c97b66daa75a77b3215bc21772cc931514e",
+      "runtimeBytes": 223646,
+      "runtimeSha256": "575cb9e0734229cb407c87e29a5da840f47951a612cda9c23b0f18cb5054c265",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "modifications": "Re-encoded as WebP; quality95 normal maps,86 other maps; no content or color edits."
+    },
+    {
+      "file": "metal-roughness.webp",
+      "asset": "Metal038",
+      "license": "CC0-1.0",
+      "source": "https://ambientcg.com/a/Metal038",
+      "sourceArchiveUrl": "https://ambientcg.com/get?file=Metal038_1K-JPG.zip",
+      "sourceArchiveSha256": "804a0e45cc923c71277f89b7e1a7b95bd8786899254e43692eb781b8c3981aae",
+      "sourceArchiveFile": "Metal038_1K-JPG_Roughness.jpg",
+      "sourceSha256": "d34b92bb2514c17cff0922371b63820cebfba749ecf309e6511f8c7060703a2f",
+      "runtimeBytes": 29672,
+      "runtimeSha256": "840f4d900b41e12c9d2491d56dcf96c02cdce1c4d8aee1ce11dca783665a0785",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "modifications": "Re-encoded as WebP; quality95 normal maps,86 other maps; no content or color edits."
+    },
+    {
+      "file": "metal-metallic.webp",
+      "asset": "Metal038",
+      "license": "CC0-1.0",
+      "source": "https://ambientcg.com/a/Metal038",
+      "sourceArchiveUrl": "https://ambientcg.com/get?file=Metal038_1K-JPG.zip",
+      "sourceArchiveSha256": "804a0e45cc923c71277f89b7e1a7b95bd8786899254e43692eb781b8c3981aae",
+      "sourceArchiveFile": "Metal038_1K-JPG_Metalness.jpg",
+      "sourceSha256": "5f8ecd7ef3ac085d42b65f26c6ed099dbb8c25d687973e6bb60abd8b7e788e87",
+      "runtimeBytes": 20398,
+      "runtimeSha256": "d162be0dfdb2d79bf490d1297fbc113fa2ffcbbbb8938bbdd63919e7cf703967",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "modifications": "Re-encoded as WebP; quality95 normal maps,86 other maps; no content or color edits."
+    }
+  ],
+  "authoredModels": [
+    {
+      "key": "mission-shell",
+      "authorship": "Original ORBITAL geometry authored for this game; not NASA-sourced.",
+      "authoringSources": [
+        "scripts/interior/export-models.ts",
+        "src/commander/pressureShellModel.ts"
+      ],
+      "runtimeBytes": 146952,
+      "runtimeSha256": "f375053090a949d892a380c0a529673abc6ba21dbfdbce1dae7e571e02dc5372",
+      "runtimeTriangles": 38656,
+      "runtimePrimitives": 8,
+      "materialNames": [
+        "fabric / ivory beta-cloth liner",
+        "paint / warm ceramic alloy",
+        "rubber / graphite nonslip deck",
+        "metal / titanium structural extrusion",
+        "paint / safety yellow",
+        "rubber / pressure seals",
+        "light / recessed diffuser",
+        "paint / blue equipment rail"
+      ],
+      "runtimeExtensions": [
+        "KHR_draco_mesh_compression"
+      ],
+      "modifications": "Original GLTFExporter output: flattened, joined, welded, deduplicated and Draco compressed with glTF Transform4.5.1; no simplification or palette merging; material names and metric coordinates retained.",
+      "uvPreservation": "--prune-attributes false retains TEXCOORD_0 for runtime PBR materials",
+      "balancedVariant": {
+        "file": "mission-shell-balanced.glb",
+        "runtimeBytes": 138340,
+        "runtimeSha256": "7dd36ebb169be88cfc2e6a33b22fa2dd1a4646925e9261960cf3c7fbd1b948a0",
+        "runtimeTriangles": 33500,
+        "modifications": "Meshoptimizer ratio target0.6, maximum relative error0.0001, topological borders locked, UVs retained. Battery/Balanced only; Quality keeps full topology."
+      }
+    },
+    {
+      "key": "mission-workstations",
+      "authorship": "Original ORBITAL geometry authored for this game; not NASA-sourced.",
+      "authoringSources": [
+        "scripts/interior/export-models.ts",
+        "src/commander/workstationModels.ts"
+      ],
+      "runtimeBytes": 311864,
+      "runtimeSha256": "40be5cff70a489917c0c486857c10f4bb3e716449d3640bae1cf950bc373f9a2",
+      "runtimeTriangles": 82784,
+      "runtimePrimitives": 11,
+      "materialNames": [
+        "glass / polycarbonate laboratory shield",
+        "light / diffuse white practical",
+        "paint / graphite composite",
+        "fabric / blue-grey woven restraint upholstery",
+        "metal / satin titanium",
+        "rubber / pressure seals and controls",
+        "fabric / black harness webbing",
+        "paint / emergency identification orange",
+        "paint / warm ceramic equipment finish",
+        "metal / muted anodised safety gold",
+        "paint / service identification blue"
+      ],
+      "runtimeExtensions": [
+        "KHR_draco_mesh_compression"
+      ],
+      "modifications": "Original GLTFExporter output: flattened, joined, welded, deduplicated and Draco compressed with glTF Transform4.5.1; no simplification or palette merging; material names and metric coordinates retained.",
+      "uvPreservation": "--prune-attributes false retains TEXCOORD_0 for runtime PBR materials",
+      "balancedVariant": {
+        "file": "mission-workstations-balanced.glb",
+        "runtimeBytes": 307572,
+        "runtimeSha256": "e76fdadcf690757f8d1202ad13dc9cdce2f6dd272c5b267a8f61c270b41ad55b",
+        "runtimeTriangles": 76130,
+        "modifications": "Meshoptimizer ratio target0.6, maximum relative error0.0001, topological borders locked, UVs retained. Battery/Balanced only; Quality keeps full topology."
+      }
+    }
+  ],
+  "authoredTextures": [
+    {
+      "file": "quilt-base.webp",
+      "runtimeBytes": 13966,
+      "runtimeSha256": "c2ab8004c553283cc762539274252813149544ebffaff7f57a392f2be4ac1300",
+      "dimensions": [
+        512,
+        512
+      ],
+      "authorship": "Original ORBITAL diamond stitching/height relief; base recolors the CC0 Fabric030 woven scan",
+      "source": "fabric-base.webp; ambientCG Fabric030, CC0-1.0",
+      "modifications": "Neutral beta-cloth albedo with sewn diamond lines; physically derived tangent normal relief. Artistic cabin lining, not agency hardware measurement."
+    },
+    {
+      "file": "quilt-normal.webp",
+      "runtimeBytes": 5448,
+      "runtimeSha256": "5cadd74dedff0dfe171d3ae35b5b2a1eac8d54d8c9839cafc9f9f650b7dff5bf",
+      "dimensions": [
+        512,
+        512
+      ],
+      "authorship": "Original ORBITAL diamond stitching/height relief; base recolors the CC0 Fabric030 woven scan",
+      "source": "fabric-base.webp; ambientCG Fabric030, CC0-1.0",
+      "modifications": "Neutral beta-cloth albedo with sewn diamond lines; physically derived tangent normal relief. Artistic cabin lining, not agency hardware measurement."
+    }
+  ]
+}

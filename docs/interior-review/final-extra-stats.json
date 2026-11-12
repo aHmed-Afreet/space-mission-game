@@ -1,0 +1,48 @@
+{
+  "results": [
+    {
+      "pose": {
+        "name": "eva",
+        "area": "equipment",
+        "position": [
+          0.25,
+          1.63,
+          5.25
+        ],
+        "target": [
+          2.3,
+          1.65,
+          4.3
+        ]
+      },
+      "calls": 180,
+      "triangles": 179312,
+      "textures": 34,
+      "geometries": 66,
+      "draws": 2
+    },
+    {
+      "pose": {
+        "name": "eva-suit",
+        "area": "equipment",
+        "position": [
+          0.35,
+          1.63,
+          3.45
+        ],
+        "target": [
+          2.45,
+          1.2,
+          3.8
+        ]
+      },
+      "calls": 124,
+      "triangles": 173454,
+      "textures": 37,
+      "geometries": 69,
+      "draws": 4
+    }
+  ],
+  "errors": [],
+  "assetErrors": []
+}

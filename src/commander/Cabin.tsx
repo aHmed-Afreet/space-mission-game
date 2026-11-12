@@ -130,7 +130,7 @@ export default function Cabin(props: Props) {
       console.error(error);
       return;
     }
-    const fixtures = props.world ? createFixtures(interior.scene) : undefined;
+    const fixtures = props.world ? createFixtures(interior.scene, invalidateScene) : undefined;
     let field:
       { update: (s: Session) => void; dispose: () => void } | undefined;
     if (props.world && missionForSession(props.world.session).eva) {

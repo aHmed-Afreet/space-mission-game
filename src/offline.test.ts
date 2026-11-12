@@ -51,16 +51,18 @@ test("realism models cache only after use; failed or quota-limited downloads nev
     caches: {open: async () => cache, match: async () => undefined},
     fetch: async () => {requests++; return {ok, clone() {return this;}};},
   });
-  async function load(name: string) {
+  async function load(name: string, directory = "realism") {
     let response: Promise<unknown> = Promise.resolve();
-    handlers.fetch({request: {method: "GET", url: scope + "assets/realism/" + name}, respondWith: (p: Promise<unknown>) => {response = p;}});
+    handlers.fetch({request: {method: "GET", url: scope + "assets/" + directory + "/" + name}, respondWith: (p: Promise<unknown>) => {response = p;}});
     return response;
   }
   assert.equal(requests, 0, "new models do not fetch during service-worker installation");
   await load("lander.glb"); await load("lander.glb");
   assert.equal(requests, 1, "second use works from the local model cache");
+  await load("mission-shell.glb", "interior"); await load("mission-shell.glb", "interior");
+  assert.equal(requests, 2, "interior models also cache after first use");
   ok = false; await load("missing.glb"); await load("missing.glb");
-  assert.equal(saved.size, 1, "HTTP failures are never cached");
+  assert.equal(saved.size, 2, "HTTP failures are never cached");
   quota = true; ok = true;
   assert.ok(await load("terrain-base.jpg"), "storage quota failures still serve the network response");
 });

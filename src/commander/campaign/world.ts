@@ -62,27 +62,42 @@ export function createFieldWorld(scene: T.Scene, destination: Destination, missi
     group.add(a);
     return a;
   }
-  // A physical two-hatch airlock is attached to the existing aft opening.
-  box(0, -0.08, 9, 0.1 + 1.55, 0.16, 3.3, dark);
-  box(-0.84, 1.3, 9, 0.12, 2.6, 3.3, white);
-  box(0.84, 1.3, 9, 0.12, 2.6, 3.3, white);
-  box(0, 2.6, 9, 1.8, 0.12, 3.3, white);
-  for (const z of [7.75, 10.25]) {
-    box(-0.78, 1.25, z, 0.12, 2.5, 0.17, alloy);
-    box(0.78, 1.25, z, 0.12, 2.5, 0.17, alloy);
+  // Formed pressure tunnel and machined closures retain the original analytic
+  // planes and leaf translations. Mechanical hardware is in metres, not scaled
+  // cubes, and remains attached to each moving leaf.
+  function rounded(w:number,h:number,r:number){
+    const s=new T.Shape(),x=-w/2,y=-h/2;
+    s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;
   }
-  const inner = box(0, 1.25, 7.75, 1.42, 2.46, 0.1, white),
-    outer = box(0, 1.25, 10.25, 1.42, 2.46, 0.1, white);
-  inner.name="inner pressure hatch";outer.name="outer pressure hatch";
-  // All hardware moves with its leaf. Normalized dimensions compensate for
-  // the existing scaled hatch meshes, retaining their exact closure planes.
-  for(const leaf of [inner,outer])for(const face of [-1,1]){
-    for(const x of [-.43,.43])box(x,0,face*.66,.025,.91,.14,dark,leaf);
-    for(const y of [-.45,.45])box(0,y,face*.66,.88,.014,.14,dark,leaf);
-    box(-.22,0,face*.85,.035,.19,.2,alloy,leaf);
-    for(const y of [-.1,.1])box(-.18,y,face*.85,.08,.018,.2,alloy,leaf);
-    box(.11,.33,face*.7,.24,.035,.13,gold,leaf);
+  function formed(shape:T.Shape,depth:number,m:T.Material,parent:T.Object3D,x=0,y=0,z=0){
+    const g=new T.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelSize:.015,bevelThickness:.012,bevelSegments:1,curveSegments:8});geometries.push(g);
+    const mesh=new T.Mesh(g,m);mesh.position.set(x,y,z);parent.add(mesh);return mesh;
   }
+  const tunnel=rounded(1.86,2.78,.39);tunnel.holes.push(rounded(1.64,2.55,.31));
+  formed(tunnel,3.3,white,group,0,1.28,7.35).name="curved pressure airlock tunnel";
+  for(const z of [7.75,10.25]){
+    const flange=rounded(1.81,2.76,.35);flange.holes.push(rounded(1.44,2.48,.26));
+    formed(flange,.13,alloy,group,0,1.25,z-.065);
+    const seal=rounded(1.49,2.53,.28);seal.holes.push(rounded(1.44,2.48,.26));formed(seal,.16,dark,group,0,1.25,z-.08);
+  }
+  const makeLeaf=(z:number,name:string)=>{
+    const shape=rounded(1.42,2.46,.25),port=new T.Path();port.absarc(0,.37,.19,0,Math.PI*2,true);shape.holes.push(port);
+    const leaf=formed(shape,.09,white,group,0,1.25,z);leaf.geometry.translate(0,0,-.045);leaf.name=name;
+    const gasket=rounded(1.3,2.34,.23);gasket.holes.push(rounded(1.26,2.3,.21));formed(gasket,.007,dark,leaf,0,0,.103);
+    const portGlass=material("#33434a",.38,.2);portGlass.side=T.DoubleSide;const portG=new T.CircleGeometry(.188,28);geometries.push(portG);const pane=new T.Mesh(portG,portGlass);pane.position.set(0,.37,.046);leaf.add(pane);
+    for(const face of [-1,1]){
+      const rimGeo=new T.TorusGeometry(.207,.027,7,32);geometries.push(rimGeo);const rim=new T.Mesh(rimGeo,alloy);rim.position.set(0,.37,face*.058+.045);leaf.add(rim);
+      const wheelG=new T.TorusGeometry(.14,.022,6,24);geometries.push(wheelG);const wheel=new T.Mesh(wheelG,alloy);wheel.position.set(.12,-.41,face*.11+.045);leaf.add(wheel);
+      for(let k=0;k<3;k++){
+        const angle=k*Math.PI*2/3,beamG=new T.CylinderGeometry(.012,.012,.15,7);geometries.push(beamG);const beam=new T.Mesh(beamG,alloy);beam.rotation.z=angle-Math.PI/2;beam.position.set(.12+Math.cos(angle)*.065,-.41+Math.sin(angle)*.065,face*.11+.045);leaf.add(beam);
+      }
+      for(const x of [-.53,.53])for(const y of [-.93,0,.93]){
+        const boltG=new T.CylinderGeometry(.025,.025,.025,6);geometries.push(boltG);const bolt=new T.Mesh(boltG,alloy);bolt.rotation.x=Math.PI/2;bolt.position.set(x,y,face*.065+.045);leaf.add(bolt);
+      }
+    }
+    return leaf;
+  };
+  const inner=makeLeaf(7.75,"inner pressure hatch"),outer=makeLeaf(10.25,"outer pressure hatch");
   // Each pressure hatch has the same physical button inside and outside,
   // letting the player reach it after exiting the spacecraft.
   const buttons:{mesh:T.Mesh;side:"inner"|"outer"}[]=[];

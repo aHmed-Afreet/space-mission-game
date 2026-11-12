@@ -48,3 +48,7 @@ This is a terrestrial rock scan used as an artistic lunar/Martian regolith analo
 Panel, woven fabric and foil microstructure maps are original ORBITAL generated textures. They add material response to authored interaction geometry and require no external images. Existing planetary photographs and the Hubble model retain their own credits in the parent `planetary`, `backgrounds` and `models` directories.
 
 All assets are self-hosted. Models load on scene entry and terrain maps load only when used. They are not mandatory service-worker installation downloads. Visual asset failure preserves the original authored mission systems and interaction geometry.
+
+## Additional spacecraft interior assets
+
+The newer pressure-module models, interior hardware and fabric/metal PBR maps have their own [complete credits and provenance](../interior/ATTRIBUTION.md). The pressure shell and workstation GLBs are original ORBITAL modeled architecture, not NASA cabin downloads.
