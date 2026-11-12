@@ -1,6 +1,8 @@
 import {useEffect,useRef,type RefObject} from "react";
 import * as T from "three";
 import type {ToolId} from "../universalQuickbar";
+import {inertialMovement,jumpStep,type PlanarVelocity,type JumpState} from "./motionPhysics";
+import type {RoverPose} from "./roverPhysics";
 import {BASE_FACILITIES,doorPosition,doorwayCrossed,nearConsole,nearExit,nearestDoor,walkStep,distance,confinedInteriorCamera,nearHabitatRoutine,CREW_BED,CREW_DINING,type Point2} from "./worldLogic";
 import {CROPS,forecast,type Outpost} from "./engine";
 import type {FacilityId} from "./FacilityScene";
@@ -23,7 +25,7 @@ type Props={
 function createScene(session:Outpost,room:FacilityId|null){
  const scene=new T.Scene(),dark=session.destination==="moon"&&[5,6].includes(session.sol);
  const dust=session.destination==="mars"&&[4,5,8].includes(session.sol);
- scene.background=new T.Color(room?0x11171c:dust?0x98715a:dark?0x010204:session.destination==="mars"?0xb58d70:0x010204);
+ scene.background=new T.Color(room?(room==="greenhouse"?(session.destination==="mars"?0xb58d70:0x222c3d):0x11171c):dust?0x98715a:dark?0x010204:session.destination==="mars"?0xb58d70:0x010204);
  // The Moon has no atmospheric haze; Mars has dust, with reduced visibility
  // during the existing storm sols. Cabin surfaces remain crisp at close range.
  if(!room&&session.destination==="mars")scene.fog=new T.FogExp2(scene.background as T.Color,dust?.024:.0055);
@@ -96,6 +98,7 @@ function createScene(session:Outpost,room:FacilityId|null){
  const lamps:T.PointLight[]=[];
  const solarPanels:T.Group[]=[];
  const doors=new Map<FacilityId,{mesh:T.Mesh;open:number}>();
+ let roverGroup:T.Group|null=null;
  const markers=new Map<FacilityId,T.Object3D>();
  const kit:StructureKit={box,cylinder,dome,mesh,mat,light,glass,hull,trim,darkSteel,gold,glow,
    solarMat,green,soil,solarPanels,foliage,batteryLights,lamps};
@@ -192,9 +195,21 @@ function createScene(session:Outpost,room:FacilityId|null){
        (leaf.userData.pressureBody as T.Group).visible=false;
      }}));
    }
-   // A genuine self-hosted science rover is parked off the marked routes.
-   referenceAssets.push(attachRealismModel(world,"rover",{extent:3.6,position:[8,0,0],rotation:[0,-.7,0],onLoad:model=>{
-     world.updateMatrixWorld(true);externalProps.push(new T.Box3().setFromObject(model));
+   // A movable 3D rover with a compact procedural fallback so it remains
+   // drivable even before the optimized reference GLB loads.
+   roverGroup=new T.Group();world.add(roverGroup);roverGroup.position.set(8,0,0);
+   const fallback=new T.Group();roverGroup.add(fallback);
+   box(fallback,2.7,.4,1.7,0,.62,0,darkSteel);
+   box(fallback,1.45,.66,1.25,-.12,1.13,.10,hull);
+   box(fallback,1.08,.4,.28,0,1.0,-.75,glow);
+   for(const x of [-1.12,1.12])for(const z of [-.73,.73]){
+     const wheel=cylinder(fallback,.43,.22,x,.4,z,rubber,14);
+     wheel.rotation.z=Math.PI/2;
+     box(fallback,.11,.13,.11,x,.4,z+(z>0?.12:-.12),gold);
+   }
+   for(const x of [-.75,.75])box(fallback,.16,.1,.85,x,1.45,.04,solarMat);
+   referenceAssets.push(attachRealismModel(roverGroup,"rover",{extent:3.6,position:[0,0,0],rotation:[0,0,0],onLoad:()=>{
+     fallback.visible=false;
    }}));
    // Walkway lights indicate routes to every building.
    for(const f of BASE_FACILITIES){const door=doorPosition(f);
@@ -208,6 +223,16 @@ function createScene(session:Outpost,room:FacilityId|null){
    }
  }else{
    // In-room geometry is actual 3D, navigated by the same avatar and camera.
+   if(room==="greenhouse"){
+     // Outside scenery behind true translucent panes gives glass depth from
+     // the INSIDE; otherwise transparent walls would reveal a black void.
+     const soilOutside=mat(session.destination==="mars"?0xa77961:0x66696f,.02,.96);
+     box(world,44,.2,44,0,-.47,0,soilOutside).castShadow=false;
+     for(let i=0;i<10;i++){
+       const x=-18+i*3.9,z=(i%2===0?-10:11);
+       const rock=box(world,1.15,.4,.75,x,-.06,z,soilOutside);rock.rotation.y=i*.61;
+     }
+   }
    const floor=box(world,9,.4,9,0,-.21,0,mat(0x636965,.06,.86));
    const greenhouseRoof=mat(0xb7c6b4,.15,.24);
    if(room==="greenhouse"){greenhouseRoof.transparent=true;greenhouseRoof.opacity=.22;greenhouseRoof.depthWrite=false;}
@@ -215,9 +240,25 @@ function createScene(session:Outpost,room:FacilityId|null){
    roof.castShadow=room!=="greenhouse";
    const wall=mat(room==="shield"?0x777972:0xc1c3b9,.15,.78);
    if(metalDetail){wall.map=metalDetail;wall.needsUpdate=true;}
-   box(world,9,4,.3,0,1.95,-4.5,wall);
-   box(world,.3,4,9,-4.5,1.95,0,wall);
-   box(world,.3,4,9,4.5,1.95,0,wall);
+   const greenhousePane=mat(0x98ddde,.08,.13,0x344a54,.05);
+   greenhousePane.transparent=true;greenhousePane.opacity=.23;greenhousePane.depthWrite=false;
+   greenhousePane.side=T.DoubleSide;
+   const actualWall=room==="greenhouse"?greenhousePane:wall;
+   box(world,9,4,.3,0,1.95,-4.5,actualWall);
+   box(world,.3,4,9,-4.5,1.95,0,actualWall);
+   box(world,.3,4,9,4.5,1.95,0,actualWall);
+   if(room==="greenhouse"){
+     // Structural glazing frames, rather than opaque painted walls.
+     for(const x of [-4.42,4.42])for(const z of [-3.45,-1.15,1.15,3.45]){
+       box(world,.14,3.63,.14,x,1.85,z,trim);
+     }
+     for(const z of [-4.42])for(const x of [-3.4,-1.1,1.1,3.4])
+       box(world,.14,3.63,.14,x,1.85,z,trim);
+     for(const y of [.35,2.7]){
+       for(const x of [-4.42,4.42])box(world,.13,.12,8.7,x,y,0,trim);
+       box(world,8.7,.12,.13,0,y,-4.42,trim);
+     }
+   }
    // Front wall includes a door-sized corridor opening. Door leaf slides.
    box(world,3.5,4,.3,-2.75,1.95,4.5,wall);
    box(world,3.5,4,.3,2.75,1.95,4.5,wall);
@@ -355,7 +396,7 @@ function createScene(session:Outpost,room:FacilityId|null){
    world.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.InstancedMesh){o.geometry.dispose();}});
    materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());
  };
- return {scene,camera,astro,limbs,heldModels,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
+ return {scene,camera,astro,limbs,heldModels,roverGroup,doors,markers,solarPanels,foliage,lamps,batteryLights,cameraSolids,updateReferenceSuit:(time:number,speed:number)=>referenceSuit?.update(time,speed),dispose};
 }
 export default function World3D({session,room,graphics,blocked,heldTool,movement,lookDelta,spawn,interactSeq,target,onEnter,onConsole,onRoutine,onNear,onPosition,onError}:Props){
  const host=useRef<HTMLDivElement>(null);
