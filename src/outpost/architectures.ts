@@ -324,12 +324,35 @@ export function furnishDistinctInterior(id:FacilityId,k:StructureKit,group:T.Gro
  }
 
  if(id==="habitat"){
-  // Bunks are functional sleep stations, positioned separately from dining.
+  // Two proper strapped crew bunks along the left pressure wall.
+  // Their sleep interaction remains at CREW_BED (-2.75, +0.75), beside the
+  // reachable lower bunk. Keep the aisle and hatch free for mobile controls.
+  const mattress=k.mat(0xd7e3d8,.03,.92),pillow=k.mat(0xf3f1e8,.03,.98);
+  const blanket=k.mat(0x718e9a,.08,.88),webbing=k.mat(0xcc9f61,.23,.75);
   for(const z of [-2.05,.65]){
-   k.box(group,1.45,.44,1.9,-3.15,.60,z,metal);
-   k.box(group,1.37,.18,1.4,-3.15,.91,z,warm);
-   k.box(group,.55,.13,.45,-3.15,1.04,z-.53,k.hull);
-   k.box(group,1.5,.12,1.7,-3.15,1.25,z,k.gold);
+   // Wall rails, inset bunk frame, padded full-length sleeping surface.
+   k.box(group,.16,.91,2.16,-3.98,.77,z,k.darkSteel);
+   k.box(group,1.60,.14,2.21,-3.16,.48,z,k.hull);
+   k.box(group,1.47,.15,2.05,-3.16,.62,z,metal);
+   k.box(group,1.35,.17,1.88,-3.16,.78,z,mattress);
+   // Raised pillow at the head and a softer folded blanket at the foot.
+   k.box(group,.82,.16,.46,-3.18,.96,z-.62,pillow);
+   k.box(group,1.30,.105,1.06,-3.16,.94,z+.37,blanket);
+   k.box(group,1.30,.035,.10,-3.16,1.01,z-.06,webbing);
+   // Webbed sleeping restraints on the midsection, with buckles.
+   for(const x of [-3.65,-2.67])k.box(group,.07,.04,1.12,x,1.02,z+.32,webbing);
+   k.box(group,.23,.065,.16,-3.16,1.05,z+.36,k.darkSteel);
+   // Rounded-looking protective rails are deliberately below the
+   // astronaut's interaction line; no opaque slab above the bed.
+   for(const x of [-3.92,-2.42]){
+     k.box(group,.075,.16,2.04,x,.73,z,k.darkSteel);
+     for(const dz of [-.88,.88])k.box(group,.075,.29,.08,x,.59,z+dz,k.hull);
+   }
+   // A directional reading lamp, locker, and visible bunk identifier.
+   k.box(group,.20,.35,.22,-3.99,1.40,z-.76,k.darkSteel);
+   k.box(group,.08,.09,.30,-3.88,1.40,z-.61,k.glow).castShadow=false;
+   k.box(group,.30,.28,.55,-3.94,.34,z+.78,k.darkSteel);
+   k.box(group,.095,.07,.13,-3.77,.32,z+.78,k.gold);
   }
   // Dining table and kitchenette to the right, always reachable on foot.
   k.box(group,1.25,.16,1.05,2.55,.88,1.35,warm);
