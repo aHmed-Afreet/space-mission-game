@@ -38,42 +38,99 @@ function MissionGlyph({ mode }: { mode: GameMode }) {
 export default function ModeSelect() {
   const [mode, setMode] = useState<GameMode | null>(null);
   if (!mode) {
+    const start = (next: GameMode) => setMode(next);
+    const scrollToMissions = () => document.getElementById("orbital-experiences")?.scrollIntoView({behavior: "smooth"});
+    const tile = (item: typeof experiences[number]) =>
+      <button type="button" className={"orbital-mode-tile orbital-mode-"+item.id} key={item.id}
+        onClick={() => start(item.id)} aria-label={"Open "+item.title}>
+        <span className="orbital-mode-top"><span>{item.label}</span><span>{item.number} / 06</span></span>
+        <span className="orbital-mode-art" aria-hidden="true"><MissionGlyph mode={item.id}/></span>
+        <span className="orbital-mode-copy">
+          <strong>{item.title}</strong>
+          <span className="orbital-mode-detail">{item.detail}</span>
+        </span>
+        <span className="orbital-mode-bottom"><span>{item.meta}</span><b>OPEN MODE <MissionArrow/></b></span>
+      </button>;
     return <div className="orbital-landing">
       <header className="orbital-landing-nav">
-        <span className="orbital-mark"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="18" r="11"/><ellipse cx="18" cy="18" rx="17" ry="6" transform="rotate(-38 18 18)"/></svg><b>ORBITAL</b><small>MISSION LAB</small></span>
-        <div className="orbital-nav-actions"><GlobalGraphics/><button type="button" onClick={() => document.getElementById("orbital-experiences")?.scrollIntoView({behavior:"smooth"})}>EXPLORE MODES <MissionArrow/></button></div>
+        <span className="orbital-mark">
+          <svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="18" r="11"/><ellipse cx="18" cy="18" rx="17" ry="6" transform="rotate(-38 18 18)"/></svg>
+          <b>ORBITAL</b><small>MISSION LAB</small>
+        </span>
+        <nav className="orbital-nav-actions" aria-label="Home navigation">
+          <button type="button" onClick={scrollToMissions}>GAME MODES</button>
+          <button type="button" className="orbital-nav-guide" onClick={() => start("guide")}>HOW TO PLAY</button>
+          <GlobalGraphics/>
+        </nav>
       </header>
-      <section className="orbital-landing-hero" aria-labelledby="orbital-welcome-title">
-        <div className="orbital-hero-picture" aria-hidden="true" />
-        <div className="orbital-hero-content">
-          <span className="orbital-hero-overline"><i /> EXPLORE / ENGINEER / DISCOVER</span>
-          <h1 id="orbital-welcome-title">Your next mission<br/><em>starts here.</em></h1>
-          <p>Step inside a spacecraft. Build a base on another world. Engineer a journey beyond Earth. Six experiences, one mission lab.</p>
-          <div className="orbital-hero-actions">
-            <button type="button" className="orbital-hero-primary" onClick={() => setMode("outpost")}>START SPACE OUTPOST <MissionArrow/></button>
-            <button type="button" className="orbital-hero-secondary" onClick={() => setMode("commander")}>PLAY COMMANDER <MissionArrow/></button>
-            <button type="button" className="orbital-hero-secondary" onClick={() => document.getElementById("orbital-experiences")?.scrollIntoView({behavior:"smooth"})}>ALL EXPERIENCES ↓</button>
+
+      <main>
+        <section className="orbital-landing-hero" aria-labelledby="orbital-welcome-title">
+          <div className="orbital-hero-picture" aria-hidden="true"/>
+          <div className="orbital-hero-inner">
+            <div className="orbital-hero-content">
+              <span className="orbital-hero-overline"><i/> SPACE EXPLORATION / MISSION CONTROL</span>
+              <h1 id="orbital-welcome-title">Choose your<br/><em>next mission.</em></h1>
+              <p>Explore spacecraft, run a Moon or Mars outpost, design missions, and discover the history of spaceflight.</p>
+              <div className="orbital-hero-actions">
+                <button type="button" className="orbital-hero-primary" onClick={() => start("commander")}>PLAY COMMANDER <MissionArrow/></button>
+                <button type="button" className="orbital-hero-secondary" onClick={scrollToMissions}>BROWSE ALL MODES ↓</button>
+              </div>
+              <div className="orbital-hero-facts" aria-label="Game information">
+                <span><b>05</b> GAME EXPERIENCES</span>
+                <span><b>01</b> PLAYER GUIDE</span>
+                <span>PROGRESS SAVED LOCALLY</span>
+              </div>
+            </div>
+            <aside className="orbital-launchpad" aria-label="Quick start">
+              <div className="orbital-launchpad-header"><span>QUICK START</span><small>CHOOSE AN EXPERIENCE</small></div>
+              {experiences.slice(0,3).map(item =>
+                <button type="button" className="orbital-launchpad-item" key={item.id} onClick={() => start(item.id)}>
+                  <span className="orbital-launchpad-icon" aria-hidden="true"><MissionGlyph mode={item.id}/></span>
+                  <span className="orbital-launchpad-copy"><strong>{item.title}</strong><small>{item.meta}</small></span>
+                  <MissionArrow/>
+                </button>
+              )}
+              <button type="button" className="orbital-launchpad-guide" onClick={() => start("guide")}>New here? Read the controls guide <MissionArrow/></button>
+            </aside>
           </div>
-        </div>
-        <div className="orbital-hero-note"><span>EARTH ORBIT / EXPEDITION 49</span><p>A view from the International Space Station.<br/>Photography: NASA/JSC · Kate Rubins</p></div>
-        <div className="orbital-hero-bottom"><span>INDEPENDENT EDUCATIONAL SIMULATION</span><span>PROGRESS SAVED ON THIS DEVICE</span></div>
-      </section>
-      <section className="orbital-experiences" id="orbital-experiences" aria-labelledby="orbital-mode-heading">
-        <div className="orbital-section-head">
-          <span className="orbital-small-label">OPERATIONS DIRECTORY / 6 EXPERIENCES</span>
-          <h2 id="orbital-mode-heading">Where will you <em>go next?</em></h2>
-          <p>First-person exploration, surface survival, engineering and the real history of spaceflight. Choose your mission.</p>
-        </div>
-        <div className="orbital-mode-grid">
-          {experiences.map(item => <button type="button" className={"orbital-mode-tile orbital-mode-"+item.id} key={item.id} onClick={() => setMode(item.id)}>
-            <span className="orbital-mode-top"><span>{item.label}</span><span>{item.number} / 06</span></span>
-            <span className="orbital-mode-art" aria-hidden="true"><MissionGlyph mode={item.id}/></span>
-            <strong>{item.title}</strong>
-            <span className="orbital-mode-detail">{item.detail}</span>
-            <span className="orbital-mode-bottom"><span>{item.meta}</span><b>EXPLORE <MissionArrow/></b></span>
-          </button>)}
-        </div>
-      </section>
+          <div className="orbital-hero-bottom">
+            <span>INDEPENDENT EDUCATIONAL SIMULATION</span>
+            <span>NASA/JSC · KATE RUBINS PHOTOGRAPHY</span>
+          </div>
+        </section>
+
+        <section className="orbital-experiences" id="orbital-experiences" aria-labelledby="orbital-mode-heading">
+          <div className="orbital-section-head">
+            <span className="orbital-small-label">MISSION DIRECTORY / 05 GAME EXPERIENCES</span>
+            <h2 id="orbital-mode-heading">Explore the <em>mission lab.</em></h2>
+            <p>Pick a game below, or explore the historical spaceflight collection.</p>
+          </div>
+          <div className="orbital-group-heading">
+            <div><span className="orbital-small-label">01 / PLAY & BUILD</span><h3>Interactive missions</h3></div>
+            <span>THREE WAYS TO EXPLORE</span>
+          </div>
+          <div className="orbital-mode-grid orbital-mode-grid-primary">
+            {experiences.slice(0,3).map(tile)}
+          </div>
+
+          <div className="orbital-group-heading orbital-group-history">
+            <div><span className="orbital-small-label">02 / EXPLORE</span><h3>Spaceflight history</h3></div>
+            <span>FEATURED STORIES & FULL ARCHIVE</span>
+          </div>
+          <div className="orbital-mode-grid orbital-mode-grid-history">
+            {experiences.slice(3,5).map(tile)}
+          </div>
+
+          <section className="orbital-guide-strip" aria-label="Help and controls">
+            <div className="orbital-guide-mark" aria-hidden="true"><MissionGlyph mode="guide"/></div>
+            <div><span className="orbital-small-label">NEED A HAND?</span><h3>First mission? Start with the guide.</h3>
+              <p>Learn movement, INTERACT, mission objectives and saving your progress.</p></div>
+            <button type="button" onClick={() => start("guide")}>HOW TO PLAY <MissionArrow/></button>
+          </section>
+        </section>
+      </main>
+
       <footer className="orbital-site-footer">
         <span>ORBITAL / MISSION LAB</span>
         <span>Independent educational simulation · Not affiliated with NASA</span>
