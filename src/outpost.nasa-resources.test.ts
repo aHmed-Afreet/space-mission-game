@@ -34,14 +34,14 @@ test("NASA solar event API uses live fetch response; no fabricated outages",asyn
   return {ok:true,json:async()=>url.includes("/SEP?")?
    [{sepID:"nasa-sep-1",eventTime:"2026-11-12T08:00:00Z"}]:
    [{flrID:"nasa-flare",beginTime:"2026-11-11T07:00:00Z",classType:"M1.0"}]};
- }) as typeof fetch;
+ }) as unknown as typeof fetch;
  const data=await getNasaSolarEvents({now:new Date("2026-11-13T06:00:00Z"),fetchImpl:api});
  assert.equal(data.status,"nasa");
  assert.equal(data.events.length,2);
  assert.equal(urls.length,2);
  assert.equal(data.events[0].kind,"Solar energetic particle event");
  assert.match(solarScienceQuestion(data.events),/storm shelter|shelter|shielding|radiation alert/i);
- const failed=await getNasaSolarEvents({fetchImpl:(async()=>{throw Error("Network error")}) as typeof fetch});
+ const failed=await getNasaSolarEvents({fetchImpl:(async()=>{throw Error("Network error")}) as unknown as typeof fetch});
  assert.equal(failed.status,"unavailable");
  assert.deepEqual(failed.events,[]);
 });
@@ -49,7 +49,7 @@ test("NASA observations cache is separate, expires after an hour and does not al
  const store=new Map<string,string>();
  const storage={getItem:(k:string)=>store.get(k)??null,setItem:(k:string,v:string)=>{store.set(k,v);}};
  const data=await getNasaSolarEvents({now:new Date("2026-11-13T06:00:00Z"),
-  fetchImpl:(async()=>({ok:true,json:async()=>[]})) as typeof fetch});
+  fetchImpl:(async()=>({ok:true,json:async()=>[]})) as unknown as typeof fetch});
  setCachedSolar(storage,data);
  assert.equal(getCachedSolar(storage,Date.parse("2026-11-13T06:45:00Z"))?.status,"nasa");
  assert.equal(getCachedSolar(storage,Date.parse("2026-11-13T07:30:00Z")),null);
@@ -61,7 +61,7 @@ test("NASA photo library fetch parses NASA credits, does not expose unsafe thumb
   {data:[{nasa_id:"NASA_001",title:"Lunar Rover",date_created:"1972-01-01",center:"JSC"}],
    links:[{href:"https://images-assets.nasa.gov/image/NASA_001/thumb.jpg"}]},
   {data:[{nasa_id:"WRONG"}],links:[{href:"https://fake-site.example/no.jpg"}]}
- ]}})})) as typeof fetch;
+ ]}})})) as unknown as typeof fetch;
  const pics=await getNasaImages("Apollo lunar rover",{fetchImpl:api});
  assert.equal(pics.length,1);
  assert.equal(pics[0].center,"JSC");
