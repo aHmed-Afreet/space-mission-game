@@ -1,0 +1,35 @@
+/* NASA reference screen reuses the tested internal-scroll panel/footer layout.
+   The Outpost canvas must not consume iPad touch scrolling within the panel. */
+.j3-nasa-panel .j3-panel-content{gap:12px;touch-action:pan-y;overscroll-behavior:contain}
+.j3-nasa-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.j3-nasa-tabs button{min-height:46px;text-align:center;line-height:1.3;
+ font-size:11px;font-weight:800;padding:9px;background:#22434b;border:1px solid #84b4aa;border-radius:7px;color:#edfaf3}
+.j3-nasa-tabs button[aria-pressed="true"]{background:#b0ecd0;color:#153d32}
+.j3-nasa-events{display:grid;gap:9px}
+.j3-nasa-events article,.j3-nasa-study{display:flex;flex-direction:column;gap:9px;
+ padding:13px;border:1px solid #638b8c;border-radius:9px;background:#1b3741}
+.j3-nasa-events article b{font-size:12px;color:#dcf9e8}
+.j3-nasa-events article small{font-size:10px;color:#b7d0d3}
+.j3-nasa-panel a{color:#b6f1d4}
+.j3-nasa-practice{background:#224449;border:1px solid #93c6ae;border-radius:9px;
+ padding:13px;display:grid;gap:9px}
+.j3-nasa-practice b{color:#bdf4dd}
+.j3-nasa-answers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.j3-nasa-answers button{min-height:49px;background:#244e50;color:#e5fff3;
+ border:1px solid #8cbdb1;border-radius:8px;font-size:11px;padding:8px}
+.j3-nasa-photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.j3-nasa-photos a{display:flex;flex-direction:column;gap:7px;text-decoration:none;
+ padding:9px;border:1px solid #598782;border-radius:8px;background:#1d3941}
+.j3-nasa-photos img{width:100%;height:130px;object-fit:cover;border-radius:5px}
+.j3-nasa-photos b{font-size:12px;line-height:1.4}
+.j3-nasa-photos small{font-size:10px;color:#bfd4d2;line-height:1.4}
+.j3-nasa-study h3{margin:0;font-size:16px}
+.j3-nasa-study p{line-height:1.6;margin:0}
+.j3-nasa-disclaimer{font-size:11px;line-height:1.6;color:#d5efdf;
+ padding:12px;border:1px solid #7799a0;border-radius:7px;background:#172f39}
+.j3-nasa-source-link{display:inline-block;align-self:flex-start;padding:10px}
+@media(max-width:670px){
+ .j3-nasa-tabs{grid-template-columns:1fr}
+ .j3-nasa-answers{grid-template-columns:1fr}
+ .j3-nasa-photos{grid-template-columns:1fr}
+}
