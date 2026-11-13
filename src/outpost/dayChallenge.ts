@@ -8,7 +8,7 @@ import {GAME_KEY,type Destination,type Outpost} from "./engine";
 export const DAY_TIME_LIMIT_MS=4*60*1000;
 export const DAY_WARNING_MS=60*1000;
 export const DAY_URGENT_MS=20*1000;
-export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"minigame"|"rover"|"timeout";
+export type TimerPausePanel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"nasa"|"minigame"|"rover"|"timeout";
 
 export function dayTimerKey(destination:Destination):string {
   return GAME_KEY+"-"+destination+"-day-clock";
@@ -28,11 +28,11 @@ export function formatDayTime(ms:number):string {
   return String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");
 }
 
-/** Intro/help, maps, mission details and between-sol reports are free to read.
+/** Intro/help, maps, NASA science resources, mission details and between-sol reports are free to read.
  * Engineering consoles and ordinary exploration count against the deadline. */
 export function dayTimerRuns(phase:Outpost["phase"],panel:TimerPausePanel,visible:boolean):boolean {
   return phase==="active"&&visible&&
-    !["help","map","mission","board","event","outcome","timeout"].includes(panel??"");
+    !["help","map","mission","board","nasa","event","outcome","timeout"].includes(panel??"");
 }
 
 /** Pure transition: a missed day is a failed timed challenge, never a win.
