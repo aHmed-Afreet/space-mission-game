@@ -12,6 +12,7 @@ import {distance,exteriorDoorSpawn,exteriorDoorYaw,HABITAT_WAKE,type Point2} fro
 import {lockOutpostViewport} from "./scrollLock";
 import {greenhouseClimate} from "./greenhouseClimate";
 import MissionBoard from "./MissionBoard";
+import NasaScience from "./nasa/NasaScience";
 import EngineeringMiniGame from "./EngineeringMiniGame";
 import RoverConsole from "./RoverConsole";
 import {ROVER_START,stepRover,type RoverPose,type RoverDrive} from "./roverPhysics";
@@ -21,7 +22,7 @@ import {createPostClickActivationQueue} from "../touchActivation";
 import {initializePreferences,type PlayerPreferences} from "../commander/campaign/preferences";
 import "./world3d.css";
 
-type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"minigame"|"rover"|"timeout";
+type Panel=null|"console"|"event"|"help"|"outcome"|"mission"|"map"|"board"|"nasa"|"minigame"|"rover"|"timeout";
 type Result={before:Outpost;after:Outpost};
 const meters=[
  {key:"oxygen",label:"OXYGEN",icon:"◉"},{key:"water",label:"WATER",icon:"◈"},
@@ -409,6 +410,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <div className="j3-quick">
          <button onClick={()=>setPanel("map")}>MAP</button>
          <button onClick={()=>setPanel("board")}>QUESTS</button>
+         <button onClick={()=>setPanel("nasa")}>NASA</button>
          <button onClick={()=>setPanel("help")}>?</button>
          <button onClick={()=>{setSession(null);setPanel(null);setRoom(null);}}>EXIT</button>
        </div>
@@ -466,9 +468,10 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    </button>}
    {notice&&!panel&&<div className="j3-status" role="status">{notice}</div>}
    {error&&<div className="j3-fallback"><div><p>{error}</p><button onClick={()=>setSession(null)}>BACK TO OUTPOSTS</button></div></div>}
-   {panel&&<div className={"j3-overlay"+((panel==="console"||panel==="board"||panel==="minigame"||panel==="rover")?" j3-overlay-console":"")}>
+   {panel&&<div className={"j3-overlay"+((panel==="console"||panel==="board"||panel==="nasa"||panel==="minigame"||panel==="rover")?" j3-overlay-console":"")}>
      {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
      {panel==="board"&&<MissionBoard session={session} onClose={()=>setPanel(null)}/>}
+      {panel==="nasa"&&<NasaScience destination={session.destination} onClose={()=>setPanel(null)}/>}
      {panel==="rover"&&<RoverConsole pose={roverPose} drive={roverDrive} onClose={()=>setPanel("console")}/>}
      {panel==="minigame"&&pendingAction&&room&&<EngineeringMiniGame key={session.sol+"-"+pendingAction} action={pendingAction} room={room} sol={session.sol} onBack={()=>setPanel("console")} onComplete={()=>{operate(pendingAction);setPendingAction(null);setPanel("console");}}/>}
      {panel==="console"&&currentFacility&&<section className="j3-panel j3-panel-console" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
@@ -537,6 +540,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <div className="j3-map-direction"><b>★ {nav.title}</b><span>{nav.description}</span></div>
        <button onClick={()=>setPanel("map")}>VIEW BASE MAP AND BUILDING GUIDE ↗</button>
        <button onClick={()=>setPanel("board")}>OPEN ALL 10 MISSIONS + SIDE QUESTS ↗</button>
+        <button onClick={()=>setPanel("nasa")}>OPEN NASA SCIENCE LAB & REAL NASA DATA ↗</button>
        <div className="j3-info">{brief.tip}</div>
        <div className="j3-split"><div className="j3-info">CREW SAFETY<br/><b>{Math.round(session.safety)}%</b></div>
          <div className="j3-info">RADIATION<br/><b>{Math.round(session.radiation)} INDEX</b></div></div>
@@ -551,7 +555,8 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
        <span className="j3-kicker">WELCOME TO THE 3D MISSION</span><h2>YOU ARE THE ASTRONAUT.</h2>
        <p>This is a walkable Moon/Mars base. The equipment you operate changes your mission resources and the world you see.</p>
        <div className="j3-info"><b>NEW CHALLENGE: 04:00 PER DAY.</b> Eat breakfast, finish one engineering task, resolve emergencies, eat dinner and sleep at your bunk before the clock runs out. Miss the deadline and the mission fails. The clock pauses while reading HELP, MAP or MISSION, between days, and whenever this browser tab is hidden. It runs while you explore or use equipment.</div>
-       <div className="j3-tutorial-steps">
+       <button onClick={()=>setPanel("nasa")}>EXPLORE REAL NASA SCIENCE DATA ↗</button>
+        <div className="j3-tutorial-steps">
          <div><b>1. WALK</b><br/>On a touchscreen, use the bottom-left joystick; touch JUMP to hop. Using a mouse and keyboard automatically hides touch walking. On desktop use WASD, SPACE to jump and E to interact.</div>
          <div><b>2. FIND YOUR WAY</b><br/>Open MAP to see yourself, your mission target and what every building does. Follow the highlighted building.</div>
          <div><b>3. OPEN AND OPERATE</b><br/>Approach the door, press INTERACT to open it, walk inside, or press INTERACT again to close it. Use the glowing console for interactive equipment mini-games. Drag from RUN or INTERACT to turn the camera.</div>
