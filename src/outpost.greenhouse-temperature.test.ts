@@ -35,7 +35,7 @@ test("temperature is clearly labeled simulated, only in Greenhouse, and uses Cel
 });
 
 test("iPad console uses a top-aligned 68svh safe-height with independently scrollable options",()=>{
- assert.match(source,/\(panel==="console"\|\|panel==="board"\|\|panel==="minigame"\|\|panel==="rover"\)\?" j3-overlay-console":""/);
+ assert.match(source,/\(panel==="console"\|\|panel==="board"\|\|panel==="nasa"\|\|panel==="minigame"\|\|panel==="rover"\)\?" j3-overlay-console":""/);
  assert.match(css,/\.j3-overlay-console\{[\s\S]*?align-items:flex-start/);
  assert.match(css,/height:min\(620px,68svh,calc\(var\(--outpost-visible-height,100dvh\) - 136px\)\)/);
  assert.match(css,/\.j3-overlay-console \.j3-panel-console\{/);
