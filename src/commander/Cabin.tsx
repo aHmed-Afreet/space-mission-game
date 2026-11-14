@@ -363,6 +363,7 @@ export default function Cabin(props: Props) {
         field?.update(current.current.world.session);
         fixtures?.update(current.current.world.session);
         remoteAstronauts.update(current.current.crew??[],current.current.world.session.id,elapsed);
+        renderer.domElement.dataset.remoteCrew=String(remoteAstronauts.visibleCount);
       }
       // Movement is suspended behind maps, tablets and paused procedures. Keep
       // the last cabin image there so software GPUs leave time for those controls.
