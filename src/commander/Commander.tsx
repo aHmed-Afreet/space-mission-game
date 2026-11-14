@@ -1,4 +1,7 @@
-import { worldAction, service, serviceEquipment } from "./campaign/ship";
+import { worldAction, service, serviceEquipment, type WorldAction } from "./campaign/ship";
+import CrewPanel from "./multiplayer/CrewPanel";
+import {CommanderRoomNetwork} from "./multiplayer/network";
+import {generateCrewCode,type CrewRoomState,type CrewAction,type CrewViewMode} from "./multiplayer/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import GameSettings from "./campaign/GameSettings";
 import type { PlayerPreferences } from "./campaign/preferences";
@@ -65,6 +68,17 @@ export default function Commander({
     [settingsOpen, setSettingsOpen] = useState(false),
     [preferences, setPreferences] = useState(initial.preferences),
     [preferencesWarning, setPreferencesWarning] = useState(initial.preferencesSaving.warning);
+  const [crewRoom,setCrewRoom]=useState<CrewRoomState|null>(null);
+  const [crewConnecting,setCrewConnecting]=useState(false);
+  const [crewError,setCrewError]=useState("");
+  const [guestPosition,setGuestPosition]=useState<Position|null>(null);
+  const roomRef=useRef<CrewRoomState|null>(null);
+  const networkRef=useRef<CommanderRoomNetwork|null>(null);
+  const savedBeforeJoin=useRef<Store|null>(null);
+  const remoteSessionId=useRef("");
+  const isGuest=useRef(false);
+  roomRef.current=crewRoom;
+  isGuest.current=crewRoom?.mode==="guest";
   const changePreferences = useCallback((next: PlayerPreferences) => {
     setPreferences(next);
     setPreferencesWarning(initial.preferencesSaving.save(next));
@@ -78,7 +92,8 @@ export default function Commander({
   const setupDialog = useRef<HTMLDivElement>(null);
   useModalFocus({ dialog:setupDialog, active:!device || laptopIntro, onClose:!device ? onExit : () => setLaptopIntro(false) });
   const save = useCallback(() => {
-    if (loaded.readOnly) return;
+    // Guest snapshots must never overwrite the player\'s personal campaign save.
+    if (isGuest.current || loaded.readOnly) return;
     if (!storage) { setSaveError(UNSAVED_WARNING); return; }
     try {
       setSaveError(saving.save(latest.current));
@@ -92,7 +107,7 @@ export default function Commander({
   useEffect(() => {
     const id = setInterval(save, 1500);
     const hide = () => {
-      if (document.hidden) {
+      if (document.hidden && !isGuest.current) {
         const steps = timeBudget.current.takeSteps(true);
         simulationClock.current?.reset();
         setStore((v) => {
@@ -129,6 +144,7 @@ export default function Commander({
     simulationClock.current = clock;
     let frame = 0;
     const advance = (now:number) => {
+      if(isGuest.current){clock.reset(now);return;}
       const session = latest.current.session;
       const accepted = clock.advance(now, {
         active:!!session && !session.state.paused && !session.state.ended && !session.report,
@@ -161,7 +177,7 @@ export default function Commander({
     };
   }, [mode]);
   useEffect(() => {
-    if (!store.session?.report) return;
+    if (isGuest.current || !store.session?.report) return;
     setStore((v) => {
       if (!v.session) return v;
       const progress = recordReport(v.progress, v.session);
