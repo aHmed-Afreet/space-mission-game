@@ -126,12 +126,12 @@ test("Commander only gets multiplayer; solo, Outpost, Planner and history remain
  const flight=readFileSync("src/commander/campaign/Flight.tsx","utf8");
  const main=readFileSync("src/ModeSelect.tsx","utf8");
  assert.match(commander,/MultiplayerLobby/);
- assert.match(commander,/network\\.publishMission|publishMission\\(latest\\.current/);
- assert.match(commander,/roomRef\\.current\\?\\.role==="guest"/);
+ assert.match(commander,/network\.publishMission|publishMission\(latest\.current/);
+ assert.match(commander,/roomRef\.current\?\.role==="guest"/);
  assert.match(commander,/onMove = useCallback/);
- assert.match(commander,/session=\\{crewRoom\\.role==="guest"\\?/);
- assert.match(flight,/crew\\.filter\\(member=>member\\.id!==crewOwnId\\)/);
- assert.match(cabin,/new CrewAvatarManager\\(scene\\)/);
- assert.match(cabin,/remoteAstronauts\\.update/);
+ assert.match(commander,/session=\{crewRoom\.role==="guest"\?/);
+ assert.match(flight,/crew\.filter\(member=>member\.id!==crewOwnId\)/);
+ assert.match(cabin,/new CrewAvatarManager\(scene\)/);
+ assert.match(cabin,/remoteAstronauts\.update/);
  assert.doesNotMatch(main,/<MultiplayerLobby/);
 });
