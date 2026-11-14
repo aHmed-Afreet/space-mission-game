@@ -1,7 +1,7 @@
 /* NASA reference screen reuses the tested internal-scroll panel/footer layout.
    The Outpost canvas must not consume iPad touch scrolling within the panel. */
 .j3-nasa-panel .j3-panel-content{gap:12px;touch-action:pan-y;overscroll-behavior:contain}
-.j3-nasa-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.j3-nasa-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .j3-nasa-tabs button{min-height:46px;text-align:center;line-height:1.3;
  font-size:11px;font-weight:800;padding:9px;background:#22434b;border:1px solid #84b4aa;border-radius:7px;color:#edfaf3}
 .j3-nasa-tabs button[aria-pressed="true"]{background:#b0ecd0;color:#153d32}
@@ -33,3 +33,39 @@
  .j3-nasa-answers{grid-template-columns:1fr}
  .j3-nasa-photos{grid-template-columns:1fr}
 }
+
+
+/* Challenge-system resource forecaster: accessible on mobile within the
+ * existing scrollable NASA panel, without blocking other Outpost controls. */
+.j3-challenge-systems{display:grid;gap:13px;min-width:0}
+.j3-challenge-systems h3{font-size:clamp(17px,2.3vw,21px);margin:0}
+.j3-challenge-systems>p{line-height:1.55;margin:0}
+.j3-challenge-systems-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.j3-challenge-systems-grid article{display:flex;flex-direction:column;gap:8px;padding:12px;
+ border:1px solid #689692;border-radius:9px;background:#1b3941}
+.j3-challenge-systems-grid small{font-size:10px;font-weight:850;letter-spacing:.08em;color:#b2f0d6}
+.j3-challenge-systems-grid strong{font-size:14px;line-height:1.35}
+.j3-challenge-systems-grid article p{font-size:12px;line-height:1.5;margin:0}
+.j3-challenge-systems-grid article a{font-size:11px;margin-top:auto}
+.j3-challenge-planner{display:grid;gap:12px;background:#193740;border:1px solid #81a9a2;
+ border-radius:10px;padding:14px;min-width:0}
+.j3-challenge-planner>p{font-size:12px;line-height:1.55;margin:0}
+.j3-challenge-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.j3-challenge-options button{font-size:11px;min-height:46px;padding:9px;text-align:left;
+ line-height:1.35;background:#244953;color:#e5f8ef;border:1px solid #759b93;border-radius:7px}
+.j3-challenge-options button[aria-pressed="true"]{background:#b4efd0;color:#123b31;border:2px solid #f5ffec}
+.j3-challenge-compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.j3-challenge-compare article{display:grid;align-content:start;gap:8px;padding:12px;
+ border:1px solid #789a97;border-radius:7px;background:#112c36}
+.j3-challenge-compare article strong{font-size:14px}
+.j3-challenge-compare article small{font-size:9px;letter-spacing:.08em;color:#b1e0d4;font-weight:800}
+.j3-challenge-compare article span{font-size:11px;line-height:1.45}
+.j3-challenge-review{background:#b9ead0;color:#1d4539;border:0;border-radius:7px;
+ min-height:48px;font-weight:850;cursor:pointer;padding:10px}
+.j3-challenge-systems button{touch-action:manipulation}
+@media(max-width:760px){
+ .j3-nasa-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .j3-challenge-systems-grid{grid-template-columns:1fr}
+ .j3-challenge-compare{grid-template-columns:1fr}
+}
+@media(max-width:520px){.j3-challenge-options{grid-template-columns:1fr}}

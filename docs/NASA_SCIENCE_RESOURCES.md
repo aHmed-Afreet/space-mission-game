@@ -47,3 +47,29 @@ Solar flares or particle-event records alone do not establish radiation dose at 
 
 ## Challenge eligibility
 The base game predates the 2026 hackathon. Always follow current official NASA Space Apps rules regarding prebuilt projects, when development may begin, and how sources and team contributions should be credited. An added NASA API does not, by itself, establish eligibility for judging.
+
+
+## November 14, 2026: Challenge-specific mission systems
+
+User-provided official NASA Space Apps challenge Resources URL:
+https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/?tab=resources
+
+The exact `?tab=resources` entries could not be retrieved through available tools; the official challenge brief **was verified**, and specifically calls for student decisions involving **life support, radiation shielding, power and food production**. The UI links directly to the original tab for users to check its complete resource list.
+
+The new `MISSION SYSTEMS` screen maps the verified challenge brief to four game subsystems using verified primary NASA sources. This mapping **does not claim** the source links below are actually listed in the specific Resources tab:
+
+| Challenge topic | Existing game mechanics | NASA primary source |
+|---|---|---|
+| Life support | Oxygen, water, power-consuming recycling | [NASA Life Support Baseline Values and Assumptions Document](https://ntrs.nasa.gov/citations/20210024855) |
+| Radiation shielding | Shield levels, incident response, simulated exposure index | [NASA CCMC DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) |
+| Power generation/storage | Sunlight factor, solar arrays, battery reserves, demand | [NASA Lunar Surface Technology: surface power](https://www.nasa.gov/lunar-surface-technology/) |
+| Food production | Crop varieties, greenhouse capacity, water/lighting demands | [NASA Growing Plants in Space](https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/) |
+
+The accompanying **ENGINEERING DECISION SIMULATOR** uses pure game simulation functions (`availableAction`, `perform`, `projectPower`, `advanceSol`) to compute a read-only before/after comparison for solar arrays, recycling, greenhouse, shelter, battery and crop harvest. This uses the exact **game engine** values, not NASA-measured rates. It neither changes credit balances nor records an engineering operation. If today's emergency is unresolved, the simulator deliberately withholds complete next-day forecasts rather than pretending to have resolved it. Four-minute day timer pauses while reading.
+
+This educational functionality extends the prior real NASA DONKI and NASA Images connections; it does **not** replace existing course, saves, daily missions, or special-event rules.
+
+### Source-verification status
+- **Confirmed:** The official challenge overview's four interdependent life-support/radiation/power/food themes; NASA authority and URLs for BVAD, DONKI, lunar surface power and space-crop research.
+- **Not confirmed:** The actual individual entries shown in the 2026 NASA Space Apps website's **Resources** tab.
+- The user or local organizer should verify tab entries before claiming compliance with a particular dataset-selection rule.
