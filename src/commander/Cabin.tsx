@@ -24,9 +24,12 @@ import { stepLocomotion } from "./locomotion";
 import { SimulationClockContext } from "./simulationClockContext";
 import type { PlayerPreferences } from "./campaign/preferences";
 import { pickAimTarget, type AimTarget } from "./targeting";
+import {CrewAvatarManager} from "./multiplayer/CrewAvatars";
+import type {CrewMember} from "./multiplayer/protocol";
 
 export type { AimTarget } from "./targeting";
 type Props = {
+  crew?: CrewMember[];
   device?: "ipad" | "iphone" | "laptop";
   settings?: PlayerPreferences;
   onArea: (area: Area | undefined) => void;
@@ -156,6 +159,7 @@ export default function Cabin(props: Props) {
     }
     current.current.onArea(undefined);
     const { camera, scene } = interior;
+    const remoteAstronauts=new CrewAvatarManager(scene);
     const resize = () => {
       const w = Math.max(1, el.clientWidth),
         h = Math.max(1, el.clientHeight);
@@ -358,6 +362,8 @@ export default function Cabin(props: Props) {
       if (current.current.world) {
         field?.update(current.current.world.session);
         fixtures?.update(current.current.world.session);
+        remoteAstronauts.update(current.current.crew??[],current.current.world.session.id,elapsed);
+        renderer.domElement.dataset.remoteCrew=String(remoteAstronauts.visibleCount);
       }
       // Movement is suspended behind maps, tablets and paused procedures. Keep
       // the last cabin image there so software GPUs leave time for those controls.
@@ -414,6 +420,7 @@ export default function Cabin(props: Props) {
       clear();
       flushMotion.current = () => {};
       commitInteraction.current = () => {};
+      remoteAstronauts.dispose();
       fixtures?.dispose();
       interior.dispose();
       renderer.dispose();
