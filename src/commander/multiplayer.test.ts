@@ -77,7 +77,7 @@ test("incoming room payloads reject bogus positions and actions",()=>{
 });
 test("true host/guest channel semantics: 1, 2, 3, 4 participants, movement, snapshots and cap",async()=>{
  const original=(globalThis as {window?:unknown}).window;
- (globalThis as {window?:unknown}).window={Peer:FakePeer,setTimeout};
+ (globalThis as {window?:unknown}).window={Peer:FakePeer,setTimeout,clearTimeout};
  FakePeer.registry.clear();
  let hostState:CrewRoomState|null=null;
  const latest=new Map<string,CrewRoomState|null>();
