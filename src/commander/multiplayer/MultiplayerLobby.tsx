@@ -1,6 +1,5 @@
 import {useState} from "react";
 import {normalizeCrewCode,roomCapacity,type CrewMember,type RoomRole} from "./protocol";
-import "./multiplayer.css";
 
 export default function MultiplayerLobby({role,code,maxPlayers,members,message,connecting,
  onCreate,onJoin,onLeave}:{
