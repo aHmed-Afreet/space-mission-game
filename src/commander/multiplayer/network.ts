@@ -106,15 +106,23 @@ export class CommanderRoomNetwork{
    const id=conn.peer;
    conn.on("open",()=>{
     if(this.closed){conn.close();return;}
-    if(this.members.size>=CREW_MAX_PLAYERS||this.connections.has(id)){
+    // PeerJS may open a replacement data channel during signaling recovery.
+    // A reconnect from the SAME browser must not be mistaken for a fifth
+    // player. Only distinct peer IDs consume additional crew seats.
+    const previous=this.connections.get(id);
+    if(import.meta.env.DEV)console.info("[crew-signaling] incoming",{
+      seats:this.members.size,duplicate:Boolean(previous),newSeat:!this.members.has(id)
+    });
+    if(this.members.size>=CREW_MAX_PLAYERS&&!this.members.has(id)){
      this.send(conn,{v:CREW_PROTOCOL,t:"error",message:"This mission is full (maximum four astronauts)."});
      window.setTimeout(()=>conn.close(),300);
      return;
     }
-    const role=CREW_ROLES[this.members.size];
+    if(previous){this.connections.delete(id);previous.close();}
+    const role=this.members.get(id)?.role??CREW_ROLES.find(role=>![...this.members.values()].some(member=>member.role===role))??CREW_ROLES[3];
     this.connections.set(id,conn);
     const host=this.members.get(peer.id);
-    this.members.set(id,{id,role,pose:host?.pose??emptyPosition,missionId:this.latestSession?.missionId??""});
+    this.members.set(id,{id,role,pose:this.members.get(id)?.pose??host?.pose??emptyPosition,missionId:this.latestSession?.missionId??""});
     this.roster();
     this.send(conn,{v:CREW_PROTOCOL,t:"welcome",members:[...this.members.values()],
       session:this.latestSession,view:this.latestView});
@@ -134,8 +142,8 @@ export class CommanderRoomNetwork{
      if(action&&this.latestSession)this.callbacks.onAction(action,id);
     }
    });
-   conn.on("close",()=>this.removePeer(id));
-   conn.on("error",()=>this.removePeer(id));
+   conn.on("close",()=>{if(this.connections.get(id)===conn)this.removePeer(id);});
+   conn.on("error",()=>{if(this.connections.get(id)===conn)this.removePeer(id);});
   });
   peer.on("disconnected",()=>{
    if(this.closed)return;
