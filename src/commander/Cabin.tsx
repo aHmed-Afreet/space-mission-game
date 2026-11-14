@@ -24,12 +24,16 @@ import { stepLocomotion } from "./locomotion";
 import { SimulationClockContext } from "./simulationClockContext";
 import type { PlayerPreferences } from "./campaign/preferences";
 import { pickAimTarget, type AimTarget } from "./targeting";
+import {CrewAvatarField} from "./multiplayer/crewAvatars";
+import type {CrewMember} from "./multiplayer/protocol";
 
 export type { AimTarget } from "./targeting";
 type Props = {
   device?: "ipad" | "iphone" | "laptop";
   settings?: PlayerPreferences;
   onArea: (area: Area | undefined) => void;
+  crewMembers?:readonly CrewMember[];
+  myCrewId?:string;
   onPosition: (p: Position) => void;
   onInteract: (target: AimTarget | null, position?: Position) => void;
   onGraphicsError: () => void;
@@ -156,6 +160,7 @@ export default function Cabin(props: Props) {
     }
     current.current.onArea(undefined);
     const { camera, scene } = interior;
+    const onlineCrew = new CrewAvatarField(scene);
     const resize = () => {
       const w = Math.max(1, el.clientWidth),
         h = Math.max(1, el.clientHeight);
@@ -342,6 +347,8 @@ export default function Cabin(props: Props) {
         lastReport = now;
         current.current.onPosition(pos);
       }
+      onlineCrew.update(current.current.crewMembers??[],current.current.myCrewId,
+        current.current.world?.session.missionId,now);
       interior.update(
         elapsed,
         near,
@@ -415,6 +422,7 @@ export default function Cabin(props: Props) {
       flushMotion.current = () => {};
       commitInteraction.current = () => {};
       fixtures?.dispose();
+      onlineCrew.dispose();
       interior.dispose();
       renderer.dispose();
       renderer.domElement.remove();
