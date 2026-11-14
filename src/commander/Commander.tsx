@@ -197,14 +197,106 @@ export default function Commander({
     },
     [],
   );
-  const onMove = useCallback(
-    (p: Position) => setStore(v => {
-      if (!v.session) return v;
-      const next = moveSession(v.session, p);
-      return next === v.session ? v : { ...v, session:next, progress:recordReport(v.progress, next) };
-    }),
-    [],
-  );
+  const onRemoteCrewAction = useCallback((action:CrewAction,_senderId:string)=>{
+    // Only the host is allowed to commit a shared mission change.
+    if(roomRef.current?.mode!=="host")return;
+    setStore(v=>{
+      if(!v.session||v.session.report)return v;
+      const captainPosition=v.session.position;
+      const visiting={...v.session,position:action.position};
+      let result:Session=visiting;
+      try{
+        switch(action.type){
+         case "command":result=command(visiting,action.value as CampaignAction);break;
+         case "world":result=worldAction(visiting,action.value as WorldAction);break;
+         case "optional":result=optionalCommand(visiting,action.value as string);break;
+         case "pause":result={...visiting,state:{...visiting.state,paused:action.value as boolean}};break;
+         // Launch flight controls and simulation acceleration remain captain-only.
+         case "controls":case "rate":return v;
+        }
+      }catch{return v;}
+      const next={...result,position:captainPosition};
+      return {...v,session:next,progress:recordReport(v.progress,next)};
+    });
+  },[]);
+  const sendCrewAction=useCallback((type:CrewAction["type"],value:unknown)=>{
+    if(roomRef.current?.mode!=="guest")return;
+    const position=guestPosition??latest.current.session?.position;
+    if(position)networkRef.current?.requestAction({type,value,position});
+  },[guestPosition]);
+  const onMove=useCallback((p:Position)=>{
+    const room=roomRef.current;
+    if(room?.mode==="guest"){
+      setGuestPosition(p);
+      networkRef.current?.publishPose(p,latest.current.session?.missionId??"");
+      return;
+    }
+    setStore(v=>{
+      if(!v.session)return v;
+      const next=moveSession(v.session,p);
+      return next===v.session?v:{...v,session:next,progress:recordReport(v.progress,next)};
+    });
+    if(room?.mode==="host")networkRef.current?.publishPose(p,latest.current.session?.missionId??"");
+  },[]);
+  const leaveCrew=useCallback(()=>{
+    const guest=roomRef.current?.mode==="guest";
+    networkRef.current?.close();networkRef.current=null;
+    roomRef.current=null;isGuest.current=false;setCrewRoom(null);setCrewError("");
+    if(guest){
+      if(savedBeforeJoin.current)setStore(savedBeforeJoin.current);
+      savedBeforeJoin.current=null;remoteSessionId.current="";
+      setGuestPosition(null);setMode("home");
+    }
+  },[]);
+  const createCrew=useCallback(async()=>{
+    if(networkRef.current)return;
+    setCrewConnecting(true);setCrewError("");
+    const network=new CommanderRoomNetwork({
+      onState:state=>{roomRef.current=state;isGuest.current=state?.mode==="guest";setCrewRoom(state);},
+      onSession:()=>{},
+      onAction:onRemoteCrewAction,
+      onLost:message=>setCrewError(message)
+    });
+    networkRef.current=network;
+    try{await network.create(generateCrewCode(),latest.current.session,
+       mode==="flight"?"flight":"home");}
+    catch(e){network.close();networkRef.current=null;setCrewError(e instanceof Error?e.message:String(e));}
+    finally{setCrewConnecting(false);}
+  },[mode,onRemoteCrewAction]);
+  const joinCrew=useCallback(async(code:string)=>{
+    if(networkRef.current)return;
+    setCrewConnecting(true);setCrewError("");
+    savedBeforeJoin.current=latest.current;remoteSessionId.current="";
+    const network=new CommanderRoomNetwork({
+      onState:state=>{roomRef.current=state;isGuest.current=state?.mode==="guest";setCrewRoom(state);},
+      onSession:(session,view)=>{
+        if(roomRef.current?.mode!=="guest")return;
+        if(view==="flight"&&session){
+          if(remoteSessionId.current!==session.id){
+            remoteSessionId.current=session.id;
+            setGuestPosition({...session.position,x:session.position.x+.55,z:session.position.z+.25});
+          }
+          setStore(v=>({...v,session}));setMode("flight");
+        }else setMode("home");
+      },
+      onAction:()=>{},
+      onLost:message=>setCrewError(message)
+    });
+    networkRef.current=network;
+    try{await network.join(code);}
+    catch(e){
+      network.close();networkRef.current=null;savedBeforeJoin.current=null;
+      setCrewError(e instanceof Error?e.message:String(e));
+    }finally{setCrewConnecting(false);}
+  },[]);
+  useEffect(()=>{
+    if(crewRoom?.mode!=="host")return;
+    const timer=window.setTimeout(()=>{
+      networkRef.current?.publishSession(store.session,mode==="flight"?"flight":"home");
+    },160);
+    return ()=>window.clearTimeout(timer);
+  },[crewRoom?.mode,store.session,mode]);
+  useEffect(()=>()=>{networkRef.current?.close();networkRef.current=null;},[]);
   const pause = useCallback(
     (paused: boolean) => {
       simulationClock.current?.reset(performance.now());
