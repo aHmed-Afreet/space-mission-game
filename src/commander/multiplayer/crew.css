@@ -31,3 +31,13 @@
 .commander-crew-panel .commander-crew-small{font-size:10px}
 .commander-crew-ui button:focus-visible,.commander-crew-ui input:focus-visible{outline:3px solid #bdf7ce;outline-offset:3px}
 @media(max-width:720px){.commander-crew-ui{top:max(9px,env(safe-area-inset-top));right:9px;width:min(326px,calc(100vw - 18px))}.commander-crew-ui.in-flight{top:175px}.commander-crew-panel{max-height:calc(100svh - 226px)}.commander-crew-toggle{font-size:10px;min-height:42px}}
+
+/* Guests wait for the captain rather than opening a separate solo save. */
+.commander-crew-wait-room{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+ background:radial-gradient(circle at 50% 25%,#224b56,#081321 75%);color:#eef9f3;
+ padding:clamp(20px,6vw,60px);box-sizing:border-box;font-family:Inter,system-ui,sans-serif}
+.commander-crew-wait-copy{max-width:min(650px,100%);text-align:center;display:grid;gap:12px}
+.commander-crew-wait-copy>span{font-size:11px;letter-spacing:.2em;color:#9bdac8}
+.commander-crew-wait-copy h1{font-size:clamp(26px,5vw,46px);line-height:1.12;margin:4px 0}
+.commander-crew-wait-copy p{font-size:14px;line-height:1.6;color:#bad5d0}
+@media(max-width:720px){.commander-crew-wait-copy{padding-top:100px}}
