@@ -34,6 +34,8 @@ import Tutorial from "./Tutorial";
 import Report from "./Report";
 import type { VisualAction } from "../interior";
 import type { PlayerPreferences } from "./preferences";
+import type {CrewMember} from "../multiplayer/protocol";
+import {FlightCrewHud} from "../multiplayer/MultiplayerLobby";
 const baseStationActions: Partial<
   Record<keyof typeof deck, { action: CampaignAction; label: string }[]>
 > = {
@@ -87,6 +89,10 @@ const baseStationActions: Partial<
 };
 export default function Flight({
   session: s,
+  crew = [],
+  crewCode = "",
+  crewOwnId = "",
+  onLeaveCrew = () => {},
   device = "ipad",
   preferences,
   onSettings = () => {},
@@ -112,6 +118,10 @@ export default function Flight({
   onControls: (throttle: number, pitch: number) => void;
   onAbort: () => void;
   session: Session;
+  crew?: CrewMember[];
+  crewCode?:string;
+  crewOwnId?:string;
+  onLeaveCrew?:()=>void;
   device?: "ipad" | "iphone" | "laptop";
   preferences?: PlayerPreferences;
   onSettings?: () => void;
@@ -475,6 +485,7 @@ export default function Flight({
       ) : (
         <Cabin
           key={s.id}
+          crew={crew.filter(member=>member.id!==crewOwnId)}
           onArea={() => {}}
           onPosition={move}
           device={device}
@@ -498,6 +509,7 @@ export default function Flight({
         />
       )}
       <div className="cmd-cinema-shade" aria-hidden="true" />
+      {crewCode&&<FlightCrewHud members={crew} ownId={crewOwnId} code={crewCode} onLeave={onLeaveCrew}/>}
       <div className="cmd-hud-header">
         <div className="cmd-flight-identity">
           <span className="cmd-orbital-emblem">✦</span>
