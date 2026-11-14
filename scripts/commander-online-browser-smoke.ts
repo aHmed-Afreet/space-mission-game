@@ -47,7 +47,7 @@ try{
  log("host",host);log("guest",guest);
  for(const p of [host,guest]){
   await p.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
-  await p.getByRole("button",{name:"ENTER COMMANDER"}).click();
+  await p.getByRole("button",{name:/PLAY COMMANDER/}).click();
   await p.getByRole("button",{name:/^iPad /}).click();
   await p.locator(".cmd-coop-lobby").waitFor({timeout:15000});
  }
