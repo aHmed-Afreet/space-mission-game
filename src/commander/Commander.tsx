@@ -406,6 +406,8 @@ export default function Commander({
       onDevice={setDevice} onClose={closeSettings}
       onReset={resetProgress} readonly={loaded.readOnly}/>
   ) : null;
+  const crewPanel=<CrewPanel room={crewRoom} connecting={crewConnecting} error={crewError}
+    inFlight={mode==="flight"} onCreate={createCrew} onJoin={joinCrew} onLeave={leaveCrew}/>;
   if (!device || laptopIntro) return (
     <div ref={setupDialog} className="cmd-device-setup" role="dialog" aria-modal="true" aria-label="Commander control setup">
       <section className="cmd-device-panel">
@@ -513,6 +515,7 @@ export default function Commander({
           }}
         />
         {saveError && <p className="cmd-alert critical">{saveError}</p>}
+        {crewPanel}
       </>
     );
   if (mode === "flight" && store.session) {
@@ -528,13 +531,14 @@ export default function Commander({
         device={device}
         preferences={preferences}
         onSettings={openSettings}
-        onWorld={(action) => updateSession((s) => worldAction(s, action))}
-        onOptional={(id) => updateSession((s) => optionalCommand(s, id))}
-        onRate={(rate) => updateSession((s) => setSimRate(s, rate))}
-        onControls={(throttle, pitch) =>
-          updateSession((s) => flightControls(s, throttle, pitch))
-        }
+        onWorld={onCrewWorld}
+        onOptional={onCrewOptional}
+        onRate={(rate) => {if(!isGuest.current)updateSession(s=>setSimRate(s,rate));}}
+        onControls={(throttle, pitch) => {
+          if(!isGuest.current)updateSession(s=>flightControls(s,throttle,pitch));
+        }}
         onAbort={() => {
+          if(isGuest.current){setCrewError("Only the mission host can abort a shared flight.");return;}
           if (
             window.confirm(
               "Abort this flight and recover insured hardware? Performance bonuses will be lost.",
@@ -546,14 +550,17 @@ export default function Commander({
               report: makeReport(s, false),
             }));
         }}
-        session={store.session}
+        session={crewRoom?.mode==="guest"&&guestPosition
+          ? {...store.session,position:guestPosition}:store.session}
+        crewMembers={crewRoom?.members}
+        myCrewId={crewRoom?.myId}
         progress={store.progress}
         onMove={onMove}
         onTickPause={pause}
         onCommand={onCommand}
-        onHome={home}
-        onNext={store.session.report?.success && next ? nextFinished : undefined}
-        onRetry={store.session.report && !store.session.report.success ? retryFinished : undefined}
+        onHome={crewRoom?.mode==="guest"?leaveCrew:home}
+        onNext={crewRoom?.mode!=="guest"&&store.session.report?.success && next ? nextFinished : undefined}
+        onRetry={crewRoom?.mode!=="guest"&&store.session.report && !store.session.report.success ? retryFinished : undefined}
         onDismissTutorial={(id) =>
           setStore((v) => ({
             ...v,
@@ -573,9 +580,20 @@ export default function Commander({
       />
       </SimulationClockContext.Provider>
       {settingsView}
+      {crewPanel}
       </>
     );
   }
+  if(crewRoom?.mode==="guest")return <div className="commander-crew-wait-room">
+    <div className="commander-crew-wait-copy">
+      <span>ORBITAL · COMMANDER ONLINE CREW</span>
+      <h1>Connected to your mission host</h1>
+      <p>The captain is choosing or preparing the next flight. When they start the mission,
+       your spacecraft will load automatically and you'll see the other crew members moving.</p>
+      <p>Your individual Commander save is protected. Leave the crew to continue your solo campaign.</p>
+    </div>
+    {crewPanel}
+  </div>;
   return (
     <>
     <CampaignHome
@@ -599,6 +617,7 @@ export default function Commander({
       onSettings={openSettings}
     />
     {settingsView}
+    {crewPanel}
     </>
   );
 }
