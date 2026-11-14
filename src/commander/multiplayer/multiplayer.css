@@ -1,0 +1,61 @@
+/* Only Commander gets online co-op. No intrusive overlay in the other modes. */
+.cmd-coop-lobby{color:#e5f5f1;background:linear-gradient(120deg,#102f42,#142333);
+ border:1px solid #689baa;border-radius:17px;padding:clamp(16px,3vw,28px);
+ margin:20px auto;width:min(1180px,calc(100% - 32px));box-sizing:border-box;
+ font-family:Inter,system-ui,sans-serif;box-shadow:0 10px 40px #0005}
+.cmd-coop-lobby *{box-sizing:border-box}
+.cmd-coop-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.cmd-coop-header small{color:#8edac4;font-size:11px;letter-spacing:.15em;font-weight:800}
+.cmd-coop-header h2{font-size:clamp(24px,3vw,34px);margin:8px 0;line-height:1.2}
+.cmd-coop-header p{font-size:13px;color:#c9e1e1;line-height:1.6;max-width:740px}
+.cmd-coop-count{white-space:nowrap;font-size:12px;border:1px solid #75beb2;border-radius:7px;
+ background:#18493d;padding:10px 13px;color:#dbffe4}
+.cmd-coop-choice{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.cmd-coop-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;
+ background:#143b49;border:1px solid #4f7b86;border-radius:10px;padding:13px}
+.cmd-coop-form label{grid-column:1/-1;color:#a0e3d5;font-size:11px;letter-spacing:.07em;font-weight:850}
+.cmd-coop-form input,.cmd-coop-form select{min-width:0;min-height:46px;width:100%;color:#ecfff2;
+ background:#0e2731;border:1px solid #73999b;border-radius:7px;padding:8px;font-size:14px;
+ font-family:inherit;letter-spacing:.03em}
+.cmd-coop-form button,.cmd-coop-room button{border:0;background:#b3ebd0;color:#11392e;
+ border-radius:7px;padding:9px 12px;min-height:46px;font-weight:850;cursor:pointer;
+ touch-action:manipulation}
+.cmd-coop-form button:disabled{opacity:.5;cursor:not-allowed}
+.cmd-coop-form>small{grid-column:1/-1;color:#a9cbce;font-size:11px;line-height:1.4}
+.cmd-coop-note,.cmd-coop-next{color:#b9d3d3;font-size:12px;line-height:1.55;margin:14px 0 0}
+.cmd-coop-room{display:grid;gap:12px;margin-top:15px}
+.cmd-coop-invite{display:flex;gap:9px;flex-wrap:wrap;align-items:center;
+ padding:12px;background:#153c44;border-radius:9px;border:1px solid #75a1a0}
+.cmd-coop-invite>div{margin-right:auto;display:grid;gap:5px}
+.cmd-coop-invite small{font-size:10px;color:#a9e3d2;font-weight:850}
+.cmd-coop-invite strong{font-size:clamp(21px,4vw,30px);letter-spacing:.15em;color:#e9fff1;font-variant-numeric:tabular-nums}
+.cmd-coop-room .cmd-coop-invite button{min-height:43px;font-size:10px}
+.cmd-coop-roster{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.cmd-coop-seat{background:#1b303c;border:1px solid #486471;border-radius:7px;padding:11px;
+ display:grid;gap:6px}
+.cmd-coop-seat.connected{border-color:#71c6ab;background:#1d4a44}
+.cmd-coop-seat span{color:#82eac7;font-size:16px}
+.cmd-coop-seat b{font-size:12px}
+.cmd-coop-seat small{font-size:10px;color:#b1cfd0}
+.cmd-coop-status{font-size:12px;line-height:1.5;color:#b9ecdc}
+.cmd-coop-room .cmd-coop-leave{justify-self:start;background:#633b44;color:#fff;border:1px solid #bd7782}
+.cmd-coop-wait{min-height:50svh;display:grid;align-content:center;text-align:center;padding:24px}
+.cmd-coop-wait .cmd-coop-lobby{max-width:900px}
+.cmd-coop-flight-hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 108px);
+ right:16px;z-index:35;background:#0c2635ee;border:1px solid #72b8a6;border-radius:8px;
+ font:11px Inter,system-ui,sans-serif;color:#e3ffed;pointer-events:auto;max-width:min(300px,55vw)}
+.cmd-coop-flight-hud>button{border:0;background:transparent;color:inherit;padding:10px 13px;
+ font-size:11px;min-height:43px;font-weight:850;cursor:pointer;white-space:nowrap}
+.cmd-coop-flight-hud>button span{margin-left:12px}
+.cmd-coop-flight-hud>div{padding:4px 13px 13px}
+.cmd-coop-flight-hud p{margin:8px 0;line-height:1.4}
+.cmd-coop-flight-hud p span{color:#8fe7bc}
+.cmd-coop-flight-hud>div button{background:#713d44;border:1px solid #be7a82;
+ color:#fff;border-radius:5px;padding:8px;min-height:39px;cursor:pointer}
+.cmd-coop-lobby button:focus-visible,.cmd-coop-flight-hud button:focus-visible{outline:3px solid #bfffd5;outline-offset:2px}
+@media(max-width:710px){
+ .cmd-coop-choice{grid-template-columns:1fr}
+ .cmd-coop-header{flex-wrap:wrap}
+ .cmd-coop-roster{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .cmd-coop-flight-hud{right:8px;top:85px}
+}

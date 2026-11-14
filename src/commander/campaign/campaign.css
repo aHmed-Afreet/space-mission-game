@@ -1,3 +1,4 @@
+@import "../multiplayer/multiplayer.css";
 /* Campaign extension: retain the cabin and original ORBITAL material language. */
 .campaign-nav {
   display: flex;

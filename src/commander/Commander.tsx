@@ -1,11 +1,11 @@
-import { worldAction, service, serviceEquipment } from "./campaign/ship";
+import { worldAction, service, serviceEquipment, doors, lockers, type WorldAction } from "./campaign/ship";
 import { useCallback, useEffect, useRef, useState } from "react";
 import GameSettings from "./campaign/GameSettings";
 import type { PlayerPreferences } from "./campaign/preferences";
 import { initializeCommander, UNSAVED_WARNING } from "./campaign/commanderStorage";
 import type { Design } from "../game";
 import type { LifeSupport } from "./simulation";
-import type { Position } from "./layout";
+import {spawn, type Position} from "./layout";
 import LegacyCommander from "./LegacyCommander";
 import CampaignHome from "./campaign/CampaignHome";
 import Preparation from "./campaign/Preparation";
@@ -29,6 +29,7 @@ import {
   tickSession,
   recordReport,
   unlockedChapters,
+  campaignWalkable,
   type Session,
 } from "./campaign/engine";
 import {
@@ -43,6 +44,10 @@ import { useModalFocus } from "./modalFocus";
 import { SimulationClockContext } from "./simulationClockContext";
 import "./commander.css";
 import "./campaign/campaign.css";
+import MultiplayerLobby from "./multiplayer/MultiplayerLobby";
+import {CommanderNetwork} from "./multiplayer/network";
+import {generateCrewCode,roomCapacity,initialCrewPose,validCrewPosition,
+ type RoomRole,type CrewMember} from "./multiplayer/protocol";
 export default function Commander({
   onExit = () => {},
 }: {
@@ -71,6 +76,121 @@ export default function Commander({
   }, [initial.preferencesSaving]);
   const latest = useRef(store);
   latest.current = store;
+  // Live co-op is opt-in: only the Commander host saves v3 progress.
+  const [crewRoom,setCrewRoom]=useState<{role:RoomRole|null;code:string;
+   capacity:2|3|4;members:CrewMember[];status:string;connecting:boolean}>({
+    role:null,code:"",capacity:4,members:[],status:"",connecting:false
+   });
+  const roomRef=useRef<CommanderNetwork|null>(null);
+  const soloBackup=useRef<Store|null>(null);
+  const guestMissionId=useRef<string|null>(null);
+  const guestSeat=useRef(1);
+  const guestPose=useRef<Position>({...spawn});
+  const [guestPosition,setGuestPosition]=useState<Position>({...spawn});
+  const modeRef=useRef(mode);
+  modeRef.current=mode;
+  const lastPoseSend=useRef(0);
+  const leaveCrew=()=>{
+    const guest=roomRef.current?.role==="guest";
+    roomRef.current?.leave();roomRef.current=null;
+    guestMissionId.current=null;
+    if(guest&&soloBackup.current){
+      setStore(soloBackup.current);soloBackup.current=null;setMode("home");
+    }
+    setCrewRoom({role:null,code:"",capacity:4,members:[],status:"",connecting:false});
+  };
+  useEffect(()=>()=>{roomRef.current?.leave();roomRef.current=null;},[]);
+  const startRoom=async(role:RoomRole,code:string,capacity:2|3|4)=>{
+    if(roomRef.current)return;
+    if(roomCapacity(code)!==capacity){
+      setCrewRoom(v=>({...v,status:"The room code is invalid."}));return;
+    }
+    if(role==="guest"){soloBackup.current=latest.current;setMode("home");}
+    setCrewRoom({role,code,capacity,members:[],status:"Connecting securely…",connecting:true});
+    const network=new CommanderNetwork(role,code,capacity,{
+      onRoster:(members,seat)=>{
+        guestSeat.current=seat;
+        setCrewRoom(v=>({...v,members,connecting:false}));
+      },
+      onStatus:status=>setCrewRoom(v=>({...v,status,connecting:false})),
+      onSnapshot:packet=>{
+        if(roomRef.current!==network||role!=="guest")return;
+        if(packet.active&&packet.session){
+          if(guestMissionId.current!==packet.session.id){
+            guestMissionId.current=packet.session.id;
+            const pose=initialCrewPose(guestSeat.current,packet.session.position);
+            guestPose.current=pose;setGuestPosition(pose);
+            network.sendPose(pose,packet.session.id);
+          }
+          setStore(v=>({...v,session:packet.session}));
+          setMode("flight");
+        }else{
+          guestMissionId.current=null;
+          setMode("home");
+        }
+      },
+      onAction:(_userId,task)=>{
+        if(role!=="host")return;
+        setStore(v=>{
+          const session=v.session;
+          if(!session||session.id!==task.sessionId||session.state.ended||session.report||
+             !validCrewPosition(task.position)||
+             !campaignWalkable(task.position.x,task.position.z,session))return v;
+          // Apply guest actions at their physical position, then restore the
+          // host's own camera position; the host remains the only authority.
+          const projected={...session,position:task.position};
+          let next=projected;
+          try{
+            if(task.type==="command"&&typeof task.value==="string"&&
+               /^[a-zA-Z]{1,32}$/.test(task.value)){
+              next=command(projected,task.value as CampaignAction);
+            }else if(task.type==="optional"&&typeof task.value==="string"&&
+                     /^[a-zA-Z0-9_-]{1,64}$/.test(task.value)){
+              next=optionalCommand(projected,task.value);
+            }else if(task.type==="world"&&task.value&&typeof task.value==="object"){
+              const event=task.value as Partial<WorldAction>;
+              if(event.kind==="door"&&typeof event.id==="string"&&event.id in doors)
+                next=worldAction(projected,{kind:"door",id:event.id as keyof typeof doors});
+              else if(event.kind==="locker"&&typeof event.id==="string"&&event.id in lockers)
+                next=worldAction(projected,{kind:"locker",id:event.id as keyof typeof lockers});
+            }
+          }catch{/* Ignore malformed or unavailable remote actions. */}
+          if(next===projected)return v;
+          const restored={...next,position:session.position};
+          return {...v,session:restored,progress:recordReport(v.progress,restored)};
+        });
+      },
+      onHostLost:()=>{
+        if(roomRef.current!==network)return;
+        network.leave();roomRef.current=null;guestMissionId.current=null;
+        if(soloBackup.current){setStore(soloBackup.current);soloBackup.current=null;}
+        setMode("home");
+        setCrewRoom({role:null,code:"",capacity:4,members:[],
+         status:"The host disconnected. Your solo progress is safe.",connecting:false});
+      }
+    });
+    roomRef.current=network;
+    try{
+      await network.connect();
+      if(role==="host")network.publishMission(latest.current.session,modeRef.current==="flight");
+    }catch(error){
+      network.leave();if(roomRef.current===network)roomRef.current=null;
+      if(role==="guest"&&soloBackup.current){setStore(soloBackup.current);soloBackup.current=null;}
+      setCrewRoom({role:null,code:"",capacity:4,members:[],
+        status:"Online connection failed: "+(error instanceof Error?error.message:String(error)),
+        connecting:false});
+    }
+  };
+  // Keep the host's single shared simulation in sync, including mission
+  // starts, pauses, resource changes and late joiners.
+  useEffect(()=>{
+    if(crewRoom.role!=="host")return;
+    const publish=()=>roomRef.current?.publishMission(latest.current.session,modeRef.current==="flight");
+    publish();
+    const timer=window.setInterval(publish,1000);
+    return ()=>window.clearInterval(timer);
+  },[crewRoom.role,crewRoom.code]);
+
   const timeBudget = useRef(createCommanderTimeBudget());
   const simulationClock = useRef<ReturnType<typeof createForegroundClock> | null>(null);
   const resourceFrame = useRef<(now:number)=>void>(() => {});
@@ -78,7 +198,7 @@ export default function Commander({
   const setupDialog = useRef<HTMLDivElement>(null);
   useModalFocus({ dialog:setupDialog, active:!device || laptopIntro, onClose:!device ? onExit : () => setLaptopIntro(false) });
   const save = useCallback(() => {
-    if (loaded.readOnly) return;
+    if (roomRef.current?.role==="guest"||loaded.readOnly) return;
     if (!storage) { setSaveError(UNSAVED_WARNING); return; }
     try {
       setSaveError(saving.save(latest.current));
@@ -92,7 +212,7 @@ export default function Commander({
   useEffect(() => {
     const id = setInterval(save, 1500);
     const hide = () => {
-      if (document.hidden) {
+      if (document.hidden&&roomRef.current?.role!=="guest") {
         const steps = timeBudget.current.takeSteps(true);
         simulationClock.current?.reset();
         setStore((v) => {
@@ -129,6 +249,7 @@ export default function Commander({
     simulationClock.current = clock;
     let frame = 0;
     const advance = (now:number) => {
+      if(roomRef.current?.role==="guest")return;
       const session = latest.current.session;
       const accepted = clock.advance(now, {
         active:!!session && !session.state.paused && !session.state.ended && !session.report,
@@ -170,6 +291,7 @@ export default function Commander({
   }, [store.session?.report]);
   const updateSession = useCallback(
     (fn: (s: Session) => Session) => {
+      if(roomRef.current?.role==="guest")return;
       const steps = timeBudget.current.takeSteps(true);
       setStore((v) => {
         if (!v.session) return v;
@@ -182,11 +304,26 @@ export default function Commander({
     [],
   );
   const onMove = useCallback(
-    (p: Position) => setStore(v => {
-      if (!v.session) return v;
-      const next = moveSession(v.session, p);
-      return next === v.session ? v : { ...v, session:next, progress:recordReport(v.progress, next) };
-    }),
+    (p: Position) => {
+      const net=roomRef.current;
+      if(net?.role==="guest"){
+        guestPose.current=p;setGuestPosition(p);
+        if(performance.now()-lastPoseSend.current>90){
+          lastPoseSend.current=performance.now();
+          net.sendPose(p,guestMissionId.current);
+        }
+        return;
+      }
+      if(net?.role==="host"&&performance.now()-lastPoseSend.current>90){
+        lastPoseSend.current=performance.now();
+        net.sendPose(p,latest.current.session?.id??null);
+      }
+      setStore(v=>{
+        if(!v.session)return v;
+        const next=moveSession(v.session,p);
+        return next===v.session?v:{...v,session:next,progress:recordReport(v.progress,next)};
+      });
+    },
     [],
   );
   const pause = useCallback(
@@ -196,8 +333,22 @@ export default function Commander({
     },
     [updateSession],
   );
+  const sendCrewAction=(type:"command"|"world"|"optional",value:unknown):boolean=>{
+    const network=roomRef.current;
+    if(network?.role!=="guest")return false;
+    const sessionId=guestMissionId.current;
+    if(sessionId)network.sendTask({type,value,position:guestPose.current,sessionId});
+    return true;
+  };
   const onCommand = useCallback(
-    (action: CampaignAction) => updateSession((s) => command(s, action)),
+    (action: CampaignAction) => {
+      if(roomRef.current?.role==="guest"){
+        if(guestMissionId.current)roomRef.current.sendTask({type:"command",value:action,
+          position:guestPose.current,sessionId:guestMissionId.current});
+        return;
+      }
+      updateSession(s=>command(s,action));
+    },
     [updateSession],
   );
   // A report is an immutable finished flight. Acknowledge it once and
@@ -210,6 +361,7 @@ export default function Commander({
     setMode("home");
   };
   const home = () => {
+    if(roomRef.current?.role==="guest"){leaveCrew();return;}
     if(store.session?.report){dismissReport();return;}
     if(store.session) setCampaignRoute(campaignForMission(store.session.missionId)?.id ?? null);
     pause(true);
@@ -405,16 +557,21 @@ export default function Commander({
       <>
       <SimulationClockContext.Provider value={advanceResourceClock}>
       <Flight
+        crew={crewRoom.role?crewRoom.members:[]}
+        crewCode={crewRoom.role?crewRoom.code:""}
+        crewOwnId={roomRef.current?.selfId??""}
+        onLeaveCrew={leaveCrew}
         device={device}
         preferences={preferences}
         onSettings={openSettings}
-        onWorld={(action) => updateSession((s) => worldAction(s, action))}
-        onOptional={(id) => updateSession((s) => optionalCommand(s, id))}
+        onWorld={(action) => {if(!sendCrewAction("world",action))updateSession(s=>worldAction(s,action));}}
+        onOptional={(id) => {if(!sendCrewAction("optional",id))updateSession(s=>optionalCommand(s,id));}}
         onRate={(rate) => updateSession((s) => setSimRate(s, rate))}
         onControls={(throttle, pitch) =>
           updateSession((s) => flightControls(s, throttle, pitch))
         }
         onAbort={() => {
+          if(roomRef.current?.role==="guest"){setCrewRoom(v=>({...v,status:"Only the host can abort the shared flight."}));return;}
           if (
             window.confirm(
               "Abort this flight and recover insured hardware? Performance bonuses will be lost.",
@@ -426,7 +583,7 @@ export default function Commander({
               report: makeReport(s, false),
             }));
         }}
-        session={store.session}
+        session={crewRoom.role==="guest"?{...store.session,position:guestPosition}:store.session}
         progress={store.progress}
         onMove={onMove}
         onTickPause={pause}
@@ -458,7 +615,12 @@ export default function Commander({
   }
   return (
     <>
-    <CampaignHome
+    <MultiplayerLobby role={crewRoom.role} code={crewRoom.code} maxPlayers={crewRoom.capacity}
+      members={crewRoom.members} message={crewRoom.status} connecting={crewRoom.connecting}
+      onCreate={capacity=>{void startRoom("host",generateCrewCode(capacity),capacity);}}
+      onJoin={code=>{const capacity=roomCapacity(code);if(capacity)void startRoom("guest",code,capacity);}}
+      onLeave={leaveCrew}/>
+    {crewRoom.role!=="guest"&&<CampaignHome
       selectedRoute={campaignRoute}
       setSelectedRoute={setCampaignRoute}
       onServiceEquipment={(id) =>
@@ -477,7 +639,7 @@ export default function Commander({
       onLegacy={() => setMode("legacy")}
       onExit={onExit}
       onSettings={openSettings}
-    />
+    />}
     {settingsView}
     </>
   );
