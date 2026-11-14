@@ -299,15 +299,27 @@ export default function Commander({
   useEffect(()=>()=>{networkRef.current?.close();networkRef.current=null;},[]);
   const pause = useCallback(
     (paused: boolean) => {
+      if(isGuest.current){sendCrewAction("pause",paused);return;}
       simulationClock.current?.reset(performance.now());
       updateSession((s) => ({ ...s, state: { ...s.state, paused } }));
     },
-    [updateSession],
+    [updateSession,sendCrewAction],
   );
   const onCommand = useCallback(
-    (action: CampaignAction) => updateSession((s) => command(s, action)),
-    [updateSession],
+    (action: CampaignAction) => {
+      if(isGuest.current)sendCrewAction("command",action);
+      else updateSession((s) => command(s, action));
+    },
+    [updateSession,sendCrewAction],
   );
+  const onCrewWorld=useCallback((action:WorldAction)=>{
+    if(isGuest.current)sendCrewAction("world",action);
+    else updateSession(s=>worldAction(s,action));
+  },[updateSession,sendCrewAction]);
+  const onCrewOptional=useCallback((id:string)=>{
+    if(isGuest.current)sendCrewAction("optional",id);
+    else updateSession(s=>optionalCommand(s,id));
+  },[updateSession,sendCrewAction]);
   // A report is an immutable finished flight. Acknowledge it once and
   // discard only its stale session; keep the settled report in progress.history.
   const dismissReport = () => {
@@ -356,7 +368,7 @@ export default function Commander({
     setMode("prepare");
   };
   const prepare = (m: MissionDefinition) => {
-    if (!canStart(m, store.progress) || loaded.readOnly) return;
+    if (isGuest.current || !canStart(m, store.progress) || loaded.readOnly) return;
     setCampaignRoute(campaignForMission(m.id)?.id ?? null);
     setSelected(m);
     setGear([...m.requiredEquipment]);
@@ -364,7 +376,7 @@ export default function Commander({
     setMode("prepare");
   };
   const deviceValue = device || "ipad";
-  const openSettings = useCallback(() => { if (mode === "flight") pause(true); setSettingsOpen(true); }, [mode, pause]);
+  const openSettings = useCallback(() => { if (mode === "flight"&&!isGuest.current) pause(true); setSettingsOpen(true); }, [mode, pause]);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const resetProgress = () => {
     if (loaded.readOnly) return;
