@@ -16,6 +16,7 @@ import Cabin, { type AimTarget } from "../Cabin";
 import Icon from "../Icons";
 import { nearby, deck, type Position } from "../layout";
 import { missionTime } from "../MissionTablet";
+import type {CrewMember} from "../multiplayer/protocol";
 import { alerts } from "../simulation";
 import {
   currentObjective,
@@ -87,6 +88,8 @@ const baseStationActions: Partial<
 };
 export default function Flight({
   session: s,
+  crewMembers,
+  myCrewId,
   device = "ipad",
   preferences,
   onSettings = () => {},
@@ -112,6 +115,8 @@ export default function Flight({
   onControls: (throttle: number, pitch: number) => void;
   onAbort: () => void;
   session: Session;
+  crewMembers?:readonly CrewMember[];
+  myCrewId?:string;
   device?: "ipad" | "iphone" | "laptop";
   preferences?: PlayerPreferences;
   onSettings?: () => void;
@@ -475,6 +480,8 @@ export default function Flight({
       ) : (
         <Cabin
           key={s.id}
+          crewMembers={crewMembers}
+          myCrewId={myCrewId}
           onArea={() => {}}
           onPosition={move}
           device={device}

@@ -16,3 +16,9 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Real-browser Commander WebRTC connectivity (4 independent clients)
+        timeout-minutes: 5
+        run: |
+          npm install --no-save --package-lock=false playwright-core@1.56.1
+          npm run dev -- --host 127.0.0.1 --port 4173 >/tmp/orbital-vite.log 2>&1 &
+          node e2e/commander-crew-smoke.mjs

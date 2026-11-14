@@ -2353,8 +2353,8 @@ test("report settlement is acknowledged once: success advances only within campa
  assert.match(commander,/const nextFinished = \(\) =>/);
  assert.match(commander,/const nextId=route\.missionIds\[index\+1\]/);
  assert.match(commander,/if\(!canStart\(m,settled\)\)/);
- assert.match(commander,/onNext=\{store\.session\.report\?\.success && next \? nextFinished : undefined\}/);
- assert.match(commander,/onRetry=\{store\.session\.report && !store\.session\.report\.success \? retryFinished : undefined\}/);
+ assert.match(commander,/onNext=\{crewRoom\?\.mode!=="guest"&&store\.session\.report\?\.success && next \? nextFinished : undefined\}/);
+ assert.match(commander,/onRetry=\{crewRoom\?\.mode!=="guest"&&store\.session\.report && !store\.session\.report\.success \? retryFinished : undefined\}/);
  assert.match(report,/Retry this level/);
  assert.match(report,/Next level in/);
  assert.match(report,/Finish report · Return to campaign/);

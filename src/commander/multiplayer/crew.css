@@ -1,0 +1,43 @@
+/* Accessible Commander-only online crew controls. In-flight toggle avoids HUD
+ * controls by sitting below the map at the upper right. */
+.commander-crew-ui{position:fixed;z-index:310;right:max(12px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));width:min(380px,calc(100vw - 24px));font-family:Inter,system-ui,sans-serif;pointer-events:none;color:#e8f8f0}
+.commander-crew-ui.in-flight{top:max(165px,calc(env(safe-area-inset-top) + 150px))}
+.commander-crew-ui button,.commander-crew-ui input{touch-action:manipulation;pointer-events:auto;font:inherit}
+.commander-crew-toggle{pointer-events:auto;float:right;display:flex;gap:9px;align-items:center;min-height:43px;padding:10px 13px;border-radius:8px;border:1px solid #91d8c2;background:#152b3bf3;color:#eafff3;font-weight:800;font-size:11px;letter-spacing:.06em;box-shadow:0 8px 24px #0008;cursor:pointer}
+.commander-crew-toggle strong{border-radius:30px;padding:3px 7px;background:#346b60;color:#def5e6}
+.commander-crew-panel{clear:both;pointer-events:auto;margin-top:53px;max-height:min(77svh,710px);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;display:grid;gap:14px;padding:17px;background:#142836fb;border:1px solid #86b4ac;border-radius:12px;box-shadow:0 15px 55px #000c}
+.commander-crew-panel header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.commander-crew-panel h2{margin:5px 0;font-size:19px;line-height:1.2}
+.commander-crew-panel small,.commander-crew-panel header small{font-size:10px;letter-spacing:.07em;color:#a8d4c5}
+.commander-crew-panel p{font-size:12px;line-height:1.6;color:#c8e0d9;margin:0}
+.commander-crew-panel button{min-height:43px;padding:9px 12px;border-radius:7px;border:1px solid #94c9bb;color:#ebfff1;background:#254551;font-weight:760;font-size:11px;cursor:pointer}
+.commander-crew-panel button:disabled{opacity:.5;cursor:wait}
+.commander-crew-panel .commander-crew-create{background:#b9edd1;color:#12382e}
+.commander-crew-panel label{font-weight:800;font-size:10px}
+.commander-crew-panel input{width:100%;min-height:47px;border:1px solid #91aeb1;border-radius:7px;padding:10px;background:#0c202c;color:#fff;text-transform:uppercase;letter-spacing:.11em;box-sizing:border-box}
+.commander-crew-divider{text-align:center;color:#bfdcd3;font-size:10px;letter-spacing:.12em}
+.commander-crew-status{display:grid;gap:4px;font-size:12px}
+.commander-crew-status b{color:#9cedb9}
+.commander-crew-code{display:grid;gap:7px;padding:12px;border:1px solid #7bafaa;border-radius:8px;background:#21404a}
+.commander-crew-code>span{font-size:9px;letter-spacing:.12em}
+.commander-crew-code>strong{text-align:center;font-variant-numeric:tabular-nums;font-size:20px;letter-spacing:.12em;user-select:all}
+.commander-crew-roster{display:grid;gap:6px;list-style:none;padding:0;margin:0}
+.commander-crew-roster li{display:flex;gap:10px;align-items:center;min-height:44px;padding:8px 10px;background:#1f424a;border:1px solid #5c908a;border-radius:7px}
+.commander-crew-roster li b{flex:1;font-size:12px}
+.commander-crew-roster li.waiting{opacity:.65;border-style:dashed}
+.commander-crew-number{font-size:20px;color:#b7edd2}
+.commander-crew-leave{background:#5f3439!important;border-color:#db9f9c!important}
+.commander-crew-error{background:#4d2c2f;border:1px solid #edb3ae;border-radius:7px;padding:10px;line-height:1.5;font-size:12px}
+.commander-crew-panel .commander-crew-small{font-size:10px}
+.commander-crew-ui button:focus-visible,.commander-crew-ui input:focus-visible{outline:3px solid #bdf7ce;outline-offset:3px}
+@media(max-width:720px){.commander-crew-ui{top:max(9px,env(safe-area-inset-top));right:9px;width:min(326px,calc(100vw - 18px))}.commander-crew-ui.in-flight{top:175px}.commander-crew-panel{max-height:calc(100svh - 226px)}.commander-crew-toggle{font-size:10px;min-height:42px}}
+
+/* Guests wait for the captain rather than opening a separate solo save. */
+.commander-crew-wait-room{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+ background:radial-gradient(circle at 50% 25%,#224b56,#081321 75%);color:#eef9f3;
+ padding:clamp(20px,6vw,60px);box-sizing:border-box;font-family:Inter,system-ui,sans-serif}
+.commander-crew-wait-copy{max-width:min(650px,100%);text-align:center;display:grid;gap:12px}
+.commander-crew-wait-copy>span{font-size:11px;letter-spacing:.2em;color:#9bdac8}
+.commander-crew-wait-copy h1{font-size:clamp(26px,5vw,46px);line-height:1.12;margin:4px 0}
+.commander-crew-wait-copy p{font-size:14px;line-height:1.6;color:#bad5d0}
+@media(max-width:720px){.commander-crew-wait-copy{padding-top:100px}}

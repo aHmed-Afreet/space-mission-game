@@ -13,14 +13,19 @@ p,li{color:#b9c8cd}a{color:#9ce7ce}
 article{padding:18px 22px;border:1px solid #68958c70;border-radius:12px;background:#1230385c}
 </style></head><body><main>
 <small>ORBITAL / MISSION LAB</small><h1>Privacy & Local Saves</h1>
-<p>Last updated: October 19, 2026</p>
+<p>Last updated: November 14, 2026</p>
 <article><p><strong>ORBITAL Mission Lab</strong> is an independent educational space simulation. You can play without creating an account or entering a name or email.</p></article>
 <h2>What the game saves</h2>
 <p>Commander Mode keeps campaign progress, equipment, mission reports, credits, checkpoints and control and sound settings in your browser's local storage. This allows you to resume after closing the game. Strategy Mode saves your unlocked levels and best scores in this browser's local storage; the current spacecraft design and event choices remain in memory during a flight. Real Space History saves which interactive first-person stories you have completed in this browser. Story mission progress is local and not intentionally uploaded to a game server.</p>
 <h2>How data is used</h2>
-<p>Game data is used to power local gameplay. This version does not include sign-in, in-game chat, advertising or analytics scripts. The app does not intentionally upload game progress to a game server.</p>
+<p>Solo game data stays in your browser's local saves. No sign-in, in-game chat, microphone or camera permission is required, and the game does not run advertising or analytics scripts.</p>
+<h2>Optional Commander online multiplayer</h2>
+<p>When you explicitly create or join a private Commander crew, anonymous browser peers connect using WebRTC. The game exchanges astronaut positions, movement, assigned crew roles, equipment operations and the host's current mission state with the other players in that room. These data are not shared when you play solo.</p>
+<p>The optional room code uses a random 12-character invitation token. Only share it with teammates you trust. The code is not a registered account or a guarantee of secrecy once shared.</p>
+<p>PeerJS Cloud (peerjs.com) provides connection signaling and may process connection metadata such as IP addresses; WebRTC browsers or relays may also expose network connection metadata to peers. During a direct data connection, mission packets are sent between players rather than stored by an ORBITAL game account server. Do not enter identifying information into room codes.</p>
+<p>The mission host controls the shared simulation and personal game saves remain local. Guest copies of a host's active mission are not written to the guest's individual campaign save. A room stops when its host disconnects, and some networks may block connections without a TURN relay.</p>
 <h2>Hosting and technical information</h2>
-<p>The game is served by Netlify. Hosting infrastructure may process connection information, such as IP addresses, requested pages and diagnostic logs, under its own policies. The game developer does not control hosting logs from within the app.</p>
+<p>The game is served by Vercel. Hosting infrastructure may process connection information, such as IP addresses, requested pages and diagnostic logs, under its own policies. The game developer does not control hosting logs from within the app.</p>
 <h2>Deleting saved progress</h2>
 <p>Open <strong>Commander Mode → Settings → Reset campaign progress</strong> and confirm to clear the current campaign and backup in this browser. You can also clear the site's data through your browser settings. Separate legacy-format saves, if present, are not erased by this reset.</p>
 <h2>External links</h2>
