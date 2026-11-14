@@ -8,7 +8,7 @@ export default function MultiplayerLobby({role,code,maxPlayers,members,message,c
  onCreate:(capacity:2|3|4)=>void;onJoin:(code:string)=>void;onLeave:()=>void;
 }){
  const [capacity,setCapacity]=useState<2|3|4>(4);
- const [join,setJoin]=useState("");
+ const [join,setJoin]=useState(()=>{try{return normalizeCrewCode(new URLSearchParams(window.location.search).get("commanderRoom")??"");}catch{return "";}});
  const parsed=roomCapacity(normalizeCrewCode(join));
  return <section className="cmd-coop-lobby" aria-label="Commander online co-op multiplayer">
   <div className="cmd-coop-header">
