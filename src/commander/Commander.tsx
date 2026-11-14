@@ -198,7 +198,7 @@ export default function Commander({
   const setupDialog = useRef<HTMLDivElement>(null);
   useModalFocus({ dialog:setupDialog, active:!device || laptopIntro, onClose:!device ? onExit : () => setLaptopIntro(false) });
   const save = useCallback(() => {
-    if (loaded.readOnly) return;
+    if (roomRef.current?.role==="guest"||loaded.readOnly) return;
     if (!storage) { setSaveError(UNSAVED_WARNING); return; }
     try {
       setSaveError(saving.save(latest.current));
@@ -212,7 +212,7 @@ export default function Commander({
   useEffect(() => {
     const id = setInterval(save, 1500);
     const hide = () => {
-      if (document.hidden) {
+      if (document.hidden&&roomRef.current?.role!=="guest") {
         const steps = timeBudget.current.takeSteps(true);
         simulationClock.current?.reset();
         setStore((v) => {
@@ -249,6 +249,7 @@ export default function Commander({
     simulationClock.current = clock;
     let frame = 0;
     const advance = (now:number) => {
+      if(roomRef.current?.role==="guest")return;
       const session = latest.current.session;
       const accepted = clock.advance(now, {
         active:!!session && !session.state.paused && !session.state.ended && !session.report,
@@ -290,6 +291,7 @@ export default function Commander({
   }, [store.session?.report]);
   const updateSession = useCallback(
     (fn: (s: Session) => Session) => {
+      if(roomRef.current?.role==="guest")return;
       const steps = timeBudget.current.takeSteps(true);
       setStore((v) => {
         if (!v.session) return v;
@@ -302,11 +304,26 @@ export default function Commander({
     [],
   );
   const onMove = useCallback(
-    (p: Position) => setStore(v => {
-      if (!v.session) return v;
-      const next = moveSession(v.session, p);
-      return next === v.session ? v : { ...v, session:next, progress:recordReport(v.progress, next) };
-    }),
+    (p: Position) => {
+      const net=roomRef.current;
+      if(net?.role==="guest"){
+        guestPose.current=p;setGuestPosition(p);
+        if(performance.now()-lastPoseSend.current>90){
+          lastPoseSend.current=performance.now();
+          net.sendPose(p,guestMissionId.current);
+        }
+        return;
+      }
+      if(net?.role==="host"&&performance.now()-lastPoseSend.current>90){
+        lastPoseSend.current=performance.now();
+        net.sendPose(p,latest.current.session?.id??null);
+      }
+      setStore(v=>{
+        if(!v.session)return v;
+        const next=moveSession(v.session,p);
+        return next===v.session?v:{...v,session:next,progress:recordReport(v.progress,next)};
+      });
+    },
     [],
   );
   const pause = useCallback(
@@ -316,8 +333,22 @@ export default function Commander({
     },
     [updateSession],
   );
+  const sendCrewAction=(type:"command"|"world"|"optional",value:unknown):boolean=>{
+    const network=roomRef.current;
+    if(network?.role!=="guest")return false;
+    const sessionId=guestMissionId.current;
+    if(sessionId)network.sendTask({type,value,position:guestPose.current,sessionId});
+    return true;
+  };
   const onCommand = useCallback(
-    (action: CampaignAction) => updateSession((s) => command(s, action)),
+    (action: CampaignAction) => {
+      if(roomRef.current?.role==="guest"){
+        if(guestMissionId.current)roomRef.current.sendTask({type:"command",value:action,
+          position:guestPose.current,sessionId:guestMissionId.current});
+        return;
+      }
+      updateSession(s=>command(s,action));
+    },
     [updateSession],
   );
   // A report is an immutable finished flight. Acknowledge it once and
