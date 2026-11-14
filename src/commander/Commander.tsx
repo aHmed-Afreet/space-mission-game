@@ -361,6 +361,7 @@ export default function Commander({
     setMode("home");
   };
   const home = () => {
+    if(roomRef.current?.role==="guest"){leaveCrew();return;}
     if(store.session?.report){dismissReport();return;}
     if(store.session) setCampaignRoute(campaignForMission(store.session.missionId)?.id ?? null);
     pause(true);
@@ -556,16 +557,21 @@ export default function Commander({
       <>
       <SimulationClockContext.Provider value={advanceResourceClock}>
       <Flight
+        crew={crewRoom.role?crewRoom.members:[]}
+        crewCode={crewRoom.role?crewRoom.code:""}
+        crewOwnId={roomRef.current?.selfId??""}
+        onLeaveCrew={leaveCrew}
         device={device}
         preferences={preferences}
         onSettings={openSettings}
-        onWorld={(action) => updateSession((s) => worldAction(s, action))}
-        onOptional={(id) => updateSession((s) => optionalCommand(s, id))}
+        onWorld={(action) => {if(!sendCrewAction("world",action))updateSession(s=>worldAction(s,action));}}
+        onOptional={(id) => {if(!sendCrewAction("optional",id))updateSession(s=>optionalCommand(s,id));}}
         onRate={(rate) => updateSession((s) => setSimRate(s, rate))}
         onControls={(throttle, pitch) =>
           updateSession((s) => flightControls(s, throttle, pitch))
         }
         onAbort={() => {
+          if(roomRef.current?.role==="guest"){setCrewRoom(v=>({...v,status:"Only the host can abort the shared flight."}));return;}
           if (
             window.confirm(
               "Abort this flight and recover insured hardware? Performance bonuses will be lost.",
@@ -577,7 +583,7 @@ export default function Commander({
               report: makeReport(s, false),
             }));
         }}
-        session={store.session}
+        session={crewRoom.role==="guest"?{...store.session,position:guestPosition}:store.session}
         progress={store.progress}
         onMove={onMove}
         onTickPause={pause}
@@ -609,7 +615,12 @@ export default function Commander({
   }
   return (
     <>
-    <CampaignHome
+    <MultiplayerLobby role={crewRoom.role} code={crewRoom.code} maxPlayers={crewRoom.capacity}
+      members={crewRoom.members} message={crewRoom.status} connecting={crewRoom.connecting}
+      onCreate={capacity=>{void startRoom("host",generateCrewCode(capacity),capacity);}}
+      onJoin={code=>{const capacity=roomCapacity(code);if(capacity)void startRoom("guest",code,capacity);}}
+      onLeave={leaveCrew}/>
+    {crewRoom.role!=="guest"&&<CampaignHome
       selectedRoute={campaignRoute}
       setSelectedRoute={setCampaignRoute}
       onServiceEquipment={(id) =>
@@ -628,7 +639,7 @@ export default function Commander({
       onLegacy={() => setMode("legacy")}
       onExit={onExit}
       onSettings={openSettings}
-    />
+    />}
     {settingsView}
     </>
   );
