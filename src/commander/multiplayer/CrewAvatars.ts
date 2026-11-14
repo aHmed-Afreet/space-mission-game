@@ -74,6 +74,7 @@ export class CrewAvatarManager{
   }
   for(const [id,item] of this.actors)if(!visible.has(id))item.group.visible=false;
  }
+ get visibleCount():number{return [...this.actors.values()].filter(a=>a.group.visible).length;}
  dispose():void{
   for(const item of this.actors.values()){
    this.scene.remove(item.group);
