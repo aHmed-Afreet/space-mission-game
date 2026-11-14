@@ -79,20 +79,19 @@ test("true host/guest channel semantics: 1, 2, 3, 4 participants, movement, snap
  const original=(globalThis as {window?:unknown}).window;
  (globalThis as {window?:unknown}).window={Peer:FakePeer,setTimeout,clearTimeout};
  FakePeer.registry.clear();
- let hostState:CrewRoomState|null=null;
  const latest=new Map<string,CrewRoomState|null>();
  const sessions=new Map<string,string[]>();
  const receivedActions:string[]=[];
  const host=new CommanderRoomNetwork({
-  onState:s=>{hostState=s;latest.set("captain",s);},
+  onState:s=>{latest.set("captain",s);},
   onSession:()=>{},onAction:(a,id)=>receivedActions.push(a.type+":"+id),onLost:()=>{}
  });
  const code="ABCDEF234567";
  const guests:CommanderRoomNetwork[]=[];
  try{
   await host.create(code,null,"home");
-  assert.equal(hostState?.members.length,1);
-  assert.equal(hostState?.members[0].role,CREW_ROLES[0]);
+  assert.equal(latest.get("captain")?.members.length,1);
+  assert.equal(latest.get("captain")?.members[0].role,CREW_ROLES[0]);
   for(let number=1;number<=3;number++){
    const key="guest"+number;sessions.set(key,[]);
    const network=new CommanderRoomNetwork({
@@ -103,10 +102,10 @@ test("true host/guest channel semantics: 1, 2, 3, 4 participants, movement, snap
    guests.push(network);
    await network.join(code);
    await tick();
-   assert.equal(hostState?.members.length,number+1);
+   assert.equal(latest.get("captain")?.members.length,number+1);
    assert.equal(latest.get(key)?.members.length,number+1);
    assert.equal(latest.get(key)?.mode,"guest");
-   assert.equal(hostState?.members[number].role,CREW_ROLES[number]);
+   assert.equal(latest.get("captain")?.members[number].role,CREW_ROLES[number]);
   }
   host.publishSession(sampleSession,"flight");
   await tick();
@@ -114,7 +113,7 @@ test("true host/guest channel semantics: 1, 2, 3, 4 participants, movement, snap
   const id=latest.get("guest1")!.myId;
   guests[0].publishPose({x:3,z:1,heading:.4},"mission-1");
   await tick();
-  assert.equal(hostState?.members.find(m=>m.id===id)?.pose.x,3);
+  assert.equal(latest.get("captain")?.members.find(m=>m.id===id)?.pose.x,3);
   assert.equal(latest.get("guest2")?.members.find(m=>m.id===id)?.pose.x,3);
   guests[0].requestAction({type:"command",value:"repair",position:{x:3,z:1,heading:.4}});
   await tick();
