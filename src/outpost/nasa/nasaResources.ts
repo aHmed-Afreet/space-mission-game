@@ -3,6 +3,9 @@
  * enumerated: do not claim these exact links are listed there. */
 export const NASA_RESOURCES = {
   challenge: "https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/",
+  challengeResources: "https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/?tab=resources",
+  cropResearch: "https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/",
+  lunarSurfacePower: "https://www.nasa.gov/lunar-surface-technology/",
   donkiDocs: "https://ccmc.gsfc.nasa.gov/tools/DONKI/",
   donkiMigration: "https://ccmc.gsfc.nasa.gov/news/major-updates/",
   donkiApi: "https://ccmc.gsfc.nasa.gov/DONKI-API/get/",
