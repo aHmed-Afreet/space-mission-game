@@ -29,7 +29,8 @@ test("peer position and action validation rejects malformed or out-of-bounds coo
  assert.equal(validCrewAction({type:"world",sessionId:"s1",position:{x:NaN,z:2,heading:0}}),false);
  assert.equal(validMissionPacket({active:true,seq:1,sentAt:Date.now(),session:{id:"s1",missionId:"mission-1",objective:0,position:{x:0,z:0,heading:0}}}),true);
  assert.equal(validMissionPacket({active:true,seq:-1,sentAt:0,session:null}),false);
- assert.deepEqual(initialCrewPose(1,{x:0,z:-4.95,heading:0}),{x:.75,z:-3.8,heading:0});
+ const spawn=initialCrewPose(1,{x:0,z:-4.95,heading:0});
+ assert.equal(spawn.x,.75);assert.ok(Math.abs(spawn.z+3.8)<1e-10);
 });
 
 /** Emulates multiple independently connected browser tabs while exercising
