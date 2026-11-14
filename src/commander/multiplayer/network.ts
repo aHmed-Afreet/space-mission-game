@@ -31,7 +31,7 @@ type P2PRoom={
  onError(handler:(err:{code:string;message:string})=>void):()=>void;
  leave():void;
 };
-type ClientModule={joinRoom:(config:{appId:string;password:string;maxUsers:number;identity:string},roomId:string)=>P2PRoom};
+export type ClientModule={joinRoom:(config:{appId:string;password:string;maxUsers:number;identity:string},roomId:string)=>P2PRoom};
 async function loadClient():Promise<ClientModule>{
  let lastError:unknown;
  for(const endpoint of SIGNAL_CLIENTS){
@@ -74,13 +74,14 @@ export class CommanderNetwork{
  }
  constructor(
   readonly role:RoomRole,readonly code:string,readonly capacity:2|3|4,
-  private readonly cb:CommanderNetworkCallbacks
+  private readonly cb:CommanderNetworkCallbacks,
+  private readonly getClient:()=>Promise<ClientModule>=loadClient
  ){}
  get selfId(){return this.id;}
  get isHost(){return this.role==="host";}
  async connect():Promise<void>{
   if(roomCapacity(this.code)!==this.capacity)throw Error("Invalid multiplayer room code");
-  const client=await loadClient();
+  const client=await this.getClient();
   if(this.stopped)return;
   const room=client.joinRoom({
    appId:ROOM_APP_ID,password:this.code,maxUsers:this.capacity,identity:"none"
