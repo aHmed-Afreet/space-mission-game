@@ -55,13 +55,23 @@ export function safeCrewAction(value:unknown):CrewAction|null{
   if(typeof data.value!=="string"||data.value.length>60)return null;
  } else if(data.type==="world"){
   const x=data.value as Record<string,unknown>|null;
-  if(!x||typeof x!=="object"||!["door","locker"].includes(String(x.kind))||typeof x.id!=="string"||x.id.length>40)return null;
+  if(!x||typeof x!=="object")return null;
+  const withId=["door","locker","take","store","retrieveSample","switch","diagnose","repairFault","verifyFault"];
+  const noParam=["returnMeal","takeParts","storeParts","storeSamples","stowSuit"];
+  const withValue=["antenna","target","temperature"];
+  if(withId.includes(String(x.kind))){
+   if(typeof x.id!=="string"||x.id.length>80)return null;
+  }else if(noParam.includes(String(x.kind))){/* no untrusted payload */}
+  else if(withValue.includes(String(x.kind))){
+   if(x.kind==="target"?!["earth","moon"].includes(String(x.value)):typeof x.value!=="number"||!Number.isFinite(x.value)||Math.abs(x.value)>1000)return null;
+  }else return null;
  }else if(data.type==="pause"){
   if(typeof data.value!=="boolean")return null;
  }else if(data.type==="rate"){
-  if(typeof data.value!=="number"||![.25,.5,1,2,4,8,16].includes(data.value))return null;
+  if(typeof data.value!=="number"||![1,5,20,100].includes(data.value))return null;
  }else if(data.type==="controls"){
-  if(!Array.isArray(data.value)||data.value.length!==2||!data.value.every(x=>typeof x==="number"&&Number.isFinite(x)&&Math.abs(x)<=1))return null;
+  if(!Array.isArray(data.value)||data.value.length!==2||!data.value.every(x=>typeof x==="number"&&Number.isFinite(x)))return null;
+  if(data.value[0]<0||data.value[0]>1||data.value[1]<0||data.value[1]>90)return null;
  }
  return {...data,position} as CrewAction;
 }
