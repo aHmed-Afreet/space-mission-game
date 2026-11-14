@@ -1,16 +1,19 @@
 import {useEffect,useState} from "react";
+import type {Outpost} from "../engine";
+import ChallengeSystems from "./ChallengeSystems";
 import {getCachedSolar,getNasaImages,getNasaSolarEvents,setCachedSolar,solarScienceQuestion,
  type NasaPhoto,type NasaSolarResult} from "./nasaData";
 import {NASA_RESOURCES,NASA_SCIENCE_DISCLAIMER} from "./nasaResources";
 import "./nasaScience.css";
 
-type Tab="weather"|"photos"|"research";
+type Tab="systems"|"weather"|"photos"|"research";
 /** An independent science screen. Does not change the survival save, resources,
  * credits, radiation, challenge score, rover, or physics. */
-export default function NasaScience({destination,onClose}:{
- destination:"moon"|"mars";onClose:()=>void;
+export default function NasaScience({session,onClose}:{
+ session:Outpost;onClose:()=>void;
 }){
- const [tab,setTab]=useState<Tab>("weather");
+ const destination=session.destination;
+ const [tab,setTab]=useState<Tab>("systems");
  const [solar,setSolar]=useState<NasaSolarResult|null>(()=>{
   try{return getCachedSolar(localStorage);}catch{return null;}
  });
@@ -52,10 +55,12 @@ export default function NasaScience({destination,onClose}:{
    <p>Learn from real NASA observations and research while exploring {destination==="moon"?"the Moon":"Mars"}.
      The planet base remains a simulated training game.</p>
    <div className="j3-nasa-tabs" role="group" aria-label="NASA science categories">
+    <button type="button" aria-pressed={tab==="systems"} onClick={()=>setTab("systems")}>MISSION SYSTEMS</button>
     <button type="button" aria-pressed={tab==="weather"} onClick={()=>setTab("weather")}>SPACE WEATHER</button>
     <button type="button" aria-pressed={tab==="photos"} onClick={()=>setTab("photos")}>NASA PHOTOS</button>
     <button type="button" aria-pressed={tab==="research"} onClick={()=>setTab("research")}>RESEARCH</button>
    </div>
+   {tab==="systems"&&<ChallengeSystems session={session}/>}
    {tab==="weather"&&<>
     <span className="j3-kicker">OBSERVED SOLAR ACTIVITY · NASA CCMC DONKI</span>
     {loading&&<div className="j3-info" role="status">Contacting NASA's live space-weather database…</div>}
