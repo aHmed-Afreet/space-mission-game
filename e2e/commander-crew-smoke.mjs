@@ -13,6 +13,7 @@ async function startPage(index){
  const page=await context.newPage();
  pages.push({context,page});
  page.on("pageerror",error=>errors.push("Browser "+index+": "+error.message));
+ page.on("console",message=>{if(message.text().includes("[crew-signaling]"))console.log("BROWSER",index,message.text());});
  await page.goto(base,{waitUntil:"domcontentloaded",timeout:30000});
  await page.getByRole("button",{name:/PLAY COMMANDER/}).first().click();
  await page.getByRole("button",{name:/Laptop/}).click();
@@ -53,7 +54,8 @@ try{await main();}
 catch(error){
  for(const [i,entry] of pages.entries()){
   try{await entry.page.screenshot({path:"/tmp/orbital-crew-browser-"+i+".png",fullPage:true});}catch{}
-  try{console.error("Browser",i,"error label:",await entry.page.locator(".commander-crew-error").allInnerTexts());}catch{}
+  try{console.error("Browser",i,"error label:",await entry.page.locator(".commander-crew-error").allInnerTexts());
+    console.error("Browser",i,"seats:",await entry.page.locator(".commander-crew-roster li").allInnerTexts());}catch{}
  }
  console.error(errors.join("\n"));
  throw error;
