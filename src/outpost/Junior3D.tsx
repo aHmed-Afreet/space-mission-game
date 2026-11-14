@@ -471,7 +471,7 @@ export default function Junior3D({onExit}:{onExit:()=>void}){
    {panel&&<div className={"j3-overlay"+((panel==="console"||panel==="board"||panel==="nasa"||panel==="minigame"||panel==="rover")?" j3-overlay-console":"")}>
      {panel==="map"&&<OutpostMap session={session} position={playerPosition} room={room} onClose={()=>setPanel(null)}/>}
      {panel==="board"&&<MissionBoard session={session} onClose={()=>setPanel(null)}/>}
-      {panel==="nasa"&&<NasaScience destination={session.destination} onClose={()=>setPanel(null)}/>}
+      {panel==="nasa"&&<NasaScience session={session} onClose={()=>setPanel(null)}/>}
      {panel==="rover"&&<RoverConsole pose={roverPose} drive={roverDrive} onClose={()=>setPanel("console")}/>}
      {panel==="minigame"&&pendingAction&&room&&<EngineeringMiniGame key={session.sol+"-"+pendingAction} action={pendingAction} room={room} sol={session.sol} onBack={()=>setPanel("console")} onComplete={()=>{operate(pendingAction);setPendingAction(null);setPanel("console");}}/>}
      {panel==="console"&&currentFacility&&<section className="j3-panel j3-panel-console" role="dialog" aria-modal="true" aria-label={currentFacility.title+" controls"}>
