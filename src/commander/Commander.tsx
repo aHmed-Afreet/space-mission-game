@@ -1,11 +1,11 @@
-import { worldAction, service, serviceEquipment } from "./campaign/ship";
+import { worldAction, service, serviceEquipment, doors, lockers, type WorldAction } from "./campaign/ship";
 import { useCallback, useEffect, useRef, useState } from "react";
 import GameSettings from "./campaign/GameSettings";
 import type { PlayerPreferences } from "./campaign/preferences";
 import { initializeCommander, UNSAVED_WARNING } from "./campaign/commanderStorage";
 import type { Design } from "../game";
 import type { LifeSupport } from "./simulation";
-import type { Position } from "./layout";
+import {spawn, type Position} from "./layout";
 import LegacyCommander from "./LegacyCommander";
 import CampaignHome from "./campaign/CampaignHome";
 import Preparation from "./campaign/Preparation";
@@ -29,6 +29,7 @@ import {
   tickSession,
   recordReport,
   unlockedChapters,
+  campaignWalkable,
   type Session,
 } from "./campaign/engine";
 import {
@@ -43,6 +44,10 @@ import { useModalFocus } from "./modalFocus";
 import { SimulationClockContext } from "./simulationClockContext";
 import "./commander.css";
 import "./campaign/campaign.css";
+import MultiplayerLobby from "./multiplayer/MultiplayerLobby";
+import {CommanderNetwork} from "./multiplayer/network";
+import {generateCrewCode,roomCapacity,initialCrewPose,validCrewPosition,
+ type RoomRole,type CrewMember} from "./multiplayer/protocol";
 export default function Commander({
   onExit = () => {},
 }: {
