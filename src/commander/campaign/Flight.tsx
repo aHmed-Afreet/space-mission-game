@@ -36,7 +36,7 @@ import type { VisualAction } from "../interior";
 import type { PlayerPreferences } from "./preferences";
 import type {CrewMember} from "../multiplayer/protocol";
 import {FlightCrewHud} from "../multiplayer/MultiplayerLobby";
-import {objectiveOwner} from "../multiplayer/assignments";
+import {objectiveOwner,assignedObjectives} from "../multiplayer/assignments";
 const baseStationActions: Partial<
   Record<keyof typeof deck, { action: CampaignAction; label: string }[]>
 > = {
@@ -187,6 +187,14 @@ export default function Flight({
   // reaches React. Do not close a newly opened menu when that delayed area
   // update arrives in the following render.
   const pendingInteractionArea = useRef<{area:ReturnType<typeof nearby>} | null>(null);
+  // The shared engine advances in sequence, but each astronaut previews only
+  // their own next unfinished objective until its prerequisites are complete.
+  const ownTaskIndices = crewCode ? assignedObjectives(m.objectives.length,crewOwnId,crew) : [];
+  const nextOwnIndex = crewCode ? ownTaskIndices.find(i=>i>=s.objective) : undefined;
+  const preparing = !!crewCode && nextOwnIndex !== undefined && nextOwnIndex > s.objective;
+  const displayIndex = crewCode ? nextOwnIndex : s.objective;
+  const displayObjective = displayIndex === undefined ? undefined : m.objectives[displayIndex];
+  const activeOwner = crewCode ? objectiveOwner(s.objective,crew) : null;
   const objectiveTool = o?.action ? fieldToolUse(s, o.action) : null;
   const audioPosition = useRef(s.position),
     audioDoors = useRef(""),
@@ -607,7 +615,7 @@ export default function Flight({
         <span>
           CURRENT OBJECTIVE{" "}
           <b>
-            {Math.min(s.objective + 1, m.objectives.length)} /{" "}
+            {displayIndex === undefined ? "—" : Math.min(displayIndex + 1, m.objectives.length)} /{" "}
             {m.objectives.length}
           </b>
         </span>
@@ -618,15 +626,21 @@ export default function Flight({
          </div>}
          {!recovery && helpOpen && m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
          {crewCode&&<div className="cmd-crew-assignment" role="status">
-           <strong>{objectiveOwner(s.objective,crew)===crewOwnId?"● YOUR TURN":"◷ TEAMMATE'S TURN"}</strong>
-           <p>{objectiveOwner(s.objective,crew)===crewOwnId?
-             "Complete the mission task below.":
-             `Waiting for ${crew.find(member=>member.id===objectiveOwner(s.objective,crew))?.role??"another astronaut"} to complete this task.`}</p>
+           <strong>{nextOwnIndex===undefined?"✓ YOUR TASKS COMPLETE":preparing?"◷ PREPARE FOR TASK":"● YOUR TURN"}</strong>
+           <p>{nextOwnIndex===undefined?"All your assigned objectives are finished.":
+             preparing?`Prepare at your station. This task unlocks after ${crew.find(member=>member.id===activeOwner)?.role??"your teammate"} completes the required earlier task.`:
+             "Complete your assigned task below."}</p>
          </div>}
-         <h2>{recovery?.title ?? o?.title}</h2>
-         {(recovery?.station || o?.site) && <p>Location: {sitePosition((recovery?.station ?? o!.site!)!,m.destination).name}. Refer to MAP.</p>}
-         {!recovery && helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>}
-        {o && <section className="campaign-task-guide" aria-label="How to complete this objective">
+         <h2>{recovery?.title ?? displayObjective?.title ?? "All assigned tasks complete"}</h2>
+         {(recovery?.station || displayObjective?.site) && <p>Location: {sitePosition((recovery?.station ?? displayObjective!.site!)!,m.destination).name}. Refer to MAP.</p>}
+         {!recovery && helpOpen && displayObjective?.instruction !== displayObjective?.title && <p>{displayObjective?.instruction}</p>}
+         {preparing && displayObjective && <section className="campaign-task-guide" aria-label="Prepare for your next objective">
+           <p className="campaign-guide-next">NEXT TASK · {displayObjective.title}</p>
+           <p>{displayObjective.instruction}</p>
+           <p>Task locked until earlier required objectives are complete. You may move to the location now.</p>
+           <TouchActionButton type="button" onActivate={()=>setNavOpen(true)}>OPEN MAP · Prepare at your station</TouchActionButton>
+         </section>}
+        {!preparing && (!crewCode || nextOwnIndex !== undefined) && o && <section className="campaign-task-guide" aria-label="How to complete this objective">
           <TouchActionButton type="button" className="campaign-guide-toggle"
             aria-expanded={helpOpen} aria-controls="campaign-objective-help"
             onActivate={()=>setHelpOpen(open=>!open)}>
