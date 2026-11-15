@@ -99,6 +99,8 @@ export const emptyCamp = (): Camp => ({
   sent: false,
 });
 export type Session = {
+  /** Transient multiplayer evaluation boundary; never saved or published. */
+  objectiveTurn?: { index: number; allowed: boolean };
   world: ShipState;
   observations: Observations;
   id: string;
@@ -581,7 +583,7 @@ export function evaluate(s: Session): Session {
   const limit = missionForSession(n).objectives.length;
   for (let i = 0; i < limit && !n.report; i++) {
     const o = currentObjective(n);
-    if (!o || !satisfied(n, o)) break;
+    if (!o || (n.objectiveTurn && (!n.objectiveTurn.allowed || n.objective !== n.objectiveTurn.index)) || !satisfied(n, o)) break;
     n = advance(n);
   }
   return n;

@@ -121,6 +121,7 @@ export function receipt(s: Session, action: CampaignAction): Session {
   // One operation satisfies one measurement/procedure, not every repeated measurement in the mission.
   const index = m.objectives.findIndex(
     (o, i) =>
+      (!s.objectiveTurn || (s.objectiveTurn.allowed && i === s.objectiveTurn.index)) &&
       (!airlockAction || i === s.objective) &&
       !s.completed.includes(o.id) &&
       !obs.achieved.includes(o.id) &&
@@ -177,7 +178,7 @@ export function observe(s: Session): Session {
 export function satisfied(s: Session, o: Objective): boolean {
   const obs = s.observations;
   if (o.type === "RETURN") return !!o.site && atSite(s, o.site);
-  if (o.type === "GO_TO") return !!o.site && obs.visits.includes(o.site);
+  if (o.type === "GO_TO") return !!o.site && (s.objectiveTurn ? atSite(s, o.site) : obs.visits.includes(o.site));
   if (o.type === "TRANSMIT")
     return (
       obs.achieved.includes(o.id) &&
@@ -203,6 +204,8 @@ export function satisfied(s: Session, o: Objective): boolean {
   if (s.missionId === "mission-7" && s.revision >= 4 && o.action === "measureTemperature" &&
     !s.measurements?.some(r => r.action === "measureTemperature" && r.unit === "°C" && Number.isFinite(r.value))) return false;
   if (obs.achieved.includes(o.id) || s.completed.includes(o.id)) return true;
+  // Shared equipment state cannot certify a different astronaut's operation.
+  if (s.objectiveTurn && o.action && ["tools", "equipSuit", "checkOxygen", "checkPower", "sleep", "wake"].includes(o.action)) return false;
   // Provision actions are events, recorded for one objective by receipt().
   // Persistent nutrition, bottle contents or an earlier meal cannot certify a
   // later duty shift; early preparation still keeps its own task receipt.

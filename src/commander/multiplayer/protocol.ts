@@ -11,7 +11,7 @@ export type RoomRole="host"|"guest";
 export type RoomStatus="idle"|"connecting"|"waiting"|"connected"|"error";
 export type CrewMember={id:string;name:string;role:CrewRole;position:Position|null;sessionId:string|null;isHost:boolean};
 export type MissionPacket={session:Session|null;active:boolean;seq:number;sentAt:number};
-export type CrewAction={type:"command"|"world"|"optional";value:unknown;position:Position;sessionId:string};
+export type CrewAction={type:"command"|"world"|"optional"|"move";value:unknown;position:Position;sessionId:string};
 export function generateCrewCode(maxPlayers:2|3|4,cryptoSource:Pick<Crypto,"getRandomValues">=crypto):string{
  const data=new Uint8Array(9);cryptoSource.getRandomValues(data);
  return Array.from(data,n=>ROOM_CODE_CHARS[n%ROOM_CODE_CHARS.length]).join("")+"-"+maxPlayers;
@@ -44,7 +44,7 @@ export function validMissionPacket(value:unknown):value is MissionPacket{
 export function validCrewAction(value:unknown):value is CrewAction{
  if(!value||typeof value!=="object")return false;
  const a=value as Partial<CrewAction>;
- return ["command","world","optional"].includes(a.type??"") &&
+ return ["command","world","optional","move"].includes(a.type??"") &&
   typeof a.sessionId==="string"&&a.sessionId.length<128&&validCrewPosition(a.position);
 }
 export function initialCrewPose(index:number,host:Position):Position{

@@ -136,3 +136,33 @@ test("Commander only gets multiplayer; solo, Outpost, Planner and history remain
  assert.match(cabin,/remoteAstronauts\.update/);
  assert.doesNotMatch(main,/<MultiplayerLobby/);
 });
+
+
+test("guest arrival travels through the network and the next objective synchronizes without refresh",async()=>{
+ const {createSession,emptyProgress}=await import("./commander/campaign/engine");
+ const {missionById}=await import("./commander/campaign/definitions");
+ const {defaultDesign,defaultLife}=await import("./commander/simulation");
+ const {applyCrewAction}=await import("./commander/multiplayer/actions");
+ const client=mockTransport(),code="ABCDEFGHJ-4";
+ const m=missionById("mission-2");
+ let session={...createSession(m,defaultDesign,defaultLife,[...m.requiredEquipment],emptyProgress()),objective:17};
+ let roster:import("./commander/multiplayer/protocol").CrewMember[]=[];
+ let received:Session|null=null;
+ const host=new CommanderNetwork("host",code,4,{
+  onRoster:members=>{roster=members;},onStatus:()=>{},onSnapshot:()=>{},onHostLost:()=>{},
+  onAction:(actor,task)=>{session=applyCrewAction(session,actor,roster,task);host.publishMission(session,true);}
+ },client);
+ const guest=new CommanderNetwork("guest",code,4,{
+  onRoster:()=>{},onStatus:()=>{},onSnapshot:packet=>{received=packet.session;},onHostLost:()=>{},onAction:()=>{}
+ },client);
+ const flush=()=>new Promise(resolve=>setTimeout(resolve,25));
+ try{
+  await host.connect();await guest.connect();await flush();
+  host.publishMission(session,true);await flush();
+  const camera={...session.position};
+  guest.sendTask({type:"move",value:null,position:{x:1.1,z:4.4,heading:0},sessionId:session.id});
+  await flush();
+  assert.equal(session.objective,18);assert.equal((received as Session|null)?.objective,18);
+  assert.deepEqual(session.position,camera);
+ }finally{host.leave();guest.leave();}
+});

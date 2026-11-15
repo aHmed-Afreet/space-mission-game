@@ -1,4 +1,4 @@
-import { worldAction, service, serviceEquipment, doors, lockers, type WorldAction } from "./campaign/ship";
+import { worldAction, service, serviceEquipment, type WorldAction } from "./campaign/ship";
 import { useCallback, useEffect, useRef, useState } from "react";
 import GameSettings from "./campaign/GameSettings";
 import type { PlayerPreferences } from "./campaign/preferences";
@@ -49,6 +49,7 @@ import {CommanderNetwork} from "./multiplayer/network";
 import {generateCrewCode,roomCapacity,initialCrewPose,validCrewPosition,
  type RoomRole,type CrewMember} from "./multiplayer/protocol";
 import {objectiveOwner} from "./multiplayer/assignments";
+import {applyCrewAction, crewTick, withObjectiveTurn} from "./multiplayer/actions";
 export default function Commander({
   onExit = () => {},
 }: {
@@ -138,30 +139,8 @@ export default function Commander({
           if(!session||session.id!==task.sessionId||session.state.ended||session.report||
              !validCrewPosition(task.position)||
              !campaignWalkable(task.position.x,task.position.z,session))return v;
-          const owner=objectiveOwner(session.objective,crewMembersRef.current);
-          // Apply guest actions at their physical position, then restore the
-          // host's own camera position; the host remains the only authority.
-          const projected={...session,position:task.position};
-          let next=projected;
-          try{
-            if(task.type==="command"&&typeof task.value==="string"&&
-               /^[a-zA-Z]{1,32}$/.test(task.value)){
-              next=command(projected,task.value as CampaignAction);
-            }else if(task.type==="optional"&&typeof task.value==="string"&&
-                     /^[a-zA-Z0-9_-]{1,64}$/.test(task.value)){
-              next=optionalCommand(projected,task.value);
-            }else if(task.type==="world"&&task.value&&typeof task.value==="object"){
-              const event=task.value as Partial<WorldAction>;
-              if(event.kind==="door"&&typeof event.id==="string"&&event.id in doors)
-                next=worldAction(projected,{kind:"door",id:event.id as keyof typeof doors});
-              else if(event.kind==="locker"&&typeof event.id==="string"&&event.id in lockers)
-                next=worldAction(projected,{kind:"locker",id:event.id as keyof typeof lockers});
-            }
-          }catch{/* Ignore malformed or unavailable remote actions. */}
-          if(next===projected)return v;
-          if(next.objective!==session.objective&&owner!==_userId)return v;
-          const restored={...next,position:session.position};
-          return {...v,session:restored,progress:recordReport(v.progress,restored)};
+          const next=applyCrewAction(session,_userId,crewMembersRef.current,task);
+          return next===session?v:{...v,session:next,progress:recordReport(v.progress,next)};
         });
       },
       onHostLost:()=>{
@@ -223,7 +202,7 @@ export default function Commander({
         simulationClock.current?.reset();
         setStore((v) => {
           if (!v.session) return v;
-          const session = steps.reduce((session, minutes) => tickSession(session, minutes), v.session);
+          const session = steps.reduce((session, minutes) => roomRef.current?.role==="host" ? crewTick(session,s=>tickSession(s,minutes)) : tickSession(session, minutes), v.session);
           return { ...v, session:{ ...session, state:{ ...session.state, paused:true } } };
         });
         save();
@@ -268,7 +247,7 @@ export default function Commander({
         const steps = timeBudget.current.takeSteps();
         setStore((v) => {
           if (!v.session) return v;
-          const next = steps.reduce((session, minutes) => tickSession(session, minutes), v.session);
+          const next = steps.reduce((session, minutes) => roomRef.current?.role==="host" ? crewTick(session,s=>tickSession(s,minutes)) : tickSession(session, minutes), v.session);
           return next === v.session
             ? v
             : { ...v, session: next, progress: recordReport(v.progress, next) };
@@ -301,10 +280,10 @@ export default function Commander({
       const steps = timeBudget.current.takeSteps(true);
       setStore((v) => {
         if (!v.session) return v;
-        const next = fn(steps.reduce((session, minutes) => tickSession(session, minutes), v.session));
+        const advanced = steps.reduce((session, minutes) => roomRef.current?.role==="host" ? crewTick(session,s=>tickSession(s,minutes)) : tickSession(session, minutes), v.session);
         const net=roomRef.current;
-        if(net?.role==="host"&&next.objective!==v.session.objective&&
-          objectiveOwner(v.session.objective,crewMembersRef.current)!==net.selfId)return v;
+        const next=net?.role==="host" ? withObjectiveTurn(advanced,
+          objectiveOwner(advanced.objective,crewMembersRef.current)===net.selfId,fn) : fn(advanced);
         return next === v.session
           ? v
           : { ...v, session: next, progress: recordReport(v.progress, next) };
@@ -320,6 +299,7 @@ export default function Commander({
         if(performance.now()-lastPoseSend.current>90){
           lastPoseSend.current=performance.now();
           net.sendPose(p,guestMissionId.current);
+          if(guestMissionId.current)net.sendTask({type:"move",value:null,position:p,sessionId:guestMissionId.current});
         }
         return;
       }
@@ -329,7 +309,8 @@ export default function Commander({
       }
       setStore(v=>{
         if(!v.session)return v;
-        const next=moveSession(v.session,p);
+        const next=net?.role==="host" ? withObjectiveTurn(v.session,
+          objectiveOwner(v.session.objective,crewMembersRef.current)===net.selfId,s=>moveSession(s,p)) : moveSession(v.session,p);
         return next===v.session?v:{...v,session:next,progress:recordReport(v.progress,next)};
       });
     },
