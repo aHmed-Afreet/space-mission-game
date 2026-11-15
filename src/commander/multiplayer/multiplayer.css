@@ -65,3 +65,35 @@
  .cmd-coop-roster{grid-template-columns:repeat(2,minmax(0,1fr))}
  .cmd-coop-flight-hud{right:8px;top:85px}
 }
+
+/* In-flight iPad HUD: never let the crew badge stretch to the viewport height. */
+.campaign-flight .cmd-coop-flight-hud{
+ position:absolute!important;top:calc(env(safe-area-inset-top,0px) + 108px)!important;
+ right:clamp(8px,1.2vw,18px)!important;left:auto!important;bottom:auto!important;
+ width:max-content!important;min-width:0!important;max-width:min(230px,40vw)!important;
+ height:44px!important;min-height:0!important;max-height:44px!important;
+ display:block!important;flex:none!important;align-self:flex-start!important;
+ overflow:hidden!important;box-sizing:border-box!important;
+ background:rgba(9,32,45,.94)!important;
+}
+.campaign-flight .cmd-coop-flight-hud.expanded{
+ height:auto!important;max-height:min(48vh,310px)!important;overflow-y:auto!important;
+}
+.campaign-flight .cmd-coop-flight-hud>button{height:42px!important;padding:8px 11px!important}
+.campaign-flight .cmd-crew-assignment{
+ margin:0 0 10px!important;padding:9px 12px!important;
+ background:rgba(13,59,65,.96);border-radius:8px;
+}
+.campaign-flight .cmd-crew-assignment strong{display:block;font-size:12px;letter-spacing:.07em;color:#b7ffe0}
+.campaign-flight .cmd-crew-assignment p{margin:5px 0 0!important;font-size:12px!important;line-height:1.35!important}
+.campaign-flight .cmd-crew-assignment + h2{
+ font-size:clamp(19px,2vw,25px)!important;line-height:1.25!important;
+ color:#fff!important;font-weight:800!important;margin:10px 0!important;
+ text-shadow:0 1px 4px #0008;
+}
+.campaign-flight .cmd-crew-assignment + h2 + p{
+ font-size:13px!important;color:#e4f5f2!important;line-height:1.45!important;
+}
+@media(max-width:710px){
+ .campaign-flight .cmd-coop-flight-hud{top:85px!important;max-width:44vw!important}
+}
