@@ -36,6 +36,7 @@ import type { VisualAction } from "../interior";
 import type { PlayerPreferences } from "./preferences";
 import type {CrewMember} from "../multiplayer/protocol";
 import {FlightCrewHud} from "../multiplayer/MultiplayerLobby";
+import {assignedObjectives,objectiveOwner} from "../multiplayer/assignments";
 const baseStationActions: Partial<
   Record<keyof typeof deck, { action: CampaignAction; label: string }[]>
 > = {
@@ -313,6 +314,10 @@ export default function Flight({
     }
   }, [s.state.log]);
   const run = (a: CampaignAction) => {
+    if(crewCode&&objectiveOwner(s.objective,crew)!==crewOwnId){
+      setGuideFeedback("Waiting for the astronaut assigned to this objective.");
+      return;
+    }
     void sound.unlock();
     sound.play(a === "comms" ? "radio" : a === "science" ? "science" : "click");
     attemptedCommand.current = { objective: s.objective, session: s };
@@ -612,6 +617,14 @@ export default function Flight({
            <p>{recovery.cause}</p>
          </div>}
          {!recovery && helpOpen && m.historical && <p className="campaign-real-mission">Inspired by {m.historical.inspiration} · {m.historical.year} · Fictional simulation</p>}
+         {crewCode&&<div className="cmd-crew-assignment" role="status">
+           <strong>{objectiveOwner(s.objective,crew)===crewOwnId?"YOUR OBJECTIVE":"WAITING FOR TEAMMATE"}</strong>
+           <p>{objectiveOwner(s.objective,crew)===crewOwnId?
+             "You are assigned to complete this objective.":
+             `This objective belongs to ${crew.find(member=>member.id===objectiveOwner(s.objective,crew))?.role??"another astronaut"}. It unlocks the next objective when completed.`}</p>
+           <small>Your objectives: {assignedObjectives(m.objectives.length,crewOwnId,crew)
+             .filter(i=>i>=s.objective).map(i=>i+1).join(", ")||"All your tasks are complete"}</small>
+         </div>}
          <h2>{recovery?.title ?? o?.title}</h2>
          {(recovery?.station || o?.site) && <p>Location: {sitePosition((recovery?.station ?? o!.site!)!,m.destination).name}. Refer to MAP.</p>}
          {!recovery && helpOpen && o?.instruction !== o?.title && <p>{o?.instruction}</p>}

@@ -6,28 +6,26 @@ export default function MultiplayerLobby({role,code,maxPlayers,members,message,c
  role:RoomRole|null;code:string;maxPlayers:2|3|4;members:CrewMember[];message:string;connecting:boolean;
  onCreate:(capacity:2|3|4)=>void;onJoin:(code:string)=>void;onLeave:()=>void;
 }){
- const [capacity,setCapacity]=useState<2|3|4>(4);
+ const [choice,setChoice]=useState<"create"|"join"|null>(null);
  const [join,setJoin]=useState(()=>{try{return normalizeCrewCode(new URLSearchParams(window.location.search).get("commanderRoom")??"");}catch{return "";}});
  const parsed=roomCapacity(normalizeCrewCode(join));
  return <section className="cmd-coop-lobby" aria-label="Commander online co-op multiplayer">
   <div className="cmd-coop-header">
    <div><small>COMMANDER ONLY · ONLINE CO-OP</small>
-    <h2>Fly the same mission together.</h2>
-    <p>Play solo, or connect 2–4 astronauts on different devices. Each teammate
-       appears inside the same 3D spacecraft, and the host controls shared mission progress.</p></div>
+    <h2>Your crew. Different objectives.</h2>
+    <p>Connect up to four astronauts. Each objective is assigned to one teammate, with shared progress.</p></div>
    <strong className="cmd-coop-count">{Math.max(1,members.length)} / {role?maxPlayers:4} CREW</strong>
   </div>
   {!role?<>
-   <div className="cmd-coop-choice">
-    <div className="cmd-coop-form">
+   {!choice?<div className="cmd-coop-choice">
+    <button type="button" onClick={()=>setChoice("create")}>CREATE ROOM</button>
+    <button type="button" onClick={()=>setChoice("join")}>JOIN ROOM</button>
+   </div>:<div className="cmd-coop-choice">
+    {choice==="create"?<div className="cmd-coop-form">
       <label htmlFor="coop-seat-limit">CREATE A PRIVATE ROOM</label>
-      <select id="coop-seat-limit" value={capacity}
-       onChange={e=>setCapacity(Number(e.target.value) as 2|3|4)}>
-       <option value={2}>2 players</option><option value={3}>3 players</option><option value={4}>4 players</option>
-      </select>
-      <button type="button" disabled={connecting} onClick={()=>onCreate(capacity)}>CREATE ROOM</button>
-    </div>
-    <div className="cmd-coop-form">
+      <p>Room capacity: up to 4 players. No player-count selection needed.</p>
+      <button type="button" disabled={connecting} onClick={()=>onCreate(4)}>GENERATE ROOM CODE</button>
+    </div>:<div className="cmd-coop-form">
       <label htmlFor="coop-room-code">JOIN A FRIEND'S ROOM</label>
       <input id="coop-room-code" value={join} placeholder="XXXXXXXXX-4" autoComplete="off"
        spellCheck={false} maxLength={11}
@@ -35,10 +33,10 @@ export default function MultiplayerLobby({role,code,maxPlayers,members,message,c
        aria-describedby="coop-room-hint"/>
       <button type="button" disabled={connecting||!parsed} onClick={()=>onJoin(normalizeCrewCode(join))}>JOIN ROOM</button>
       <small id="coop-room-hint">Enter the code shared by the host. No login or personal details needed.</small>
-    </div>
-   </div>
-   <div className="cmd-coop-note">1 PLAYER? Just choose any Commander campaign below and play normally.
-    Online rooms use encrypted peer-to-peer connections, so some restricted school networks may prevent connection.</div>
+    </div>}
+    <button type="button" onClick={()=>setChoice(null)}>← BACK</button>
+   </div>}
+   <div className="cmd-coop-note">Some restricted school networks may prevent peer-to-peer connections.</div>
   </>:<>
    <div className="cmd-coop-room">
     <div className="cmd-coop-invite">

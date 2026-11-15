@@ -48,6 +48,7 @@ import MultiplayerLobby from "./multiplayer/MultiplayerLobby";
 import {CommanderNetwork} from "./multiplayer/network";
 import {generateCrewCode,roomCapacity,initialCrewPose,validCrewPosition,
  type RoomRole,type CrewMember} from "./multiplayer/protocol";
+import {objectiveOwner} from "./multiplayer/assignments";
 export default function Commander({
   onExit = () => {},
 }: {
@@ -66,6 +67,7 @@ export default function Commander({
     [loadWarning, setLoadWarning] = useState(loaded.warning),
     [saveError, setSaveError] = useState(""),
     [device, setDevice] = useState<"ipad" | "iphone" | "laptop" | null>(null),
+    [playMode,setPlayMode] = useState<"single"|"multi"|null>(null),
     [laptopIntro, setLaptopIntro] = useState(false),
     [settingsOpen, setSettingsOpen] = useState(false),
     [preferences, setPreferences] = useState(initial.preferences),
@@ -136,6 +138,7 @@ export default function Commander({
           if(!session||session.id!==task.sessionId||session.state.ended||session.report||
              !validCrewPosition(task.position)||
              !campaignWalkable(task.position.x,task.position.z,session))return v;
+          const owner=objectiveOwner(session.objective,crewMembersRef.current);
           // Apply guest actions at their physical position, then restore the
           // host's own camera position; the host remains the only authority.
           const projected={...session,position:task.position};
@@ -156,6 +159,7 @@ export default function Commander({
             }
           }catch{/* Ignore malformed or unavailable remote actions. */}
           if(next===projected)return v;
+          if(next.objective!==session.objective&&owner!==_userId)return v;
           const restored={...next,position:session.position};
           return {...v,session:restored,progress:recordReport(v.progress,restored)};
         });
@@ -192,6 +196,8 @@ export default function Commander({
   },[crewRoom.role,crewRoom.code]);
 
   const timeBudget = useRef(createCommanderTimeBudget());
+  const crewMembersRef=useRef<CrewMember[]>([]);
+  crewMembersRef.current=crewRoom.members;
   const simulationClock = useRef<ReturnType<typeof createForegroundClock> | null>(null);
   const resourceFrame = useRef<(now:number)=>void>(() => {});
   const advanceResourceClock = useCallback((now:number) => resourceFrame.current(now), []);
@@ -296,6 +302,9 @@ export default function Commander({
       setStore((v) => {
         if (!v.session) return v;
         const next = fn(steps.reduce((session, minutes) => tickSession(session, minutes), v.session));
+        const net=roomRef.current;
+        if(net?.role==="host"&&next.objective!==v.session.objective&&
+          objectiveOwner(v.session.objective,crewMembersRef.current)!==net.selfId)return v;
         return next === v.session
           ? v
           : { ...v, session: next, progress: recordReport(v.progress, next) };
@@ -347,7 +356,12 @@ export default function Commander({
           position:guestPose.current,sessionId:guestMissionId.current});
         return;
       }
-      updateSession(s=>command(s,action));
+      updateSession(s=>{
+        const next=command(s,action);
+        const room=roomRef.current;
+        return room?.role==="host"&&next.objective!==s.objective&&
+          objectiveOwner(s.objective,crewMembersRef.current)!==room.selfId?s:next;
+      });
     },
     [updateSession],
   );
@@ -460,6 +474,17 @@ export default function Commander({
       </section>
     </div>
   );
+  if(!playMode)return <div className="cmd-device-setup" role="dialog" aria-modal="true" aria-label="Choose play mode">
+    <section className="cmd-device-panel">
+      <small>COMMANDER / GAME MODE</small>
+      <h1>How do you want to play?</h1>
+      <div className="cmd-device-options">
+        <button onClick={()=>setPlayMode("single")}>SINGLEPLAYER <span>Complete all objectives yourself.</span></button>
+        <button onClick={()=>setPlayMode("multi")}>MULTIPLAYER <span>Create or join a private crew of up to four.</span></button>
+      </div>
+      <button className="cmd-device-back" onClick={()=>setDevice(null)}>← Change device</button>
+    </section>
+  </div>;
   if (mode === "legacy")
     return (
       <div className="campaign-legacy-host">
@@ -615,12 +640,12 @@ export default function Commander({
   }
   return (
     <>
-    <MultiplayerLobby role={crewRoom.role} code={crewRoom.code} maxPlayers={crewRoom.capacity}
+    {playMode==="multi"&&<MultiplayerLobby role={crewRoom.role} code={crewRoom.code} maxPlayers={crewRoom.capacity}
       members={crewRoom.members} message={crewRoom.status} connecting={crewRoom.connecting}
       onCreate={capacity=>{void startRoom("host",generateCrewCode(capacity),capacity);}}
       onJoin={code=>{const capacity=roomCapacity(code);if(capacity)void startRoom("guest",code,capacity);}}
-      onLeave={leaveCrew}/>
-    {crewRoom.role!=="guest"&&<CampaignHome
+      onLeave={leaveCrew}/>}
+    {(playMode==="single"||crewRoom.role==="host")&&<CampaignHome
       selectedRoute={campaignRoute}
       setSelectedRoute={setCampaignRoute}
       onServiceEquipment={(id) =>

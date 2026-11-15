@@ -11,6 +11,7 @@
 .cmd-coop-count{white-space:nowrap;font-size:12px;border:1px solid #75beb2;border-radius:7px;
  background:#18493d;padding:10px 13px;color:#dbffe4}
 .cmd-coop-choice{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.cmd-coop-choice>button{min-height:52px;border-radius:9px;border:1px solid #72b8a6;background:#18493d;color:#e3ffed;font-weight:800;cursor:pointer}
 .cmd-coop-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;
  background:#143b49;border:1px solid #4f7b86;border-radius:10px;padding:13px}
 .cmd-coop-form label{grid-column:1/-1;color:#a0e3d5;font-size:11px;letter-spacing:.07em;font-weight:850}
@@ -43,13 +44,18 @@
 .cmd-coop-wait .cmd-coop-lobby{max-width:900px}
 .cmd-coop-flight-hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 108px);
  right:16px;z-index:35;background:#0c2635ee;border:1px solid #72b8a6;border-radius:8px;
- font:11px Inter,system-ui,sans-serif;color:#e3ffed;pointer-events:auto;max-width:min(300px,55vw)}
+ font:11px Inter,system-ui,sans-serif;color:#e3ffed;pointer-events:auto;width:max-content;
+ height:max-content;max-height:min(50vh,340px);max-width:min(300px,55vw);overflow:auto;align-self:start}
 .cmd-coop-flight-hud>button{border:0;background:transparent;color:inherit;padding:10px 13px;
  font-size:11px;min-height:43px;font-weight:850;cursor:pointer;white-space:nowrap}
 .cmd-coop-flight-hud>button span{margin-left:12px}
 .cmd-coop-flight-hud>div{padding:4px 13px 13px}
 .cmd-coop-flight-hud p{margin:8px 0;line-height:1.4}
 .cmd-coop-flight-hud p span{color:#8fe7bc}
+.cmd-crew-assignment{border:1px solid #72b8a6;border-radius:9px;background:#103b43;
+ padding:10px 12px;margin:10px 0;color:#e3ffed;font-size:13px}
+.cmd-crew-assignment p{margin:6px 0}
+.cmd-crew-assignment small{color:#a4e0d5}
 .cmd-coop-flight-hud>div button{background:#713d44;border:1px solid #be7a82;
  color:#fff;border-radius:5px;padding:8px;min-height:39px;cursor:pointer}
 .cmd-coop-lobby button:focus-visible,.cmd-coop-flight-hud button:focus-visible{outline:3px solid #bfffd5;outline-offset:2px}
